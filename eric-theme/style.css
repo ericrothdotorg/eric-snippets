@@ -96,9 +96,7 @@ textarea {
 
 input:not([type="submit"]):not([type="radio"]),
 select,
-textarea,
-.wp-block-post-comments-form input:not([type="submit"]):not([type="checkbox"]):not([type="radio"]),
-.wp-block-post-comments-form textarea {
+textarea {
 	color: var(--wp--preset--color--main);
 	border-radius: 5px;
 	border: solid 1px color-mix(in srgb, var(--wp--preset--color--tertiary) 100%, var(--wp--preset--color--main) 20%);
@@ -115,12 +113,6 @@ textarea:focus-visible,
 select:focus-visible {
 	outline-color: var(--wp--preset--color--main);
 	outline-offset: 1px;
-}
-
-input[type="checkbox"],
-input[type="image"],
-input[type="radio"] {
-	width: auto;
 }
 
 select {
@@ -225,7 +217,7 @@ body:not(.wp-admin) header.wp-block-template-part:has(> .wp-block-group > .is-po
     4. LAYOUT           clearfix, columns, flexbox, page-links, show / hide helpers
     5. EDITORIAL LISTS  single source of truth (beats Part A's list reset + phantom rule)
     6. TABLES           tables — full system (govern once; opt out per-table with a class)
-    7. FORMS            overrides Part A's form system
+    7. FORMS            border colour, focus ring, dark mode on Part A's form base
     8. QUOTE            green Georgia box (lifted from My Quotes #23; was quote-page-only)
     9. PULLQUOTE        green Georgia (overrides theme.json's forced border/padding)
     10. HEADER          bar inner row, nav (desktop + mobile overlay), submenus, search
@@ -533,17 +525,17 @@ body.dark-mode .wp-block-table tr:hover {background: var(--color-6);}
 
 /* ============================================================
    7. FORMS
-   Overrides Part A's form system (border, border-radius, padding,
-   font-size, background-color, box-shadow, focus-visible on
-   input/select/textarea).
+   Builds on Part A's form base (border style/width, radius, padding,
+   font-size, white background, shadow): sets the border colour, focus
+   ring and transition for text fields + select, and the dark mode.
    Dark mode beside each rule.
    ============================================================ */
 
 .wp-block-post-content :is(input[type=email], input[type=search], input[type=text], textarea) {
-	width: 100%; box-sizing: border-box;
+	width: 100%;
 }
 :is(select, input[type=email], input[type=search], input[type=text], textarea) {
-	background: var(--color-8); border: 1px solid var(--color-5); transition: border 0.2s ease;
+	border-color: var(--color-5); transition: border 0.2s ease;
 }
 :is(select, input[type=email], input[type=search], input[type=text], textarea):focus {
 	outline: var(--a11y-focus-width) solid var(--a11y-focus-color); outline-offset: var(--a11y-focus-offset);
@@ -552,10 +544,10 @@ body.dark-mode .wp-block-table tr:hover {background: var(--color-6);}
 	outline: none;
 }
 body.dark-mode :is(select, input[type=email], input[type=search], input[type=text], textarea) {
-	background: var(--color-10); color: var(--color-5); border: 1px solid var(--color-3);
+	background: var(--color-10); color: var(--color-5); border-color: var(--color-3);
 }
 body.dark-mode option {
-	background: var(--color-10); color: var(--color-5);
+	background: var(--color-10);
 }
 .wp-block-post-content :is(input[type=button], input[type=reset], input[type=submit]) {
 	all: revert;
