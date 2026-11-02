@@ -6,9 +6,9 @@
  * (the REST route must register on wp-json requests).
  *   A  Shortcode preview: Inspector panel renders a [shortcode] in an iframe.
  *   B  Canvas styling: same CSS, scoped under .editor-styles-wrapper.
- * CSS comes live from its real sources, nothing copied: theme.json, parent +
- * child style.css, Ollie assets/styles, site-css snippets, and the CSS inside
- * the PHP snippets listed below.
+ * CSS comes live from its real sources, nothing copied: theme.json, the
+ * theme's style.css and per-block CSS (assets/styles), site-css snippets, and
+ * the CSS inside the PHP snippets listed below.
  * ========================================================================== */
 
 /* HELPERS ------------------------------------------------------------------ */
@@ -173,15 +173,15 @@ function shortcode_live_preview_iframe_overrides() {
 }
 
 // Assembled CSS for preview and canvas, cached; the key changes with any source.
-// $with_child_css: canvas inlines child style.css, the iframe <link>s it.
-function shortcode_live_preview_build_inline_css( $with_child_css = false, $for_iframe = false ) {
-    $child_css_path = get_stylesheet_directory() . '/style.css';
-    $child_mtime    = file_exists( $child_css_path ) ? filemtime( $child_css_path ) : 0;
+// $with_theme_css: canvas inlines the theme style.css, the iframe <link>s it.
+function shortcode_live_preview_build_inline_css( $with_theme_css = false, $for_iframe = false ) {
+    $theme_css_path = get_stylesheet_directory() . '/style.css';
+    $theme_mtime    = file_exists( $theme_css_path ) ? filemtime( $theme_css_path ) : 0;
 
     $snippet_css   = shortcode_live_preview_get_snippet_css();
     $php_style_css = shortcode_live_preview_get_php_snippet_styles();
 
-    $version = md5( $child_mtime . '|' . $with_child_css . '|' . $for_iframe . '|' . $snippet_css . '|' . $php_style_css );
+    $version = md5( $theme_mtime . '|' . $with_theme_css . '|' . $for_iframe . '|' . $snippet_css . '|' . $php_style_css );
     $cache_key = 'sc_live_preview_css_' . $version;
 
     $cached = get_transient( $cache_key );
@@ -190,9 +190,9 @@ function shortcode_live_preview_build_inline_css( $with_child_css = false, $for_
     }
 
     $theme_json_css = function_exists( 'wp_get_global_stylesheet' ) ? wp_get_global_stylesheet() : '';
-    $child_css      = ( $with_child_css && file_exists( $child_css_path ) ) ? file_get_contents( $child_css_path ) : '';
+    $theme_css      = ( $with_theme_css && file_exists( $theme_css_path ) ) ? file_get_contents( $theme_css_path ) : '';
 
-    $css = $theme_json_css . "\n" . $child_css . "\n" . $snippet_css . "\n" . $php_style_css
+    $css = $theme_json_css . "\n" . $theme_css . "\n" . $snippet_css . "\n" . $php_style_css
         . "\n" . shortcode_live_preview_editor_overrides()
         . ( $for_iframe ? "\n" . shortcode_live_preview_iframe_overrides() : '' );
 
@@ -205,17 +205,12 @@ function shortcode_live_preview_build_inline_css( $with_child_css = false, $for_
 function shortcode_live_preview_payload( $html ) {
     $links = [];
 
-    // Parent before child, as on the frontend.
-    $parent_css = get_template_directory_uri() . '/style.css';
-    $child_css  = get_stylesheet_directory_uri() . '/style.css';
-    if ( file_exists( get_template_directory() . '/style.css' ) ) {
-        $links[] = $parent_css;
-    }
+    // The theme's style.css, as on the frontend.
     if ( file_exists( get_stylesheet_directory() . '/style.css' ) ) {
-        $links[] = add_query_arg( 'ver', filemtime( get_stylesheet_directory() . '/style.css' ), $child_css );
+        $links[] = add_query_arg( 'ver', filemtime( get_stylesheet_directory() . '/style.css' ), get_stylesheet_directory_uri() . '/style.css' );
     }
 
-    // Ollie per-block CSS: the frontend loads it per block; the preview can't
+    // Theme per-block CSS: the frontend loads it per block; the preview can't
     // know which blocks a shortcode emits, so load all.
     $block_style_dir = get_template_directory() . '/assets/styles';
     $block_style_uri = get_template_directory_uri() . '/assets/styles';
