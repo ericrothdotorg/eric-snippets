@@ -7,13 +7,13 @@ My website code. Does stuff. I (mostly) know what it does. Ha!
 
 ---
 
-**Eric Theme:** [eric](eric)
+**Eric Theme:** [eric-theme](eric)
 
 The block theme (FSE) behind [ericroth.org](https://ericroth.org/). Its README explains how theme, snippets, Eric Slider and the Display Posts plugin fit together. Installable zip: [Releases](https://github.com/ericrothdotorg/website-lab/releases).
 
 **Code Snippets:** [snippets](snippets)
 
-Everything dynamic on the site: shortcodes, header bar, custom post types, quotes, stats and more.
+Everything dynamic on the site: Shortcodes, header bar, custom post types, quotes, stats and more.
 
 **Eric Slider:** [eric-slider](https://github.com/ericrothdotorg/eric-slider)
 
