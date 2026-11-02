@@ -32,9 +32,9 @@ Shortcodes in the templates and where they come from:
 
 This is the theme of one particular site, shared as it is. Use it, take it apart, borrow what you like.
 
-- **Theme only:** installs and runs, but the shortcodes above show as plain text and much of the look is missing.
-- **The full picture:** add the Display Posts plugin and the snippets, at least *Eric Companion PHP* and *CSS*, *Display Posts – Bill Erickson* and *CPTs & Taxonomies* (the custom post types the archive templates expect).
-- **Menu:** the header points to a navigation menu of this site. On yours, pick your own menu for the Navigation block in the Site Editor.
+- **Theme only:** Installs and runs, but the shortcodes above show as plain text and much of the look is missing.
+- **The full picture:** Add the Display Posts plugin and the snippets, at least *Eric Companion PHP* and *CSS*, *Display Posts – Bill Erickson* and *CPTs & Taxonomies* (the custom post types the archive templates expect).
+- **Menu:** The header points to a navigation menu of this site. On yours, pick your own menu for the Navigation block in the Site Editor.
 
 ---
 
