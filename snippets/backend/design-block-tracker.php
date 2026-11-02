@@ -1,13 +1,6 @@
 <?php
 // NOTE: When in mu-plugins, add: defined('ABSPATH') || exit;
 
-// ============================================================
-// THEME-COUPLING MARKERS (search these before/after a theme switch):
-//   THEME RELATED = hard coupling; breaks/orphans on switch — must fix.
-//   THEME REVIEW  = soft coupling; reads a theme-defined value, won't
-//                   break but the value shifts — verify.
-// ============================================================
-
 // =======================================
 // Add Admin Menu
 // =======================================
@@ -264,9 +257,6 @@ function render_design_block_tracker() {
         // Scan Content for Usage Data
         dbt_scan_posts_of_type('page', 'Page', $block_usage, $pattern_usage);
         dbt_scan_posts_of_type('post', 'Post', $block_usage, $pattern_usage);
-        // THEME REVIEW — scans wp_template / wp_template_part, core FSE post types. Present in any
-        // block theme (theme-agnostic across block themes); a classic (non-FSE) theme has no template
-        // parts, so these scans return nothing — verify relevance on switch.
         dbt_scan_posts_of_type('wp_template', 'Template', $block_usage, $pattern_usage);
         dbt_scan_posts_of_type('wp_template_part', 'Template Part', $block_usage, $pattern_usage);
         
