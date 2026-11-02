@@ -750,39 +750,6 @@
 					}
 				}
 			},
-			"core/quote": {
-				"elements": {
-					"cite": {
-						"typography": {
-							"fontSize": "var(--wp--preset--font-size--small)"
-						},
-						"color": {
-							"text": "var(--wp--preset--color--secondary)"
-						}
-					}
-				},
-				"css": "& :where(cite) { display: block }",
-				"border": {
-					"radius": "0",
-					"style": "solid",
-					"width": "0 0 0 5px !important",
-					"color": "var(--wp--preset--color--primary)"
-				},
-				"spacing": {
-					"padding": {
-						"left": "var(--wp--preset--spacing--large)",
-						"right": "var(--wp--preset--spacing--large)"
-					},
-					"margin": {
-						"left": "0"
-					}
-				},
-				"typography": {
-					"lineHeight": "var(--wp--custom--line-height--body)",
-					"fontSize": "var(--wp--preset--font-size--medium)",
-					"fontWeight": "500"
-				}
-			},
 			"core/search": {
 				"css": ".wp-block-search__button-inside .wp-block-search__inside-wrapper { border: none }"
 			},
@@ -814,11 +781,6 @@
 							"textDecoration": "none"
 						}
 					}
-				}
-			},
-			"core/table": {
-				"typography": {
-					"fontSize": "var(--wp--preset--font-size--small)"
 				}
 			},
 			"core/template-part": {
