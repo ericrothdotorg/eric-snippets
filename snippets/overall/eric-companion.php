@@ -394,8 +394,7 @@ add_filter( 'render_block', function( $block_content, $block ) {
 // 3. CRITICAL CSS + HEAD SCRIPTS
 // ======================================
 
-// Above-the-fold CSS (hero structure + fixed header) that must paint before
-// style.css loads, the dark-mode FOUC guard, and the per-term hero background.
+// Above-the-fold hero structure, the dark-mode FOUC guard, and the per-term hero background.
 
 add_action( 'wp_head', function() {
 	?>
@@ -414,17 +413,6 @@ add_action( 'wp_head', function() {
 			.er-hero-section.has-background-dim {min-height: 300px;}
 			.er-hero-inner {padding: 90px 0 30px;}
 		}
-
-		/* Header fixed positioning — must be critical to prevent layout shift */
-		.er-header {
-			position: fixed !important; top: 0 !important; left: 0 !important; right: 0 !important;
-			width: 100% !important; z-index: 999 !important; display: flex !important;
-			align-items: center !important; background: rgba(0, 0, 0, 0.65) !important;
-			backdrop-filter: blur(10px) !important; -webkit-backdrop-filter: blur(10px) !important;
-			transition: height 0.3s ease !important; height: 120px !important;
-		}
-		@media (max-width: 1050px) {.er-header {height: 90px !important;}}
-		.er-header.er-scrolled {height: 90px !important;}
 
 	</style>
 
