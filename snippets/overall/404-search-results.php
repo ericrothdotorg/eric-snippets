@@ -1,13 +1,6 @@
 <?php
 // NOTE: When in mu-plugins, add: defined('ABSPATH') || exit;
 
-// ============================================================
-// THEME-COUPLING MARKERS (search these before/after a theme switch):
-//   THEME RELATED = hard coupling; breaks/orphans on switch — must fix.
-//   THEME REVIEW  = soft coupling; reads a theme-defined value, won't
-//                   break but the value shifts — verify.
-// ============================================================
-
 // ======================================
 // HELPER: Render a private Page
 // ======================================
@@ -53,9 +46,6 @@ function er_render_private_page( $slug, $loop_html = '' ) {
     $wp_query->queried_object     = $page;
     $wp_query->queried_object_id  = $page->ID;
 
-    // THEME REVIEW — relies on the active theme being a block/FSE theme that serves the
-    // page template via get_page_template(). Core API (theme-agnostic across block themes);
-    // a classic (non-FSE) theme resolves templates differently — verify on switch.
     $template = get_page_template();
     if ( ! $template ) {
         $template = get_template_directory() . '/index.php';
