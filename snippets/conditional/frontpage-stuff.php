@@ -329,7 +329,7 @@ function er_fp_cover_children( $block, $instance ) {
 }
 
 /* ============================================================================
- * 3  STYLES — brand header and stat tiles. rotate3d keyframe: Ollie
+ * 3  STYLES — brand header and stat tiles. rotate3d keyframe: Eric
  *    Companion CSS.
  * ========================================================================== */
 
@@ -384,7 +384,7 @@ CSS;
  *    alone in a row (the editor's auto grid would go 4-3-2-1).
  *    Hover: same values as the counter discs: scale 1.05, background
  *    --color-6, 0.2 s. Whole-card click comes from the heading link +
- *    .is-clickable-card (Ollie Companion PHP 9f).
+ *    .is-clickable-card (Eric Companion PHP 9f).
  * ========================================================================== */
 
 add_action( 'wp_head', 'er_fp_portals_styles', 10 );
