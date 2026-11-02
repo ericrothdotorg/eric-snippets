@@ -41,21 +41,7 @@ strong {
 	font-weight: var(--wp--custom--font-weight--semi-bold);
 }
 
-ol,
-ul {
-	padding: 0;
-}
-
-ol:where(:not([class*="wp-block"])),
-ol:where(.wp-block-list),
-ul:where(:not([class*="wp-block"])),
-ul:where(.wp-block-list) {
-	padding-inline-start: var(--wp--preset--spacing--medium);
-}
-
 div[class*="wp-block-"] figcaption {
-	color: var(--wp--preset--color--secondary);
-	font-size: var(--wp--preset--font-size--x-small);
 	margin-bottom: 0;
 	margin-top: 20px;
 	text-align: center;
@@ -135,66 +121,11 @@ label {
 /* Helper styles
 ---------------------------------------------------------------------------- */
 
-a.more-link {
-	display: block;
-}
-
 /* Inline code */
 *:not(.wp-block-code) > code {
 	padding: 3px 5px;
 	position: relative;
 	border-radius: 3px;
-}
-
-.wp-block-categories {
-	position: relative;
-}
-
-/* Remove margin on term description on archive pages */
-.wp-block-term-description p:last-child {
-	margin-bottom: 0;
-}
-
-/* Hide an empty group directly before the comment form */
-.wp-block-group:empty:has(+ .comment-respond) {
-	display: none;
-}
-
-/* Sticky header */
-
-body:not(.wp-admin) header:has(>.is-position-sticky) {
-	position: sticky;
-	top: calc( 0px + var( --wp-admin--admin-bar--height, 0px ) );
-	z-index: 100;
-}
-
-/* Account for admin bar on mobile */
-
-@media (max-width: 600px) {
-	header:has(>.is-position-sticky) {
-		top: 0;
-	}
-}
-
-/* Partial sticky header: when one row inside the header is sticky, dissolve
-   the header wrappers so that row can stick on its own while rows above
-   scroll away. Wrapper styling won't render while dissolved. */
-
-body:not(.wp-admin) header.wp-block-template-part:has(> .wp-block-group > .is-position-sticky):not(:has(> .is-position-sticky)),
-body:not(.wp-admin) header.wp-block-template-part:has(> .wp-block-group > .is-position-sticky):not(:has(> .is-position-sticky)) > .wp-block-group {
-	display: contents;
-}
-
-/* Cancel alignfull negative margins — the dissolved wrapper's compensating
-   padding no longer renders. */
-
-body:not(.wp-admin) header.wp-block-template-part:has(> .wp-block-group > .is-position-sticky):not(:has(> .is-position-sticky)) > .wp-block-group > .alignfull {
-	margin-left: 0;
-	margin-right: 0;
-}
-
-body:not(.wp-admin) header.wp-block-template-part:has(> .wp-block-group > .is-position-sticky) .is-position-sticky {
-	z-index: 100;
 }
 
 /* ============================================================
@@ -343,7 +274,7 @@ html {text-size-adjust: 100%; scroll-behavior: smooth;}
 p {text-align: justify; hyphens: auto;}
 code {background: none !important; border: none; padding: 0;}
 
-/* ---- Overrides Part A's tiny figcaption size
+/* ---- Caption size + colour (Part A only sets margin + centring).
         Unified caption styling: Standard images + video embeds (YouTube / Vimeo) ---- */
 .wp-block-image figcaption.wp-element-caption,
 figure.wp-block-embed figcaption.wp-element-caption {
@@ -402,8 +333,7 @@ body.dark-mode .wp-block-group.has-border-color {border-color: var(--color-9);}
    Owns every reader-facing list regardless of wrapper: block lists,
    the Page List block, classic <ul>/<ol> in content, and the My
    Quotes component. Depends only on CORE WP block classes + the two
-   list dials in section 1 (Part A's ol,ul{padding:0} + selective
-   restore are not relied on). UI lists
+   list dials in section 1. UI lists
    (nav, breadcrumbs, tag cloud, filter tabs) are never matched: they set
    list-style:none and live in template parts outside content roots.
    EXCEPTION: .entry-meta (er_render_card's meta <ul>) DOES land inside
