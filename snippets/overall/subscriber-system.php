@@ -145,12 +145,11 @@ add_action( 'wp_footer', function () {
     <style>
         .er-subscribe-wrapper {max-width: 350px; overflow: visible;}
         .er-subscribe-wrapper .er-field {margin-bottom: 1em;}
-        .er-subscribe-wrapper label {display: block; margin-bottom: 0.5em;}
+        .er-subscribe-wrapper label {margin-bottom: 0.5em;}
         .er-subscribe-wrapper input[type="email"] {
             display: block; width: 100%; padding: 10px;
-            font-size: var(--er-fs-sm); box-sizing: border-box; border-radius: 5px;
+            font-size: var(--er-fs-sm);
         }
-        .er-subscribe-wrapper input[type="email"]:focus {outline: 1px solid var(--color-1); outline-offset: 2px;}
         .er-subscribe-wrapper button[type="submit"] {
             display: inline-flex; align-items: center; justify-content: center;
             width: auto; padding: 10px 20px;
