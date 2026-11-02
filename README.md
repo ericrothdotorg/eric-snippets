@@ -7,7 +7,7 @@ My website code. Does stuff. I (mostly) know what it does. Ha!
 
 ---
 
-**Eric Theme:** [eric-theme](eric)
+**Eric Theme:** [eric-theme](eric-theme)
 
 The block theme (FSE) behind [ericroth.org](https://ericroth.org/). Its README explains how theme, snippets, Eric Slider and the Display Posts plugin fit together. Installable zip: [Releases](https://github.com/ericrothdotorg/website-lab/releases).
 
