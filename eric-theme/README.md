@@ -14,7 +14,7 @@ The theme is one of four parts. On its own it gives the layout, the design token
 | Part | Where | What it brings |
 |---|---|---|
 | **Eric theme** | This folder | Templates, template parts, theme.json, style.css (Part A base, Part B site), per-block CSS in `assets/styles/`, the mobile-menu submenu fix |
-| **Code snippets** | [Snippets](../snippets) | The shortcodes the templates use, the fixed header bar, Eric Companion CSS, custom post types, quotes, stats and more. Run with [Code Snippets](https://wordpress.org/plugins/code-snippets/) |
+| **Code snippets** | [Snippets](../snippets) | The shortcodes the templates use, the fixed header bar, Eric Companion CSS, custom post types, quotes, stats and more. Run with [Code Snippets  ↗](https://wordpress.org/plugins/code-snippets/) |
 | **Eric Slider** | Standalone: [eric-slider](https://github.com/ericrothdotorg/eric-slider); on the site its files sit in the theme's `assets/eric-slider/` folder, already included in the release zip | Sliders and carousels (loaded by the snippet *Eric Slider & Animate*) |
 | **Display Posts** | [Plugin by Bill Erickson  ↗](https://github.com/billerickson/display-posts-shortcode) | The `[display-posts]` listings in the templates |
 
@@ -51,4 +51,4 @@ Don't use the green **Code → Download ZIP** button for this: it downloads the 
 
 ## License
 
-GPL v3 or later. Parts of the code, CSS and templates are derived from [Ollie](https://olliewp.com) by Mike McAlister (GPL v3 or later). Eric Slider: MIT.
+GPL v3 or later. Parts of the code, CSS and templates are derived from [Ollie  ↗](https://olliewp.com) by Mike McAlister (GPL v3 or later). Eric Slider: MIT.
