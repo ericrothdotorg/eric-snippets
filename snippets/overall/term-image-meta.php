@@ -132,4 +132,4 @@ add_action('admin_enqueue_scripts', function($hook) {
     ");
 });
 
-// Front-end hero/header injection lives in Child Theme Companion PHP (er_hero); this snippet only handles term-image meta + admin field.
+// Front-end hero/header injection lives in Eric Companion PHP (er_hero); this snippet only handles term-image meta + admin field.

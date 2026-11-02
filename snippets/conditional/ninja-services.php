@@ -200,7 +200,7 @@ add_action('wp_footer', function() {
         <script>
             (function() {
                 const initNinja = function() {
-                    const targetContainer = document.querySelector(".er-hero-section .er-hero-inner"); // the dark panel itself (rgba(0,0,0,.65) in child style.css); near-symmetric padding so top:50% centers cleanly
+                    const targetContainer = document.querySelector(".er-hero-section .er-hero-inner"); // the dark panel itself (rgba(0,0,0,.65) in the theme's style.css); near-symmetric padding so top:50% centers cleanly
                     if (targetContainer) {
                         const wrapper = document.createElement("div");
                         wrapper.className = "custom-ninja-wrapper";

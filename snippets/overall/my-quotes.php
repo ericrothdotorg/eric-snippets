@@ -214,7 +214,7 @@ function q_output_styles() {
     ?>
 	<style>
 		/* MY QUOTES feature only (CPT, [quote_text], [quotes_slider], single-quote pages).
-		   Generic quote/pullquote base lives in child style.css §6-7. */
+		   Generic quote/pullquote base lives in the theme's style.css, Part B §8-9. */
 		body.dark-mode .my-quote-slide-content {background: var(--color-10); border: 1px solid var(--color-4);}
 		.quote-text p, .quote-text ul, .quote-text li {font-size: var(--er-fs-body);}
 		/* Shortcode [quotes_slider]: Shared Layout → For both horizontal and vertical */
