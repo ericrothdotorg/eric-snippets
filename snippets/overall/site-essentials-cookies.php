@@ -1,13 +1,6 @@
 <?php
 // NOTE: When in mu-plugins, add: defined('ABSPATH') || exit;
 
-// ============================================================
-// THEME-COUPLING MARKERS (search these before/after a theme switch):
-//   THEME RELATED = hard coupling; breaks/orphans on switch — must fix.
-//   THEME REVIEW  = soft coupling; reads a theme-defined value, won't
-//                   break but the value shifts — verify.
-// ============================================================
-
 // ======================================
 // CONFIGURATION CONSTANTS
 // ======================================
@@ -79,16 +72,14 @@ add_filter('pre_ping', '__return_empty_array');
 // PERFORMANCE & ASSET LOADING
 // ======================================
 
-// Stamp filemtime on theme my-assets/ and code-snippets files so edits bust cache.
+// Stamp filemtime on theme assets/ and code-snippets files so edits bust cache.
 // Everything else keeps its own version string untouched.
-// THEME RELATED — '/themes/ollie-child/my-assets/' is the child theme's asset dir
-// (a FUNCTIONAL string, not a comment). On a theme switch the slug changes; update it
-// here or asset versioning silently misses the new theme's files.
+// Active theme's assets/ folder, resolved via get_stylesheet().
 add_filter('style_loader_src', 'er_version_assets', 10, 2);
 add_filter('script_loader_src', 'er_version_assets', 10, 2);
 function er_version_assets($src, $handle = '') {
     if (strpos($src, '/wp-content/code-snippets/') !== false
-        || strpos($src, '/themes/ollie-child/my-assets/') !== false) {
+        || strpos($src, '/themes/' . get_stylesheet() . '/assets/') !== false) {
         $path = WP_CONTENT_DIR . substr($src, strpos($src, '/wp-content') + strlen('/wp-content'));
         $path = strtok($path, '?');
         return file_exists($path) ? add_query_arg('ver', filemtime($path), $src) : $src;
@@ -232,7 +223,7 @@ add_action( 'wp_footer', 'fix_wp_lightbox_js' );
 // BREADCRUMBS
 // ======================================
 
-// er_breadcrumbs() lives in Ollie Companion PHP.
+// er_breadcrumbs() lives in Eric Companion PHP.
 // Defined there so it is available in all execution contexts
 // (frontend, admin-ajax.php, Gutenberg editor) — it is called by er_hero_shortcode()
 
@@ -240,7 +231,7 @@ add_action( 'wp_footer', 'fix_wp_lightbox_js' );
 // READING TIME
 // ======================================
 
-// er_reading_time() and its render_block hook live in Ollie Companion PHP.
+// er_reading_time() and its render_block hook live in Eric Companion PHP.
 // Defined there so the function is available in all execution contexts
 // (frontend, admin-ajax.php, Gutenberg editor) — it is called by er_render_card()
 // and er_load_more_handler() which run on admin-ajax.php, and by er_hero_shortcode().
