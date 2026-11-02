@@ -3,14 +3,14 @@
 
 // ============================================================
 // This emits all custom block markup, shortcodes,
-// critical head CSS, and front-end JS for the theme.
+// head scripts, and front-end JS for the theme.
 // 
 // CONTENTS
 // 
 //   1. SHARED HELPERS          taxonomy map, breadcrumbs, reading time
 //                              (defined first; called by hero, cards, footer)
 //   2. PERFORMANCE             featured-image eager + fetchpriority filter
-//   3. CRITICAL CSS + HEAD     above-the-fold CSS, dark-mode FOUC guard,
+//   3. HEAD SCRIPTS            dark-mode FOUC guard,
 //                              dynamic per-term hero background injection
 //   4. HERO                    [er_hero] context-aware hero block
 //   5. CPT ARCHIVE + FILTER    [er_cpt_archive] grid, filter pills, render-card,
@@ -28,7 +28,8 @@
 //     in any context (front end, admin-ajax, editor).
 //   - Hook registrations (add_action/add_shortcode) fire at runtime, so their
 //     order in this file does not affect execution; sections are grouped by topic.
-//   - CSS that isn't above-the-fold lives in style.css / the CSS snippet, NOT here.
+//   - Static CSS lives in style.css / the CSS snippet, NOT here (only per-page
+//     hero background URLs are printed inline).
 // ============================================================
 
 // ======================================
@@ -391,31 +392,13 @@ add_filter( 'render_block', function( $block_content, $block ) {
 }, 10, 2 );
 
 // ======================================
-// 3. CRITICAL CSS + HEAD SCRIPTS
+// 3. HEAD SCRIPTS
 // ======================================
 
-// Above-the-fold hero structure, the dark-mode FOUC guard, and the per-term hero background.
+// The dark-mode FOUC guard and the per-term hero background.
 
 add_action( 'wp_head', function() {
 	?>
-	<style>
-
-		/* Critical above-the-fold only — everything else is in style.css */
-
-		/* Hero structural */
-		:root {--hero-curve: 15vw;}
-		.er-hero-section {position: relative; min-height: 320px; display: flex; align-items: flex-end;}
-		.er-hero-section.has-background-dim {min-height: 480px;}
-		.er-hero-bg {position: absolute; inset: 0; background-size: cover !important; background-position: center center !important; border-bottom-right-radius: var(--hero-curve); overflow: hidden;}
-		.er-hero-inner {position: relative; z-index: 1; width: 100%; padding: 120px 0 40px;}
-		@media (max-width: 767px) {
-			.er-hero-section {min-height: 240px;}
-			.er-hero-section.has-background-dim {min-height: 300px;}
-			.er-hero-inner {padding: 90px 0 30px;}
-		}
-
-	</style>
-
 	<!-- Dark mode flash prevention — must run before body renders -->
 	<script>
 (function() {
@@ -494,14 +477,14 @@ add_action( 'wp_head', function() {
 
 <?php
 
-}, 5 ); // Load critical Styles in Head early
+}, 5 ); // Head scripts early
 
 // ======================================
 // 4. HERO
 // ======================================
 
 // [er_hero] — self-contained hero (div.er-hero-section), styled by er-hero-*
-// in the §3 critical CSS. Context-aware: taxonomy / singular / page / home / archive.
+// in the theme's style.css §11. Context-aware: taxonomy / singular / page / home / archive.
 
 function er_hero_shortcode() {
 	$output = '';
@@ -1205,7 +1188,7 @@ function er_post_footer_js() {
 // ======================================
 
 // Header-scroll/submenu-positioning JS and the mobile-overlay Socials/Support
-// injection. Bar styling itself is in §3 critical CSS; submenu CSS is in style.css.
+// injection. Bar and submenu CSS are in style.css §10.
 
 // ---- 8a. Header scroll + top-level submenu positioning (own wp_footer closure) ----
 // Adds .er-scrolled past 50px and opens top-level submenus flush with the header's
@@ -1317,7 +1300,7 @@ add_shortcode( 'er_socials_support', function ( $atts ) {
 
 // Deferred front-end JS: dark-mode toggle, card-reveal animation, infinite
 // scroll, and <details>-open persistence across filter clicks.
-// All non-critical CSS now lives in style.css / the CSS snippet — none here.
+// All CSS lives in style.css / the CSS snippet — none here.
 
 add_action( 'wp_footer', function() {
 	?>
