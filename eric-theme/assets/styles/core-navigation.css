@@ -1,11 +1,9 @@
 /* Drop nav */
 .wp-block-navigation__responsive-container:not(.is-menu-open) .wp-block-navigation__submenu-container {
 	border: none !important;
-	font-size: var(--wp--preset--font-size--small);
 	line-height: var(--wp--custom--line-height--snug);
 	min-width: 225px !important;
 	margin-left: calc(var(--wp--preset--spacing--medium) * -1);
-	padding: 0;
 	z-index: 20 !important;
 	border-radius: 5px;
 	box-shadow: var(--wp--preset--shadow--small-light);
@@ -53,11 +51,8 @@
 }
 
 .wp-block-navigation__responsive-container.is-menu-open .wp-block-navigation__responsive-container-content .has-child .wp-block-navigation__submenu-container {
-	border-radius: 0;
-	margin: 0;
 	padding: 5px 0 0 20px;
 	align-items: flex-start;
-	flex-direction: column;
 	gap: 5px;
 	width: 100%;
 }
@@ -95,8 +90,6 @@ body.rtl .wp-block-navigation__responsive-container.is-menu-open .wp-block-navig
 
 .wp-block-navigation__responsive-container.is-menu-open.has-modal-open .wp-block-navigation__container li:not(.wp-social-link) {
 	width: 100%;
-	padding: 0 0;
-	position: relative;
 }
 
 /* Mobile menu links */
@@ -114,7 +107,6 @@ body.rtl .wp-block-navigation__responsive-container.is-menu-open .wp-block-navig
 .wp-block-navigation__responsive-container.is-menu-open .wp-block-navigation__container .current-menu-item > .wp-block-navigation-item__content,
 .wp-block-navigation__responsive-container.is-menu-open .wp-block-navigation__container .wp-block-navigation-item:hover > .wp-block-navigation-item__content {
 	transition: .3s ease;
-	text-decoration: none;
 	background: color-mix(in srgb, currentColor, transparent 97%);
 	-webkit-tap-highlight-color: transparent;
 }
@@ -129,12 +121,6 @@ body.rtl .wp-block-navigation__responsive-container.is-menu-open .wp-block-navig
 .wp-block-navigation__responsive-container-open:has(svg) {
 	padding: 4px;
 	border-radius: 3px;
-	background: var(--wp--preset--color--tertiary);
-	color: var(--wp--preset--color--main);
-}
-
-/* Mobile menu close button */
-.wp-block-navigation__responsive-container-close:has(svg) {
 	background: var(--wp--preset--color--tertiary);
 	color: var(--wp--preset--color--main);
 }
