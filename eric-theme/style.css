@@ -531,9 +531,9 @@ body.dark-mode figure.wp-block-pullquote {background: var(--color-10); border: 1
    The mobile-overlay submenu behaviour (per-submenu open/close) is in
    functions.php §7, together with its CSS and JS.
    ------------------------------------------------------------
-   Bar styling (fixed, blur, rgba bg, height, scroll-shrink) is in
-   Eric Companion PHP critical CSS (.er-header). Submenu vertical POSITION is in
-   Eric Companion PHP JS. Submenu rules below are scoped like core-navigation.css
+   Bar styling (fixed, blur, rgba bg, height, scroll-shrink) is the first
+   block below; the .er-scrolled class and the submenu vertical POSITION come
+   from Eric Companion PHP JS. Submenu rules below are scoped like core-navigation.css
    (.wp-block-navigation__responsive-container:not(.is-menu-open)) and
    prefixed with .er-header so they reliably out-specify core + core-navigation.css.
    ------------------------------------------------------------
@@ -542,12 +542,22 @@ body.dark-mode figure.wp-block-pullquote {background: var(--color-10); border: 1
    there too.
    ============================================================ */
 
+/* ---- Bar: fixed, translucent, blurred. 120px; 90px when scrolled (.er-scrolled, Eric Companion PHP JS) or ≤1050px. ---- */
+.er-header {
+	position: fixed !important; top: 0 !important; left: 0 !important; right: 0 !important;
+	width: 100% !important; z-index: 999 !important; display: flex !important;
+	align-items: center !important; background: rgba(0, 0, 0, 0.65) !important;
+	backdrop-filter: blur(10px) !important; -webkit-backdrop-filter: blur(10px) !important;
+	transition: height 0.3s ease !important; height: 120px !important;
+}
+@media (max-width: 1050px) {.er-header {height: 90px !important;}}
+.er-header.er-scrolled {height: 90px !important;}
+
 /* ---- Inner row: align like the hero / any wide block (cap at wide-size, inset by root-padding gutter, NOT a hardcoded 2rem). ---- */
 .er-header-inner {
 	width: 100%;
 	max-width: var(--er-wide-row);
 	margin-inline: auto;
-	padding-inline: 0;
 	gap: 2rem;
 }
 .er-header-left,
@@ -611,15 +621,12 @@ body.dark-mode figure.wp-block-pullquote {background: var(--color-10); border: 1
    target. Hover anywhere on the item still opens the submenu (the hover
    listener is on the parent <li>), so the arrow needs no precise aiming. */
 .er-header .wp-block-navigation__container > .wp-block-navigation-item {
-	display: flex;
 	align-items: stretch;
 }
 .er-header .wp-block-navigation__container > .wp-block-navigation-item > .wp-block-navigation-item__content {
 	display: flex;
 	align-items: center;
 	height: 100%;
-	padding-top: 0;
-	padding-bottom: 0;
 }
 
 /* ---- Submenu panel (desktop dropdown) ---- */
@@ -645,9 +652,6 @@ body.dark-mode figure.wp-block-pullquote {background: var(--color-10); border: 1
 	background-color: transparent !important;
 }
 /* (c) Inset thin divider between links via ::before (skip first item = no line at panel top). */
-.er-header .wp-block-navigation__responsive-container:not(.is-menu-open) .wp-block-navigation__submenu-container > .wp-block-navigation-item {
-	position: relative;
-}
 .er-header .wp-block-navigation__responsive-container:not(.is-menu-open) .wp-block-navigation__submenu-container > .wp-block-navigation-item + .wp-block-navigation-item::before {
 	content: "";
 	position: absolute;
@@ -656,13 +660,6 @@ body.dark-mode figure.wp-block-pullquote {background: var(--color-10); border: 1
 	right: 1.25rem;
 	height: 1px;
 	background: rgba(255, 255, 255, 0.15);
-}
-/* (d) Links + arrows (high specificity to beat core's white-dropdown rule). */
-.er-header .wp-block-navigation__responsive-container:not(.is-menu-open) .wp-block-navigation__submenu-container a,
-.er-header .wp-block-navigation__responsive-container:not(.is-menu-open) .wp-block-navigation__submenu-container .wp-block-navigation-item__content,
-.er-header .wp-block-navigation__responsive-container:not(.is-menu-open) .wp-block-navigation__submenu-container .wp-block-navigation__submenu-icon {
-	color: var(--color-8);
-	fill: currentColor;
 }
 /* (e) Link padding. core-navigation.css pins dropdown links small/medium via :where() (0 specificity) + !important; we beat it with .er-header scope + !important. 1st value = vertical, 2nd = horizontal. */
 .er-header .wp-block-navigation__responsive-container:not(.is-menu-open) .wp-block-navigation__submenu-container a,
@@ -679,11 +676,6 @@ body.dark-mode figure.wp-block-pullquote {background: var(--color-10); border: 1
 /* (g) Keep submenu LABELS on one line (scoped to the label span so deeper descriptions still wrap). */
 .er-header .wp-block-navigation__submenu-container .wp-block-navigation-item__label {
 	white-space: nowrap;
-}
-/* (h) Chevrons: stroked SVG (fill:none) -> colour the STROKE white (top-level + nested). */
-.er-header .wp-block-navigation__submenu-icon svg,
-.er-header .wp-block-navigation-submenu__toggle svg {
-	stroke: var(--color-8);
 }
 /* (i) Hover bridge: invisible strip fills the gap between top-level link and panel so the mouse doesn't cross dead space. Top-level submenus only. */
 .er-header .wp-block-navigation__container > .wp-block-navigation-item > .wp-block-navigation__submenu-container::before {
@@ -713,11 +705,6 @@ body.dark-mode figure.wp-block-pullquote {background: var(--color-10); border: 1
 	background: var(--color-2);
 	color: var(--color-8);
 }
-.er-header-search svg {
-	width: 24px;
-	height: 24px;
-	fill: #ffffff; /* pinned (no var color): the button is an <a>, a:link's color (0-1-1) beats the class, so currentColor would resolve blue */
-}
 
 /* ---- Desktop / overlay breakpoint ----
    Nav is overlayMenu:"always" (hamburger at all widths) so we pick our OWN
@@ -731,14 +718,6 @@ body.dark-mode figure.wp-block-pullquote {background: var(--color-10); border: 1
 	.er-header .wp-block-navigation__responsive-container {
 		display: block !important;
 		position: static !important;
-		width: auto !important;
-		height: auto !important;
-		background-color: transparent !important;
-	}
-	.er-header .wp-block-navigation__responsive-container .wp-block-navigation__responsive-container-content {
-		display: flex !important;
-		position: static !important;
-		background-color: transparent !important;
 	}
 	/* hide the close button + the injected overlay pair on desktop */
 	.er-header .wp-block-navigation__responsive-container-close,
@@ -773,8 +752,6 @@ body.dark-mode figure.wp-block-pullquote {background: var(--color-10); border: 1
 	align-items: center;
 	gap: 0.55rem;
 	color: var(--color-1) !important;
-	font-weight: 700;
-	text-decoration: none;
 }
 .er-nav-overlay-extra img { display: block; width: 20px; height: 20px; }
 
@@ -784,7 +761,6 @@ body.dark-mode figure.wp-block-pullquote {background: var(--color-10); border: 1
 	height: 100vh;
 	height: 100dvh;
 	bottom: auto;
-	overflow-y: auto;
 	background-color: #0e1825 !important;
 }
 /* Some WP builds paint the modal bg on the inner content wrapper too. */
