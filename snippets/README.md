@@ -3,7 +3,7 @@
 
 Contains all site-specific code snippets and reusable functionality.
 
-**Tags:** wordpress, ollie-theme, website-lab, eric-slider
+**Tags:** wordpress, block-theme, website-lab, eric-slider
 
 ---
 

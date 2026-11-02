@@ -1,0 +1,18 @@
+/* Table
+--------------------------------------------- */
+
+.wp-block-table.is-style-stripes {
+	border-bottom: none;
+}
+
+.wp-block-table.is-style-stripes tbody tr:nth-child(odd) {
+	background-color: var(--wp--preset--color--tertiary);
+}
+
+.wp-block-table tfoot {
+	border-top: solid 1px var(--wp--preset--color--border-light);
+}
+
+.wp-block-table tfoot td {
+	border-bottom: none;
+}
