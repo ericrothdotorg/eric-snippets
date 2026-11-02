@@ -3,7 +3,7 @@
 
 // ===========================================================================
 // TOGGLE - MUTE | UNMUTE (Text-to-Speech)
-// Markup for the toggle itself lives in the child theme: parts / footer.html
+// Markup for the toggle itself lives in the theme: parts/footer.html
 // ===========================================================================
 
 // =================================
@@ -293,7 +293,7 @@ add_action('wp_footer', function () {
 		// --- Text extraction ------------------------------------------
 
 		// Text-carrying elements. The last few are div/span based containers used
-		// by Display Posts and the Ollie templates — without them, card titles
+		// by Display Posts and the theme templates — without them, card titles
 		// are silently skipped.
 		var BLOCK_SEL = 'h1,h2,h3,h4,h5,h6,p,li,blockquote,figcaption,dt,dd,td,th,summary,' +
 			'.tts-cue,.listing-item,.title,.excerpt,.page-description';
