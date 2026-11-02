@@ -65,11 +65,8 @@ add_action( 'wp_footer', function () {
             width: 100%;
             padding: 10px 20px;
             margin-bottom: 2em;
-            border-radius: 5px;
             font-size: var(--er-fs-sm);
 			line-height: 1;
-            background: var(--color-8);
-            box-sizing: border-box;
         }
         .formsubmit-wrapper button[type="submit"] {
             background-color: var(--color-1);
