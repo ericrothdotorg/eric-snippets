@@ -1,13 +1,6 @@
 <?php
 // NOTE: When in mu-plugins, add: defined('ABSPATH') || exit;
 
-// ============================================================
-// THEME-COUPLING MARKERS (search these before/after a theme switch):
-//   THEME RELATED = hard coupling; breaks/orphans on switch — must fix.
-//   THEME REVIEW  = soft coupling; reads a theme-defined value, won't
-//                   break but the value shifts — verify.
-// ============================================================
-
 // =======================================
 // META BOX: LINKED CONTENT
 // =======================================
