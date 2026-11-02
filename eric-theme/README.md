@@ -1,7 +1,7 @@
 # Eric Theme
 **Contributors:** [ericrothdotorg](https://github.com/ericrothdotorg)
 
-The block theme (FSE) behind [ericroth.org](https://ericroth.org/): templates, template parts, theme.json, base and site CSS.
+The block theme (FSE) behind [ericroth.org](https://ericroth.org/): Templates, template parts, theme.json, base and site CSS.
 
 **Tags:** wordpress, block-theme, fse, website-lab, eric-slider
 
