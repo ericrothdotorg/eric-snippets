@@ -152,7 +152,7 @@ label {
     8. QUOTE            green Georgia box (lifted from My Quotes #23; was quote-page-only)
     9. PULLQUOTE        green Georgia (overrides theme.json's forced border/padding)
     10. HEADER          bar inner row, nav (desktop + mobile overlay), submenus, search
-    11. HERO            fluid hero box + inner (overrides #7's wp_head critical values)
+    11. HERO            structure, fluid hero box + inner
     12. SIDEBAR         sticky 25% sidebar column
    ------------------------------------------------------------
    CONVENTIONS
@@ -783,8 +783,18 @@ body.dark-mode figure.wp-block-pullquote {background: var(--color-10); border: 1
    gaps are equal by construction and fluid. The bar overlaps the hero, so
    the top padding also includes the bar height as clearance. The box can
    never overflow because the hero always sizes to contain box + gaps.
-   These override Eric Companion PHP wp_head critical values.
+   Markup: [er_hero] in Eric Companion PHP.
    ============================================================ */
+
+/* ---- Structure (every hero, with or without image). Image heroes refine it below. ---- */
+:root {--hero-curve: 15vw;}
+.er-hero-section {position: relative; min-height: 320px; display: flex; align-items: flex-end;}
+.er-hero-bg {position: absolute; inset: 0; background-size: cover !important; background-position: center center !important; border-bottom-right-radius: var(--hero-curve); overflow: hidden;}
+.er-hero-inner {position: relative; z-index: 1; width: 100%; padding: 120px 0 40px;}
+@media (max-width: 767px) {
+	.er-hero-section {min-height: 240px;}
+	.er-hero-inner {padding: 90px 0 30px;}
+}
 
 /* ---- Hero text over the dimmed image (black box) ---- */
 .er-hero-section.has-background-dim .page-title,
@@ -812,7 +822,6 @@ body.dark-mode figure.wp-block-pullquote {background: var(--color-10); border: 1
 	min-height: clamp(180px, 25vw, 240px);          /* minimum height if content is very short; padding normally sets the height */
 	padding-top: calc(var(--hero-bar) + var(--hero-gap));
 	padding-bottom: calc(1.1 * var(--hero-gap));    /* larger bottom gap */
-	box-sizing: border-box;
 }
 
 /* ---- Hero inner: cap to wide-size and centre (matches a WIDE block). ---- */
@@ -822,14 +831,11 @@ body.dark-mode figure.wp-block-pullquote {background: var(--color-10); border: 1
 	padding-inline: var(--wp--preset--spacing--medium);
 }
 .er-hero-section.has-background-dim .er-hero-inner {
-	/* Cap at wide-size, inset by the gutter only when narrower; centred so the edge lines up with body content. */
-	box-sizing: border-box;
-	width: 100%;
+	/* Cap at wide-size, inset by the gutter only when narrower; centred (margin-inline: auto above) so the edge lines up with body content. */
 	max-width: min(
 		var(--wp--style--global--wide-size),
 		calc(100% - 2 * var(--hero-x))
 	);
-	margin-inline: auto;
 	padding: clamp(1rem, 2.5vw, 1.4rem) clamp(1.1rem, 3vw, 1.5rem);
 	background: rgba(0, 0, 0, 0.65);
 	border-radius: 8px;
