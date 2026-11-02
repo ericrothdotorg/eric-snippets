@@ -1,13 +1,6 @@
 <?php
 // NOTE: When in mu-plugins, add: defined('ABSPATH') || exit;
 
-// ============================================================
-// THEME-COUPLING MARKERS (search these before/after a theme switch):
-//   THEME RELATED = hard coupling; breaks/orphans on switch — must fix.
-//   THEME REVIEW  = soft coupling; reads a theme-defined value, won't
-//                   break but the value shifts — verify.
-// ============================================================
-
 // ======================================
 // SHARED HELPERS
 // ======================================
@@ -54,7 +47,7 @@ function custom_filter_dashboard_glance_items($items) {
 }
 
 // ======================================
-// 🎨 THEME SNAPSHOT - THEME RELATED
+// 🎨 THEME SNAPSHOT
 // ======================================
 
 function custom_render_theme_snapshot_widget() {
@@ -67,11 +60,10 @@ function custom_render_theme_snapshot_widget() {
 		esc_html($theme->get('Version')),
 		$updated
 	);
-	// THEME RELATED — hardcoded parent-theme changelog URL (olliewp.com).
-	// Points to the current theme's docs; update or remove on a theme switch.
+	// Changelog = the active theme's own readme.txt (== Changelog == section).
 	custom_render_button_row([
 		'Site Editor'    => admin_url('site-editor.php'),
-		'View Changelog' => 'https://olliewp.com/docs/ollie-block-theme/ollie-changelog/',
+		'View Changelog' => get_stylesheet_directory_uri() . '/readme.txt',
 	]);
 }
 
@@ -1194,7 +1186,7 @@ add_action('wp_dashboard_setup', function () {
 	}
 
 	// Register all Widgets
-	wp_add_dashboard_widget('custom_theme_snapshot',       '🎨 Theme Snapshot',        'custom_render_theme_snapshot_widget'); // THEME RELATED
+	wp_add_dashboard_widget('custom_theme_snapshot',       '🎨 Theme Snapshot',        'custom_render_theme_snapshot_widget');
 	wp_add_dashboard_widget('custom_editing_rules',        '📌 Editing Rules',         'custom_render_editing_rules_widget');
 	wp_add_dashboard_widget('hosting_code_repo',           '🌀 Hosting & Code Repos',  'custom_render_hosting_repo_widget');
 	wp_add_dashboard_widget('quick_links',                 '🔗 Quick Links',           'custom_render_quick_links_widget');
