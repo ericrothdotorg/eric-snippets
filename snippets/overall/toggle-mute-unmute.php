@@ -51,6 +51,9 @@ add_action('wp_head', function () {
 		height: 1px;
 		overflow: hidden;
 	}
+	/* A cue in front of a container's first block must not cost that block its
+	   "first child, no top margin" status (up to three cues: slideshow, related, video) */
+	.tts-cue:first-child + *, .tts-cue:first-child + .tts-cue + *, .tts-cue:first-child + .tts-cue + .tts-cue + * {margin-block-start: 0;}
 
 	/* TTS Controls (Play, Pause, Stop) */
 	#tts-controls {
@@ -143,7 +146,6 @@ add_action('wp_footer', function () {
 		var MAX_CHUNK = 180; // Chromium drops utterances after ~15s, so speak in small pieces
 
 		var state = {
-			cuesInserted: false,
 			session: 0,        // invalidates callbacks of a cancelled run
 			queue: [],
 			index: 0,
@@ -152,7 +154,9 @@ add_action('wp_footer', function () {
 			watchdog: null,
 			autoTimer: null,
 			marks: [],         // where each slideshow slide starts in the text
-			lastSync: null     // slide currently shown, to avoid redundant clicks
+			lastSync: null,    // slide currently shown, to avoid redundant clicks
+			blocks: null,      // translated page: live blocks still to be read
+			waiting: false     // translated page: waiting for Google to translate a block
 		};
 
 		// --- Safe localStorage ---------------------------------------
@@ -212,6 +216,12 @@ add_action('wp_footer', function () {
 			return candidates[0];
 		}
 
+		// Translated by Google (same cookie the Google Translate snippet reads)
+		function isTranslated() {
+			var m = document.cookie.match(/(?:^|; )googtrans=([^;]*)/);
+			return !!m && m[1] !== '/en/en';
+		}
+
 		function targetLang() {
 			var raw = store.get('preferredLang') || 'en';
 			return LANG_MAP[raw] || LANG_MAP[raw.split('-')[0]] || 'en-US';
@@ -248,6 +258,7 @@ add_action('wp_footer', function () {
 				var cue = document.createElement('div');
 				cue.className = 'tts-cue';
 				cue.setAttribute('data-cue-key', key);
+				cue.setAttribute('aria-hidden', 'true'); // for the TTS voice only, screen readers skip it
 				cue.textContent = text;
 				anchor.parentNode.insertBefore(cue, anchor);
 			});
@@ -272,19 +283,14 @@ add_action('wp_footer', function () {
 			.map(function (sel) { return sel + ':not(.er-related-posts)'; })
 			.join(',');
 
-		// Idempotent, so re-running catches dynamically added content
-		// without needing a permanent MutationObserver on <body>.
+		// In the page from load on, so Google Translate translates the cues together
+		// with the page (it skips nodes added after it has translated).
+		// Idempotent, so re-running on enable catches content added since load.
 		// Delete a line here to drop that announcement entirely.
 		function insertCues() {
 			addCue(SLIDESHOW_SEL, 'slideshow', 'A slideshow follows here.');
 			addCue('.er-related-posts', 'related', 'Related posts follow here.');
 			addCue('.wp-block-embed-youtube', 'video', 'A video follows here.');
-			state.cuesInserted = true;
-		}
-
-		function cleanupCues() {
-			document.querySelectorAll('.tts-cue').forEach(function (cue) { cue.remove(); });
-			state.cuesInserted = false;
 		}
 
 		// --- Text extraction ------------------------------------------
@@ -328,6 +334,7 @@ add_action('wp_footer', function () {
 		function collectText(clone) {
 			// Read block by block so sentences do not run into each other
 			var parts = [];
+			var blocks = [];     // data-tts-b of each part, to find the live block again
 			var marks = [];      // { offset, slider, index } for slideshow sync
 			var spoken = 0;      // characters queued so far
 
@@ -353,6 +360,7 @@ add_action('wp_footer', function () {
 
 				var sentence = /[.!?\u2026:;]$/.test(t) ? t : t + '.';
 				parts.push(sentence);
+				blocks.push(el.getAttribute('data-tts-b'));
 				spoken += sentence.length + 1;
 			});
 
@@ -360,7 +368,7 @@ add_action('wp_footer', function () {
 			if (text.length < 10) {
 				text = (clone.textContent || '').replace(/\s+/g, ' ').trim();
 			}
-			return { text: text, marks: marks };
+			return { text: text, marks: marks, blocks: blocks };
 		}
 
 		function getReadableText() {
@@ -371,8 +379,13 @@ add_action('wp_footer', function () {
 			document.querySelectorAll(SLIDESHOW_MULTI).forEach(function (s, i) {
 				s.setAttribute('data-tts-slider', String(i));
 			});
+			// ...and every block, so a translated page can be read from the live page
+			var live = main.querySelectorAll(BLOCK_SEL);
+			Array.prototype.forEach.call(live, function (el, i) { el.setAttribute('data-tts-b', String(i)); });
 
-			return collectText(pruneClone(main.cloneNode(true)));
+			var page = collectText(pruneClone(main.cloneNode(true)));
+			page.blocks = page.blocks.map(function (i) { return live[i]; });
+			return page;
 		}
 
 		// Text of one accordion, without its heading (that was read already)
@@ -456,17 +469,19 @@ add_action('wp_footer', function () {
 				if (state.marks[i].offset <= offset) mark = state.marks[i];
 				else break;
 			}
-			if (!mark) return;
+			if (mark) moveSlider(mark.slider, mark.index);
+		}
 
-			var key = mark.slider + ':' + mark.index;
+		function moveSlider(slider, index) {
+			var key = slider + ':' + index;
 			if (state.lastSync === key) return;
 			state.lastSync = key;
 
-			var host = document.querySelector('[data-tts-slider="' + mark.slider + '"]');
+			var host = document.querySelector('[data-tts-slider="' + slider + '"]');
 			if (!host) return;
 			var dots = host.querySelectorAll('.eric-slider-dots button');
 			if (!dots.length) return; // no dots, no way to steer it — leave it alone
-			var target = dots[Math.min(mark.index, dots.length - 1)];
+			var target = dots[Math.min(index, dots.length - 1)];
 			if (target) target.click();
 		}
 
@@ -485,6 +500,7 @@ add_action('wp_footer', function () {
 			if (session !== state.session) return;
 
 			if (state.index >= state.queue.length) {
+				if (state.blocks && state.blocks.length) { nextBlock(session, voice, lang); return; }
 				status('Text-to-speech finished.');
 				store.remove('ttsPlaying');
 				clearInterval(state.watchdog);
@@ -514,6 +530,50 @@ add_action('wp_footer', function () {
 			synth.speak(u);
 		}
 
+		// Translated page: Google only translates what is on screen or close to it.
+		// So each block is scrolled into view when reading reaches it, and read
+		// once Google has translated that part (or after 5 s, whatever is there).
+		function nextBlock(session, voice, lang) {
+			var el = state.blocks.shift();
+			var slide = el.closest('.eric-slider-slide');
+			var host = slide && slide.closest('[data-tts-slider]');
+			if (host) moveSlider(host.getAttribute('data-tts-slider'), parseInt(slide.getAttribute('data-index'), 10) || 0);
+
+			var r = el.getBoundingClientRect();
+			var scrolled = r.top < 0 || r.bottom > window.innerHeight;
+			if (scrolled) {
+				var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+				// scrollTo, not scrollIntoView: that would also shift the slider tracks
+				window.scrollTo({ top: r.top + window.scrollY - window.innerHeight / 3, behavior: reduce ? 'auto' : 'smooth' });
+			}
+
+			// Google wraps what it translated in <font>. Done when this block or the next
+			// one has it, or when Google's batch for the scrolled-to area has landed
+			// (a block of names or numbers may get no <font> of its own).
+			var fonts = document.getElementsByTagName('font');
+			var before = fonts.length, count = before;
+			var t0 = Date.now(), changed = t0;
+			state.waiting = true;
+			(function wait() {
+				if (session !== state.session) return;
+				var now = Date.now();
+				if (fonts.length !== count) { count = fonts.length; changed = now; }
+				var ready = /translated-/.test(document.documentElement.className) &&
+					(!scrolled || el.querySelector('font') || (state.blocks[0] && state.blocks[0].querySelector('font')) ||
+					 (count > before && now - changed > 300));
+				if (!ready && now - t0 < 5000) { setTimeout(wait, 100); return; }
+				state.waiting = false;
+
+				var t = (pruneClone(el.cloneNode(true)).textContent || '').replace(/\s+/g, ' ').trim();
+				if (t) {
+					if (!/[.!?\u2026:;]$/.test(t)) t += '.';
+					chunkText(t, MAX_CHUNK).forEach(function (c) { state.queue.push({ text: c.text, offset: null }); });
+				}
+				startWatchdog(); // it stops itself whenever nothing is speaking, e.g. while waiting
+				speakNext(session, voice, lang);
+			})();
+		}
+
 		function start(isAutoResume) {
 			var page = getReadableText();
 			if (page.text.length < 10) { status('No readable content found.'); return; }
@@ -524,8 +584,10 @@ add_action('wp_footer', function () {
 				var voice = pickVoice(lang);
 
 				state.session++;
-				state.queue = buildQueue(page.text, page.marks, MAX_CHUNK);
-				state.marks = page.marks;
+				var translated = isTranslated();
+				state.queue = translated ? [] : buildQueue(page.text, page.marks, MAX_CHUNK);
+				state.marks = translated ? [] : page.marks;
+				state.blocks = translated ? page.blocks : null;
 				state.index = 0;
 				state.paused = false;
 				state.lastSync = null;
@@ -540,7 +602,7 @@ add_action('wp_footer', function () {
 				if (isAutoResume) {
 					clearTimeout(state.autoTimer);
 					state.autoTimer = setTimeout(function () {
-						if (!synth.speaking && !synth.pending) {
+						if (!synth.speaking && !synth.pending && !state.waiting) {
 							store.remove('ttsPlaying');
 							status('Press play to continue reading.');
 						}
@@ -573,11 +635,12 @@ add_action('wp_footer', function () {
 			state.session++;
 			state.queue = [];
 			state.index = 0;
+			state.blocks = null;
+			state.waiting = false;
 			state.paused = false;
 			clearInterval(state.watchdog);
 			clearTimeout(state.autoTimer);
 			synth.cancel();
-			cleanupCues();
 			state.lastSync = null;
 			store.remove('ttsPlaying');
 		}
@@ -591,7 +654,7 @@ add_action('wp_footer', function () {
 
 			if (on) {
 				store.set('ttsEnabled', 'true');
-				if (!state.cuesInserted) insertCues();
+				insertCues();
 				status('Text-to-speech enabled.');
 			} else {
 				store.remove('ttsEnabled');
@@ -630,7 +693,6 @@ add_action('wp_footer', function () {
 			els.play.addEventListener('click', function () {
 				if (synth.paused) { resume(); }
 				else if (!synth.speaking) {
-					if (!state.cuesInserted) insertCues();
 					start(false);
 				}
 			});
@@ -671,11 +733,12 @@ add_action('wp_footer', function () {
 
 		// --- Restore previous state --------------------------------------
 
+		insertCues();
+
 		if (store.get('ttsEnabled')) {
 			els.toggle.checked = true;
 			els.toggle.setAttribute('aria-checked', 'true');
 			if (els.controls) els.controls.classList.add('show');
-			insertCues();
 
 			if (store.get('ttsPlaying')) {
 				setTimeout(function () { start(true); }, 300);
