@@ -168,8 +168,8 @@ label {
 
 /* ---- Brand palette (each colour carries a light meaning and, where noted, a dark one) ---- */
 :root {
-	--color-1:  #1e73be; /* Link, Button, Focus Outline, Toggle Accent */
-	--color-2:  #c53030; /* Hover State for Link & Button */
+	--color-1:  #1e73be; /* Link on light BG, Button, Focus Outline, Border Accent - 4.5:1 on --color-7 */
+	--color-2:  #c53030; /* Hover for Link on light BG + Button, Active Filter Tab, Scroll Bar, Error Text - 4.5:1 on --color-7 */
 	--color-3:  #3a4f66; /* LIGHT Mode Body Text, DARK Mode Element Border I */
 	--color-4:  #192a3d; /* LIGHT Mode Headings, DARK Mode Element Border II */
 	--color-5:  #e1e8ed; /* LIGHT Mode Separator & Border, DARK Mode Body Text */
@@ -178,7 +178,13 @@ label {
 	--color-8:  #ffffff; /* LIGHT Mode Element Background, Button Text, Form Field */
 	--color-9:  #8da6b9; /* Design Block Border, Eric Slider Arrow & Active Dot, Tag & Dropdown Separator */
 	--color-10: #0e1825; /* DARK Mode Element-, Box- and Card Background */
-	--color-11: #2283d8; /* Link on dark Backgrounds (Footer, Cookie Notice) - 4.5:1 on --color-10 */
+	--color-11: #2283d8; /* Link on dark BG (Dark Mode, Footer, Cookie Notice, Hero, Header) - 4.5:1 on --color-10 */
+	--color-12: #d65656; /* Hover for Link on dark BG (same contexts as --color-11) - 4.5:1 on --color-10 */
+
+	/* Link colour pair: light by default, switched to the dark pair in dark contexts (section 3).
+	   Use for link-like TEXT only; buttons with white text stay on --color-1 / --color-2. */
+	--er-link:       var(--color-1);
+	--er-link-hover: var(--color-2);
 
 	/* Accessibility focus ring */
 	--a11y-focus-color:  var(--color-1);
@@ -247,10 +253,16 @@ body.dark-mode :is(h1, h2, h3, h4, h5, h6) {
    3. BASE
    ============================================================ */
 
-/* ---- Links ---- */
-a:where(:link) {font-weight: bold; color: var(--color-1);}
-a:where(:link:hover) {color: var(--color-2);}
-footer.wp-block-template-part, #cookie-notice {--color-1: var(--color-11);} /* links on dark backgrounds */
+/* ---- Links ----
+   Dark contexts switch the link pair to --color-11 / --color-12 (4.5:1 on dark backgrounds).
+   :where() keeps everything at 0-0-1, so link colours set on a block in the editor still win;
+   :visited is included so visited links keep the context colour. */
+:where(body.dark-mode, footer.wp-block-template-part, #cookie-notice, .er-hero-section.has-background-dim, .er-header) {
+	--er-link: var(--color-11);
+	--er-link-hover: var(--color-12);
+}
+a:where(:link, :visited) {font-weight: bold; color: var(--er-link);}
+a:where(:link:hover, :visited:hover) {color: var(--er-link-hover);}
 a:focus {outline: var(--a11y-focus-width) solid var(--a11y-focus-color); outline-offset: var(--a11y-focus-offset);}
 a:focus:not(:focus-visible) {outline: none;}
 
@@ -316,7 +328,6 @@ body.dark-mode .wp-block-group.has-border-color {border-color: var(--color-9);}
 /* ---- Page links (paginated posts) ---- */
 .page-links {padding-bottom: 50px;}
 .page-links a, .page-links .current, .page-links .post-pages-label {border: none; font-size: var(--er-fs-xs);}
-.page-links a {color: var(--color-1);}
 .page-links a:hover {box-shadow: 0 0 0 1px var(--color-1);}
 .page-links a:focus {outline: var(--a11y-focus-width) solid var(--a11y-focus-color); outline-offset: var(--a11y-focus-offset);}
 .page-links a:focus:not(:focus-visible) {outline: none;}
@@ -751,7 +762,7 @@ body.dark-mode figure.wp-block-pullquote {background: var(--color-10); border: 1
 	display: inline-flex;
 	align-items: center;
 	gap: 0.55rem;
-	color: var(--color-1) !important;
+	color: var(--er-link) !important;
 }
 .er-nav-overlay-extra img { display: block; width: 20px; height: 20px; }
 
