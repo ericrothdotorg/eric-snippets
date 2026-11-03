@@ -1,6 +1,4 @@
 <?php
-// NOTE: When in mu-plugins, add: defined('ABSPATH') || exit;
-
 // ======================================
 // CONFIGURATION CONSTANTS
 // ======================================
@@ -189,15 +187,18 @@ add_action('wp_enqueue_scripts', function () {
     }
 });
 
-// Preconnect to external Services
+// DNS lookup for Clarity ahead of its first-interaction start.
+// No preconnect: Clarity loads only after the first interaction, and its script
+// (no crossorigin) could not reuse a crossorigin preconnect anyway.
 add_action('wp_head', function () {
-    echo '<link rel="dns-prefetch" href="https://secure.gravatar.com">' . "\n";
     echo '<link rel="dns-prefetch" href="https://www.clarity.ms">' . "\n";
-    echo '<link rel="preconnect" href="https://www.clarity.ms" crossorigin>' . "\n";
 }, 10);
 
 // Lightbox Fix for Image Enlargement
+// Only on pages with a lightbox image: core hooks its overlay into wp_footer
+// exactly when such an image was rendered.
 function fix_wp_lightbox_js() {
+    if (!has_action('wp_footer', 'block_core_image_print_lightbox_overlay')) return;
     echo '<script>
     document.addEventListener("click", function() {
         setTimeout(function() {
@@ -623,10 +624,9 @@ add_action('wp_footer', function () {
 		#cookie-close {position: absolute; top: -20px; right: -20px; background: transparent !important; border: none !important; color: var(--color-3); font-size: 1.5rem; line-height: 1; cursor: pointer; padding: 0 !important; margin: 0 !important;} /* SVG x Icon inherits this Color */
 		#cookie-notice button:not(#cookie-close) {position: relative; font-weight: var(--er-fw-normal); color: var(--color-8); background: var(--color-4); border-radius: 5px; padding: 8px; margin-top: 15px; width: 48%; cursor: pointer; border: none; margin-left: 2%; display: inline-block; overflow: hidden;}
 		#cookie-notice button:not(#cookie-close):first-child {margin-left: 0;}
-		#cookie-accept, #cookie-reject {background: var(--color-4);}
 		#cookie-accept:hover, #cookie-reject:hover {background: var(--color-3) !important;}
 		#cookie-notice button:focus-visible {outline: 2px solid var(--color-3); outline-offset: 0px;}
-		@media (max-width: 480px) {#cookie-notice {max-width: 100%; bottom: 0; left: 0; border-radius: 0;} #cookie-notice button:not(#cookie-close) {width: 48%; font-size: 14px; padding: 8px 5px;}}
+		@media (max-width: 480px) {#cookie-notice {max-width: 100%; bottom: 0; left: 0; border-radius: 0;} #cookie-notice button:not(#cookie-close) {font-size: 14px; padding: 8px 5px;}}
 	</style>
 
 	<script>
@@ -638,68 +638,12 @@ add_action('wp_footer', function () {
 		}
 	</script>
 
-	<!-- Cookie Consent Logic -->
-
-	<script>
-		// Cookie Helper Functions (defined outside DOMContentLoaded)
-		(function() {
-			window.setCookie = function(value) {
-				const isSecure = location.protocol === 'https:';
-				const cookie = 'cookieaccepted=' + value + '; max-age=<?php echo defined("COOKIE_MAX_AGE") ? COOKIE_MAX_AGE : 31536000; ?>; path=/; SameSite=Lax' + (isSecure ? '; Secure' : '');
-				document.cookie = cookie;
-			};
-			window.hideCookieBanner = function() {
-				const notice = document.getElementById("cookie-notice");
-				if (notice) {
-					notice.style.visibility = "hidden";
-					notice.setAttribute("aria-hidden", "true");
-				}
-			};
-		})();
-	</script>
-
 	<!-- Scroll Progress Indicator -->
 
 	<style>
 		.scroll-indicator-bar {will-change: width; width: 0%; position: fixed; bottom: 0; height: 5px; background: var(--color-2); z-index: 5000}
 	</style>
 
-	<script>
-		(function() {
-			let ticking = false;
-			let lastPercentage = -1; // Track last Value to avoid unnecessary Updates
-			function updateScroll() {
-				// Read ALL Layout Properties ONCE per Frame
-				const scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
-				const scrollHeight = document.documentElement.scrollHeight;
-				const clientHeight = document.documentElement.clientHeight;
-				const height = scrollHeight - clientHeight;
-				const percentage = height > 0 ? Math.round((scrollTop / height) * 100) : 0;
-				const indicator = document.getElementById("my_scroll_indicator");
-				const container = indicator?.parentElement;
-				// Only update if Percentage actually changed
-				if (indicator && percentage !== lastPercentage) {
-					indicator.style.width = percentage + "%";
-					lastPercentage = percentage;
-				}
-				if (container) {
-					container.setAttribute("aria-valuenow", percentage);
-				}
-				// Back to Top Button: reuse the scrollTop already read this frame (no second scroll listener)
-				const backToTop = document.querySelector(".er-back-to-top");
-				if (backToTop) {
-					backToTop.classList.toggle("er-show", scrollTop > 500);
-				}
-				ticking = false;
-			}
-			window.addEventListener("scroll", () => {
-				if (!ticking) {
-					requestAnimationFrame(updateScroll);
-					ticking = true;
-				}
-			}, { passive: true });
-		})();
-	</script>
 
 	<div class="scroll-indicator-container" role="progressbar" aria-label="Page scroll progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
 		<div class="scroll-indicator-bar" id="my_scroll_indicator"></div>
@@ -722,66 +666,75 @@ add_action('wp_footer', function () {
 		.er-back-to-top svg {display: block; fill: var(--color-8);} /* fill pinned directly: the button is an <a>, so currentColor would inherit the theme's link/hover colors */
 	</style>
 
+	<script>
+		// Scroll Indicator + Back to Top visibility: one rAF-throttled scroll listener.
+		// Runs after both elements exist; the first frame sets the state for pages
+		// that load already scrolled (anchor links, back-navigation).
+		(function() {
+			const indicator = document.getElementById("my_scroll_indicator");
+			const container = indicator.parentElement;
+			const backToTop = document.querySelector(".er-back-to-top");
+			let ticking = false;
+			let lastPercentage = -1; // Track last Value to avoid unnecessary Updates
+			function updateScroll() {
+				// Read ALL Layout Properties ONCE per Frame
+				const root = document.documentElement;
+				const scrollTop = root.scrollTop || document.body.scrollTop;
+				const height = root.scrollHeight - root.clientHeight;
+				const percentage = height > 0 ? Math.round((scrollTop / height) * 100) : 0;
+				// Only update if Percentage actually changed
+				if (percentage !== lastPercentage) {
+					indicator.style.width = percentage + "%";
+					container.setAttribute("aria-valuenow", percentage);
+					lastPercentage = percentage;
+				}
+				backToTop.classList.toggle("er-show", scrollTop > 500);
+				ticking = false;
+			}
+			window.addEventListener("scroll", () => {
+				if (!ticking) {
+					requestAnimationFrame(updateScroll);
+					ticking = true;
+				}
+			}, { passive: true });
+			ticking = true;
+			requestAnimationFrame(updateScroll); // first Frame, no forced Layout while the Page is still parsing
+		})();
+	</script>
+
 	<!-- Consolidated JavaScript - Single DOMContentLoaded -->
 
 	<script>
 		document.addEventListener('DOMContentLoaded', function() {
 
-			// Back to Top Button: smooth scroll (respecting reduced-motion) + initial visibility
-			// (initial state matters when a page loads already scrolled, e.g. anchor links or back-navigation —
-			// the scroll listener only fires on the first actual scroll)
-			const backToTopButton = document.querySelector(".er-back-to-top");
-			if (backToTopButton) {
-				backToTopButton.classList.toggle("er-show", window.scrollY > 500);
-				backToTopButton.addEventListener("click", function(event) {
-					event.preventDefault();
-					const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-					window.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" });
-				});
-			}
+			// Back to Top Button: smooth scroll (respecting reduced-motion)
+			document.querySelector(".er-back-to-top").addEventListener("click", function(event) {
+				event.preventDefault();
+				const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+				window.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" });
+			});
 		
-			// Cookie Consent Banner
-			const hasConsent = document.cookie.indexOf("cookieaccepted=") >= 0;
-			if (!hasConsent) {
+			// Cookie Consent Banner (already shown at first paint by the inline script above)
+			if (document.cookie.indexOf("cookieaccepted=") < 0) {
 				const notice = document.getElementById("cookie-notice");
-				if (notice) {
-					setTimeout(function() {
-						notice.style.visibility = "visible";
-						notice.setAttribute("aria-hidden", "false");
-						// Move Focus to the Accept Button when Banner appears
-						document.getElementById("cookie-accept").focus();
-					}, 0);
-					const acceptBtn = document.getElementById("cookie-accept");
-					const rejectBtn = document.getElementById("cookie-reject");
-					acceptBtn.addEventListener("mouseenter", function() {
-						this.querySelector("span").textContent = "All";
-						this.setAttribute("aria-label", "Accept all cookies");
-					});
-					acceptBtn.addEventListener("mouseleave", function() {
-						this.querySelector("span").textContent = "Accept";
-						this.setAttribute("aria-label", "Accept all cookies");
-					});
-					rejectBtn.addEventListener("mouseenter", function() {
-						this.querySelector("span").textContent = "Only";
-						this.setAttribute("aria-label", "Reject optional cookies");
-					});
-					rejectBtn.addEventListener("mouseleave", function() {
-						this.querySelector("span").textContent = "Essentials";
-						this.setAttribute("aria-label", "Reject optional cookies");
-					});
-					document.getElementById("cookie-accept").addEventListener('click', function() {
-						window.setCookie(1);
-						window.hideCookieBanner();
-					});
-					document.getElementById("cookie-reject").addEventListener('click', function() {
-						window.setCookie(0);
-						window.hideCookieBanner();
-					});
-					document.getElementById("cookie-close").addEventListener('click', function() {
-						window.setCookie(0);
-						window.hideCookieBanner();
-					});
-				}
+				const acceptBtn = document.getElementById("cookie-accept");
+				const rejectBtn = document.getElementById("cookie-reject");
+				// Store the Choice and hide the Banner
+				const decide = function(value) {
+					document.cookie = 'cookieaccepted=' + value + '; max-age=<?php echo COOKIE_MAX_AGE; ?>; path=/; SameSite=Lax' + (location.protocol === 'https:' ? '; Secure' : '');
+					notice.style.visibility = "hidden";
+					notice.setAttribute("aria-hidden", "true");
+				};
+				// Move Focus to the Accept Button when Banner appears
+				setTimeout(function() { acceptBtn.focus(); }, 0);
+				// Hover Labels (the aria-labels stay as set in the markup)
+				acceptBtn.addEventListener("mouseenter", function() { this.querySelector("span").textContent = "All"; });
+				acceptBtn.addEventListener("mouseleave", function() { this.querySelector("span").textContent = "Accept"; });
+				rejectBtn.addEventListener("mouseenter", function() { this.querySelector("span").textContent = "Only"; });
+				rejectBtn.addEventListener("mouseleave", function() { this.querySelector("span").textContent = "Essentials"; });
+				acceptBtn.addEventListener("click", function() { decide(1); });
+				rejectBtn.addEventListener("click", function() { decide(0); });
+				document.getElementById("cookie-close").addEventListener("click", function() { decide(0); });
 			}
 			
 			// Auto-insert current Year
@@ -803,7 +756,6 @@ add_action('wp_footer', function () {
 			}
 			
 			// External Link Processing - Client-side Version
-				const siteUrl = '<?php echo esc_js(home_url('/')); ?>';
 				const excludeDomains = [
 					'ericroth.org',
 					'ericroth-org',
@@ -829,39 +781,29 @@ add_action('wp_footer', function () {
 					if (href.startsWith('//')) {
 						href = window.location.protocol + href;
 					}
-					// Extract Classes once (cheaper than repeated className checks)
-					const className = link.className || '';
-					const attrs = link.getAttribute('class') || ''; // for contains checks
-					// Skip links we don't want to touch
-					const skipReasons = [
+					// Classes read once (getAttribute also works for SVG links)
+					const cls = link.getAttribute('class') || '';
+					// Skip links we don't want to touch (checks stop at the first match)
+					if (
 						// Structural / Special Links
-						href.startsWith('#'),
-						href.startsWith('/'),
-						href.startsWith('tel:'),
-						href.startsWith('javascript'),
-						href.includes('?cat='),
+						href.startsWith('#') ||
+						href.startsWith('/') ||
+						href.startsWith('tel:') ||
+						href.startsWith('javascript') ||
+						href.includes('?cat=') ||
 						// Excluded Domains
-						excludeDomains.some(domain => href.includes(domain)),
+						excludeDomains.some(domain => href.includes(domain)) ||
 						// Exclusion with Class neli (Data attr or Class)
-						link.hasAttribute('data-neli') || attrs.includes('neli'),
+						link.hasAttribute('data-neli') || cls.includes('neli') ||
+						// WP UI / Button / Social Links ('button' also covers wp-block-button__link)
+						cls.includes('button') ||
+						cls.includes('page-numbers') ||
+						cls.includes('wp-block-social-link') ||
 						// Figure / Embed Links (Image & Video Blocks)
-						link.closest('figure.wp-block-image') || 
-						link.closest('.wp-block-embed__wrapper'),
-						// WP UI / Button / Social Links
-						className.includes('wp-block-button__link') ||
-						className.includes('button') ||
-						className.includes('page-numbers') ||
-						className.includes('wp-block-social-link') ||
-						className.includes('wp-social-link'),
+						link.closest('figure.wp-block-image, .wp-block-embed__wrapper') ||
 						// Links that wrap iframes (YouTube / Vimeo Embeds etc.)
 						link.querySelector('iframe')
-					];
-					if (skipReasons.some(Boolean)) {
-						// Optional: Clean up temporary Data Attributes
-						if (link.hasAttribute('data-neli'))      link.removeAttribute('data-neli');
-						if (link.hasAttribute('data-figure-link')) link.removeAttribute('data-figure-link');
-						return;
-					}
+					) return;
 					// Apply the Changes we actually want
 					link.classList.add('external-link');
 					// Add Title for new-tab Links if missing
@@ -891,32 +833,16 @@ add_action('wp_footer', function () {
 					focusable.forEach(el => el.setAttribute('tabindex', '-1'));
 				});
 			}
-			if (document.readyState === 'loading') {
-				document.addEventListener('DOMContentLoaded', fixAriaHiddenFocus);
-			} else {
+			// Runs after the Slider and other Scripts have set their initial aria-hidden States
+			document.addEventListener('DOMContentLoaded', () => {
 				fixAriaHiddenFocus();
-			}
-			const observer = new MutationObserver(mutations => {
-				const hasAriaChange = mutations.some(m => 
-					m.type === 'attributes' && m.attributeName === 'aria-hidden'
-				);
-				if (hasAriaChange) fixAriaHiddenFocus();
-			});
-			if (document.readyState === 'loading') {
-				document.addEventListener('DOMContentLoaded', () => {
-					observer.observe(document.body, {
-						attributes: true,
-						attributeFilter: ['aria-hidden'],
-						subtree: true
-					});
-				});
-			} else {
-				observer.observe(document.body, {
+				// attributeFilter already limits the Records to aria-hidden Changes
+				new MutationObserver(fixAriaHiddenFocus).observe(document.body, {
 					attributes: true,
 					attributeFilter: ['aria-hidden'],
 					subtree: true
 				});
-			}
+			});
 		})();
 	</script>
 
@@ -996,8 +922,7 @@ add_action('wp_footer', function () {
 				(function(c,l,a,r,i,t,y){
 					c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
 					t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
-					t.rel='noopener';
-					y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+										y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
 				})(window, document, "clarity", "script", "<?php echo CLARITY_ID; ?>");
 			}
 			var events=['scroll','pointerdown','pointermove','keydown','touchstart'];
