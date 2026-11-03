@@ -67,36 +67,16 @@ add_action( 'save_post', function( $post_id ) {
 // HELPERS
 // =======================================
 
-// Returns true on Singular Pages / Posts that either contain a Quotes Shortcode,
-// or have the rendered Block Pattern by Slug appended (which may carry slider content)
-// Guards both q_output_styles() and q_output_scripts() — Update here if add more Shortcodes
+// Styles and scripts load only where quote markup was actually rendered:
+// the two shortcodes and the single-quote filter mark the page while rendering.
+// Block themes render the template before wp_head, so the mark is set in time —
+// wherever the shortcode sits (content, synced pattern, template part).
+// Guards both q_output_styles() and q_output_scripts() — call q_mark_assets() in any new output
+function q_mark_assets() {
+    $GLOBALS['q_assets_needed'] = true;
+}
 function q_should_load_assets() {
-    $post = get_post();
-    if ( ! $post ) return false;
-    if ( ! is_singular() ) return false;
-    // Always load on Single Quote Pages (Slider is injected by quote_text Shortcode)
-    if ( is_singular( 'my-quotes' ) ) return true;
-    // Check Shortcodes in the Page's own Content
-    if ( has_shortcode( $post->post_content, 'quotes_slider' )
-      || has_shortcode( $post->post_content, 'quote_text' ) ) {
-        return true;
-    }
-    // Also check if the appended Pattern itself contains slider-related Content
-    $pattern_post = get_posts( array(
-        'post_type'      => 'wp_block',
-        'name'           => 'single-quote-appendix',
-        'post_status'    => 'publish',
-        'posts_per_page' => 1,
-    ) );
-    if ( ! empty( $pattern_post ) ) {
-        $pattern_content = $pattern_post[0]->post_content;
-        if ( has_shortcode( $pattern_content, 'quotes_slider' )
-          || has_shortcode( $pattern_content, 'quote_text' )
-          || str_contains( $pattern_content, 'slideshow-quotes' ) ) {
-            return true;
-        }
-    }
-    return false;
+    return ! empty( $GLOBALS['q_assets_needed'] ) || is_singular( 'my-quotes' );
 }
 
 // Appends the quotes slider markup to the content of a single my-quotes post
@@ -104,6 +84,7 @@ function q_append_slider_on_single_quote( $content ) {
     if ( ! is_singular( 'my-quotes' ) || ! in_the_loop() || ! is_main_query() ) {
         return $content;
     }
+    q_mark_assets();
     $related_id = (int) get_post_meta( get_the_ID(), 'related_content', true );
     $prefix     = '';
     if ( $related_id ) {
@@ -229,7 +210,7 @@ function q_output_styles() {
 			.my-quote-slide-inner.layout-horizontal .my-quote-slide-content {flex: 0 0 calc(66.66% - 1.5em); max-width: calc(66.66% - 1.5em);}
 		}
 		@media (max-width: 768px) {
-			.my-quote-slide-inner.layout-horizontal {flex-direction: column; gap: 1.5em;}
+			.my-quote-slide-inner.layout-horizontal {flex-direction: column;}
 			.my-quote-slide-inner.layout-horizontal .my-quote-slide-dps,
 			.my-quote-slide-inner.layout-horizontal .my-quote-slide-content {flex: 0 0 100%; max-width: 100%;}
 			.my-quote-slide-inner.layout-horizontal .my-quote-slide-content .wp-block-quote {margin-bottom: 0; padding-bottom: 0;}
@@ -325,23 +306,14 @@ function q_output_scripts() {
 		}
 		function init() {
 			injectSeeAllLink();
-			fitAll();
-			if ( 'ResizeObserver' in window ) {
-				var ro = new ResizeObserver( fitAll );
-				document.querySelectorAll(
-					'.slideshow-quotes .layout-horizontal .my-quote-slide-content'
-				).forEach( function( card ) { ro.observe( card ); } );
-			}
-			window.addEventListener( 'resize', fitAll );
-			if ( document.fonts && document.fonts.ready ) {
-				document.fonts.ready.then( fitAll );
-			}
+			// Fires once on observe and whenever a card changes size (window resize included)
+			var ro = new ResizeObserver( fitAll );
+			document.querySelectorAll(
+				'.slideshow-quotes .layout-horizontal .my-quote-slide-content'
+			).forEach( function( card ) { ro.observe( card ); } );
+			document.fonts.ready.then( fitAll ); // card size stays, text size changes
 		}
-		if ( document.readyState === 'loading' ) {
-			document.addEventListener( 'DOMContentLoaded', init );
-		} else {
-			init();
-		}
+		document.addEventListener( 'DOMContentLoaded', init ); // footer script: the page is still loading
 	} )();
 	</script>
 	<?php
@@ -366,6 +338,7 @@ function mq_shortcode_quote_text( $atts ) {
         if ( $quote ) break;
     }
     if ( ! $quote ) return '';
+    q_mark_assets();
     $text = q_render_content( $quote );
     return '<div class="my-quote-text-content">' . $text . '</div>';
 }
@@ -386,6 +359,7 @@ function mq_shortcode_quotes_slider( $atts ) {
 	if ( ! $layout ) return '';
     $quotes = q_get_quotes_for_slider( $atts['category'] );
     if ( empty( $quotes ) ) return '';
+    q_mark_assets();
     ob_start(); ?>
     <div class="slideshow-quotes">
         <?php foreach ( $quotes as $quote_post ) :
