@@ -83,9 +83,9 @@ textarea {
 input:not([type="submit"]):not([type="radio"]),
 select,
 textarea {
-	color: var(--wp--preset--color--main);
+	color: var(--color-3);
 	border-radius: 5px;
-	border: solid 1px color-mix(in srgb, var(--wp--preset--color--tertiary) 100%, var(--wp--preset--color--main) 20%);
+	border: solid 1px color-mix(in srgb, var(--color-8) 100%, var(--color-3) 20%);
 	padding: .5em 1em;
 	font-size: var(--wp--preset--font-size--small);
 	background-color: #fff;
@@ -97,7 +97,7 @@ textarea {
 input:focus-visible,
 textarea:focus-visible,
 select:focus-visible {
-	outline-color: var(--wp--preset--color--main);
+	outline-color: var(--color-3);
 	outline-offset: 1px;
 }
 
@@ -114,7 +114,7 @@ label {
 }
 
 ::placeholder {
-	color: var(--wp--preset--color--secondary);
+	color: var(--color-9);
 	opacity: 0.75;
 }
 
@@ -537,21 +537,159 @@ body.dark-mode figure.wp-block-pullquote {background: var(--color-10); border: 1
 /* ============================================================
    10. HEADER  (non-critical layout)
    The nav system below targets the core navigation block markup
-   (.wp-block-navigation__*, .is-menu-open, submenu containers) and
-   out-specifies the theme's per-block nav CSS (assets/styles/core-navigation.css).
+   (.wp-block-navigation__*, .is-menu-open, submenu containers). It starts with
+   the navigation base (formerly assets/styles/core-navigation.css), then the
+   site's own header rules, which build on and override that base.
    The mobile-overlay submenu behaviour (per-submenu open/close) is in
    functions.php §7, together with its CSS and JS.
    ------------------------------------------------------------
    Bar styling (fixed, blur, rgba bg, height, scroll-shrink) is the first
    block below; the .er-scrolled class and the submenu vertical POSITION come
-   from Eric Companion PHP JS. Submenu rules below are scoped like core-navigation.css
+   from Eric Companion PHP JS. Submenu rules below are scoped like the navigation base
    (.wp-block-navigation__responsive-container:not(.is-menu-open)) and
-   prefixed with .er-header so they reliably out-specify core + core-navigation.css.
+   prefixed with .er-header so they reliably out-specify core + the navigation base.
    ------------------------------------------------------------
    The site logo (.site-logo, used in header and footer) is styled in the Eric
    Companion CSS snippet, not here. The separate octagon-text sidebar mark lives
    there too.
    ============================================================ */
+
+/* ---- Navigation base: dropdown, mobile overlay, accordion submenus. ---- */
+/* Drop nav */
+.wp-block-navigation__responsive-container:not(.is-menu-open) .wp-block-navigation__submenu-container {
+	border: none !important;
+	line-height: var(--wp--custom--line-height--snug);
+	min-width: 225px !important;
+	margin-left: calc(var(--wp--preset--spacing--medium) * -1);
+	z-index: 20 !important;
+	border-radius: 5px;
+	box-shadow: var(--wp--preset--shadow--small-light);
+}
+
+/* Drop nav submenu */
+.wp-block-navigation__responsive-container:not(.is-menu-open) .wp-block-navigation__submenu-container .wp-block-navigation__submenu-container {
+	margin-left: 0;
+	top: 0 !important;
+	left: 100%;
+}
+
+.wp-block-navigation__responsive-container:not(.is-menu-open) :where(.wp-block-navigation__submenu-container) li:first-child {
+	padding-top: var(--wp--preset--spacing--small);
+	border-top-left-radius: 5px;
+	border-top-right-radius: 5px;
+}
+
+/* Add padding to bottom of drop menu */
+.wp-block-navigation__responsive-container:not(.is-menu-open) :where(.wp-block-navigation__submenu-container) li:last-child {
+	padding-bottom: var(--wp--preset--spacing--small);
+	border-bottom-left-radius: 5px;
+	border-bottom-right-radius: 5px;
+}
+
+/* Add margin to sub menu icon */
+.wp-block-navigation__responsive-container:not(.is-menu-open) .has-child .wp-block-navigation__submenu-container .wp-block-navigation__submenu-icon {
+	margin-right: var(--wp--preset--spacing--small);
+}
+
+/* Mobile Navigation
+--------------------------------------------- */
+
+.wp-block-navigation__responsive-container.is-menu-open.has-modal-open {
+	padding: var(--wp--preset--spacing--medium);
+}
+
+.wp-block-navigation__responsive-container.is-menu-open.has-modal-open .wp-block-navigation__container {
+	width: 100%;
+	gap: 5px !important;
+}
+
+.wp-block-navigation__responsive-container.is-menu-open.has-modal-open .wp-block-page-list {
+	width: 100%;
+}
+
+.wp-block-navigation__responsive-container.is-menu-open .wp-block-navigation__responsive-container-content .has-child .wp-block-navigation__submenu-container {
+	padding: 5px 0 0 20px;
+	align-items: flex-start;
+	gap: 5px;
+	width: 100%;
+}
+
+.wp-block-navigation__responsive-container.is-menu-open .wp-block-navigation__responsive-container-content .wp-block-navigation__submenu-icon {
+	display: block;
+	position: absolute;
+	right: 0;
+	top: 5px;
+	height: auto;
+	width: 60px;
+	padding: 15px 0;
+	margin: 0;
+	z-index: 10;
+}
+
+body.rtl .wp-block-navigation__responsive-container.is-menu-open .wp-block-navigation__responsive-container-content .wp-block-navigation__submenu-icon {
+	left: 0;
+	right: auto;
+}
+
+.wp-block-navigation__responsive-container.is-menu-open .wp-block-navigation__responsive-container-content .wp-block-navigation__submenu-icon svg {
+	height: 16px;
+	margin: 0;
+}
+
+.wp-block-navigation .has-child .wp-block-navigation__submenu-container {
+	display: none;
+}
+
+.wp-block-navigation-submenu__toggle[aria-expanded="true"] ~ .wp-block-navigation-submenu,
+.wp-block-navigation-submenu__toggle[aria-expanded="true"] ~ .wp-block-navigation__submenu-container {
+	display: flex;
+}
+
+.wp-block-navigation__responsive-container.is-menu-open.has-modal-open .wp-block-navigation__container li:not(.wp-social-link) {
+	width: 100%;
+}
+
+/* Mobile menu links */
+.wp-block-navigation__responsive-container.is-menu-open .wp-block-navigation__responsive-container-content .wp-block-navigation-item__content {
+	width: 100%;
+	font-size: var(--wp--preset--font-size--base);
+	padding: 15px 60px 15px 15px;
+	border-radius: 5px;
+}
+
+body.rtl .wp-block-navigation__responsive-container.is-menu-open .wp-block-navigation__responsive-container-content .wp-block-navigation-item__content {
+	padding: 15px 15px 15px 60px;
+}
+
+.wp-block-navigation__responsive-container.is-menu-open .wp-block-navigation__container .current-menu-item > .wp-block-navigation-item__content,
+.wp-block-navigation__responsive-container.is-menu-open .wp-block-navigation__container .wp-block-navigation-item:hover > .wp-block-navigation-item__content {
+	transition: .3s ease;
+	background: color-mix(in srgb, currentColor, transparent 97%);
+	-webkit-tap-highlight-color: transparent;
+}
+
+.wp-block-navigation__container .wp-block-navigation-item:has(.wp-block-navigation__submenu-container:hover) > .wp-block-navigation-item__content {
+	background: transparent;
+}
+
+/* Mobile menu open button. Only the icon variant gets the boxed treatment —
+   text toggles ("Menu"/"Close") stay plain. */
+.wp-block-navigation__responsive-container-close:has(svg),
+.wp-block-navigation__responsive-container-open:has(svg) {
+	padding: 4px;
+	border-radius: 3px;
+	background: var(--color-8);
+	color: var(--color-3);
+}
+
+.has-modal-open .admin-bar .is-menu-open .wp-block-navigation__responsive-dialog {
+	margin-top: 0;
+}
+
+/* Start the mobile overlay below the admin bar instead of underneath it. */
+.admin-bar .wp-block-navigation__responsive-container.is-menu-open {
+	top: var(--wp-admin--admin-bar--height, 0px);
+}
 
 /* ---- Bar: fixed, translucent, blurred. 120px; 90px when scrolled (.er-scrolled, Eric Companion PHP JS) or ≤1050px. ---- */
 .er-header {
@@ -593,7 +731,7 @@ body.dark-mode figure.wp-block-pullquote {background: var(--color-10); border: 1
 .er-socials-support {display: inline-flex; align-items: center; gap: 1.5rem; vertical-align: middle;}
 
 /* ---- Top bar: links, site title, top-level items ---- */
-/* (a) No underline on any header link, any state (incl. core-navigation.css's .has-child button:hover). */
+/* (a) No underline on any header link, any state (incl. the navigation base's .has-child button:hover). */
 .er-header a,
 .er-header a:hover,
 .er-header a:focus,
@@ -601,7 +739,7 @@ body.dark-mode figure.wp-block-pullquote {background: var(--color-10); border: 1
 	text-decoration: none;
 }
 
-/* (b) Kill the underline on the current-page menu item (core-navigation.css). */
+/* (b) Kill the underline on the current-page menu item (navigation base). */
 .er-header .wp-block-navigation__responsive-container:not(.is-menu-open) .wp-block-navigation__container .current-menu-item > a {
 	text-decoration: none;
 }
@@ -672,7 +810,7 @@ body.dark-mode figure.wp-block-pullquote {background: var(--color-10); border: 1
 	height: 1px;
 	background: rgba(255, 255, 255, 0.15);
 }
-/* (e) Link padding. core-navigation.css pins dropdown links small/medium via :where() (0 specificity) + !important; we beat it with .er-header scope + !important. 1st value = vertical, 2nd = horizontal. */
+/* (e) Link padding. The navigation base pins dropdown links small/medium via :where() (0 specificity) + !important; we beat it with .er-header scope + !important. 1st value = vertical, 2nd = horizontal. */
 .er-header .wp-block-navigation__responsive-container:not(.is-menu-open) .wp-block-navigation__submenu-container a,
 .er-header .wp-block-navigation__responsive-container:not(.is-menu-open) .wp-block-navigation__submenu-container .wp-block-navigation-submenu__toggle {
 	padding: 0.65rem 1.25rem !important;
