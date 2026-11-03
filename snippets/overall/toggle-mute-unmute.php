@@ -306,7 +306,7 @@ add_action('wp_footer', function () {
 			// 'tts-skip' is the manual opt-out: put that class on any block,
 			// slideshow or not, and it is skipped entirely.
 			clone.querySelectorAll(
-				'nav,aside,footer,header,style,script,select,code,pre,img,svg,iframe,' +
+				'nav,aside,footer,header,style,script,noscript,select,code,pre,img,svg,iframe,' +
 				'.social-icons,.share-buttons,.tag-cloud,.tag-cloud-footer,' +
 				'.like-dislike-container,.er-social-icon-row,.er-author-links,' +
 				'.entry-meta,.er-reading-time,.post-stats,.er-breadcrumbs,.er-postnav,' +
