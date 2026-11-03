@@ -1,5 +1,4 @@
 <?php
-<?php
 /**
  * Eric — theme functions.
  *
@@ -181,3 +180,37 @@ function er_theme_mobile_submenus_assets() {
 	);
 }
 add_action( 'wp_enqueue_scripts', 'er_theme_mobile_submenus_assets', 20 );
+
+/**
+ * 8. WordPress default presets.
+ * Core prints its own default colours, gradients, duotones and shadows as CSS on every
+ * page, even though theme.json hides them in the editor (defaultPalette / defaultGradients /
+ * defaultDuotone / shadow.defaultPresets: false). Keep only the defaults that content
+ * still uses; everything else is dropped from the global styles.
+ * Kept: black, cyan-bluish-gray, luminous-vivid-orange (colour classes in posts) and the
+ * "natural" shadow (box-shadow in posts). Values = WordPress core defaults.
+ */
+function er_theme_trim_default_presets( $theme_json ) {
+	return $theme_json->update_with(
+		array(
+			'version'  => 3,
+			'settings' => array(
+				'color'  => array(
+					'palette'   => array(
+						array( 'name' => 'Black', 'slug' => 'black', 'color' => '#000000' ),
+						array( 'name' => 'Cyan bluish gray', 'slug' => 'cyan-bluish-gray', 'color' => '#abb8c3' ),
+						array( 'name' => 'Luminous vivid orange', 'slug' => 'luminous-vivid-orange', 'color' => '#ff6900' ),
+					),
+					'gradients' => array(),
+					'duotone'   => array(),
+				),
+				'shadow' => array(
+					'presets' => array(
+						array( 'name' => 'Natural', 'slug' => 'natural', 'shadow' => '6px 6px 9px rgba(0, 0, 0, 0.2)' ),
+					),
+				),
+			),
+		)
+	);
+}
+add_filter( 'wp_theme_json_data_default', 'er_theme_trim_default_presets' );
