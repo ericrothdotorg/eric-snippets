@@ -1,14 +1,6 @@
 /* Image
 --------------------------------------------- */
 
-.wp-block-image.alignleft {
-	margin-bottom: var(--wp--preset--spacing--small);
-}
-
-.wp-block-image.alignright {
-	margin-bottom: var(--wp--preset--spacing--small);
-}
-
 @media only screen and (max-width: 600px) {
 	.is-layout-flow .wp-block-image.alignleft,
 	.is-layout-flow .wp-block-image.alignright {
