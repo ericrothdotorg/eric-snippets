@@ -1,6 +1,4 @@
 <?php
-// NOTE: When in mu-plugins, add: defined('ABSPATH') || exit;
-
 // =========================================
 // LANGUAGE SWITCHER (Google Translate)
 // =========================================
@@ -25,7 +23,7 @@ add_action('wp_footer', function () {
 
 <button type="button" id="er-lang-toggle" title="Language Switcher"
         aria-label="Open language switcher" aria-expanded="false" aria-controls="google_translate_element">
-	<img src="<?php echo esc_url($er_lang_icon); ?>" width="24" height="24" alt="" aria-hidden="true">
+	<img src="<?php echo esc_url($er_lang_icon); ?>" data-no-lazy="1" width="24" height="24" alt="" aria-hidden="true">
 </button>
 
 <div id="er-lang-announcer" role="status" aria-live="polite" aria-atomic="true"></div>
@@ -45,10 +43,8 @@ add_action('wp_footer', function () {
 		border: none;
 		border-radius: 50%;
 		background: var(--color-3);
-		color: var(--color-8);
 		box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
 		cursor: pointer;
-		-webkit-appearance: none;
 		appearance: none;
 	}
 	#er-lang-toggle:focus-visible {outline: 2px solid var(--color-3); outline-offset: 2px;}
@@ -113,7 +109,6 @@ add_action('wp_footer', function () {
 		font-family: Arial, sans-serif;
 		font-size: 14px;
 		cursor: pointer;
-		-webkit-appearance: none;
 		appearance: none;
 	}
 	#er-lang-retry:hover {background: var(--color-2);}
@@ -126,11 +121,9 @@ add_action('wp_footer', function () {
 
 	/* Google Translate widget cosmetics */
 	.goog-te-gadget {font-family: Arial, sans-serif; font-size: 14px;}
-	.goog-te-gadget-simple .goog-te-menu-value span:first-child {display: none;}
-	.goog-te-gadget-simple .goog-te-menu-value span:last-child {border-left: none !important;}
-	.goog-te-gadget .goog-te-gadget-simple {border: none; background: transparent;}
+	/* Google's top bar after a translation: hidden, "English (original)" in the select takes its place */
+	body > .skiptranslate > iframe {display: none !important;}
 	.goog-te-combo {width: 200px; padding: 8px; border: 1px solid var(--color-5); border-radius: 4px; font-size: 14px;}
-	.goog-te-banner-frame {display: none !important;}
 
 	/* Only counteract the banner offset when Google actually translated */
 	html.translated-ltr body, html.translated-rtl body {top: 0 !important;}
@@ -150,7 +143,6 @@ add_action('wp_footer', function () {
 	// --- Helpers -------------------------------------------------
 
 	function announce(msg) {
-		if (!announcer) return;
 		announcer.textContent = msg;
 		setTimeout(function () { announcer.textContent = ''; }, 1000);
 	}
@@ -163,6 +155,14 @@ add_action('wp_footer', function () {
 	function isTranslated() {
 		var v = getCookie();
 		return !!v && v !== '/en/en';
+	}
+
+	// Google drops its empty option once a page is translated and rebuilds the
+	// options on every switch, so "English (original)" is re-added on bind and on open.
+	function ensureOriginalOption() {
+		var select = panel.querySelector('.goog-te-combo');
+		if (!select || !isTranslated() || select.querySelector('option[value=""]')) return;
+		select.insertBefore(new Option('English (original)', ''), select.firstChild);
 	}
 
 	// Google may set the cookie host-only, on the host, or dot-prefixed.
@@ -212,7 +212,7 @@ add_action('wp_footer', function () {
 	};
 
 	function showError(msg) {
-		if (loadingText) loadingText.textContent = msg;
+		loadingText.textContent = msg;
 		panel.classList.add('is-loading', 'has-error');
 		announce(msg);
 	}
@@ -227,7 +227,7 @@ add_action('wp_footer', function () {
 		stopWatching();
 		panel.classList.remove('has-error');
 		panel.classList.add('is-loading');
-		if (loadingText) loadingText.textContent = 'Loading languages…';
+		loadingText.textContent = 'Loading languages…';
 		announce('Retrying');
 		loadWidget();
 	}
@@ -257,16 +257,10 @@ add_action('wp_footer', function () {
 		panel.classList.remove('is-loading', 'has-error');
 
 		select.setAttribute('aria-label', 'Select language');
+		ensureOriginalOption();
 		select.addEventListener('change', function () {
 			var lang = this.value;
-
-			// Empty value = back to the original language
-			if (!lang) {
-				clearCookie();
-				announce('Resetting to original language');
-				setTimeout(function () { location.reload(); }, 100);
-				return;
-			}
+			if (!lang) return; // Google's own placeholder; "English (original)" is handled in init()
 
 			// Handed over to the TTS snippet so it picks a matching voice
 			try { localStorage.setItem('preferredLang', lang); } catch (e) {}
@@ -282,6 +276,8 @@ add_action('wp_footer', function () {
 	function openPanel() {
 		panel.classList.add('visible');
 		panel.setAttribute('aria-hidden', 'false');
+		// The global ARIA fix (Site Essentials) sets tabindex="-1" while the panel is hidden — undo it
+		panel.querySelectorAll('[tabindex="-1"]').forEach(function (el) { el.removeAttribute('tabindex'); });
 		toggle.setAttribute('aria-expanded', 'true');
 		toggle.setAttribute('aria-label', 'Close language switcher');
 		if (!panel.querySelector('.goog-te-combo')) {
@@ -290,6 +286,7 @@ add_action('wp_footer', function () {
 		} else {
 			announce('Language selector opened');
 		}
+		ensureOriginalOption();
 		loadWidget();
 		setTimeout(function () {
 			var select = panel.querySelector('.goog-te-combo');
@@ -319,7 +316,6 @@ add_action('wp_footer', function () {
 		announcer  = document.getElementById('er-lang-announcer');
 		loadingText = document.getElementById('er-lang-loading-text');
 		retryBtn    = document.getElementById('er-lang-retry');
-		if (!panel || !toggle) return;
 
 		toggle.addEventListener('click', togglePanel);
 
@@ -329,7 +325,17 @@ add_action('wp_footer', function () {
 		toggle.addEventListener('pointerdown', loadWidget);  // touch — fires before the click
 		toggle.addEventListener('focus', loadWidget);        // keyboard
 
-		if (retryBtn) retryBtn.addEventListener('click', retryWidget);
+		retryBtn.addEventListener('click', retryWidget);
+
+		// "English (original)" = back to the original language. Capture phase, because
+		// Google's own change handler would first snap the select back to the current language.
+		panel.addEventListener('change', function (e) {
+			if (e.target.value !== '' || !isTranslated()) return;
+			e.stopPropagation();
+			clearCookie();
+			announce('Resetting to original language');
+			setTimeout(function () { location.reload(); }, 100);
+		}, true);
 
 		document.addEventListener('click', function (e) {
 			if (!panel.classList.contains('visible')) return;
@@ -356,8 +362,7 @@ add_action('wp_footer', function () {
 		if (isTranslated()) loadWidget();
 	}
 
-	if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', init); }
-	else { init(); }
+	init(); // the panel and the toggle are printed right above this script
 })();
 </script>
 
