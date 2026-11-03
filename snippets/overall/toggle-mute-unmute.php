@@ -15,7 +15,7 @@ add_action('wp_head', function () {
 	?>
 	<style>
 	/* TTS Toggle Switch */
-	#tts-toggle-btn {display: flex; align-items: center; gap: 10px;}
+	#tts-toggle-btn {gap: 10px;} /* flex + centring from .flex-container (style.css §4) */
 	#tts-toggle-btn img {opacity: 0.5;}
 	#tts-toggle-btn input[type='checkbox'] {position: absolute; opacity: 0; width: 0; height: 0;}
 	#tts-toggle-btn input[type='checkbox']:focus-visible + .toggle-visual {outline: 1px solid var(--color-8); outline-offset: 2px;}
@@ -24,7 +24,6 @@ add_action('wp_head', function () {
 		border: 1px solid var(--color-4);
 		border-radius: 50px;
 		cursor: pointer;
-		display: inline-block;
 		position: relative;
 		transition: all ease-in-out 0.3s;
 		width: 50px;
@@ -34,8 +33,6 @@ add_action('wp_head', function () {
 		background: var(--color-4);
 		border-radius: 50%;
 		content: '';
-		cursor: pointer;
-		display: inline-block;
 		position: absolute;
 		left: 1px;
 		top: 1px;
