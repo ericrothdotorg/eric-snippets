@@ -1,14 +1,9 @@
 /* Separator
 --------------------------------------------- */
 
-.wp-block-separator {
-	opacity: 1;
-}
-
 .wp-block-separator:not(.is-style-dots),
 .wp-block-separator.has-background:not(.is-style-dots) {
-	border-bottom: 1px solid currentColor;
-	height: 1px;
+	border-bottom: 1px solid;
 }
 
 .wp-block-separator.is-style-dots::before {
@@ -19,5 +14,5 @@
 }
 
 .is-style-separator-thin {
-	border-top: 1px !important;
+	border-top: none !important;
 }
