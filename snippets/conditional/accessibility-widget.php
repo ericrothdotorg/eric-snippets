@@ -236,8 +236,8 @@ add_action('wp_footer', function () {
 	.a11y-option.swatch {width: 32px; height: 32px; padding: 0; border-radius: 50%; border: 2px solid var(--color-5);}
 	.a11y-option.swatch.is-active {outline: 3px solid var(--color-1) !important; outline-offset: var(--a11y-focus-offset);}
 
-	#a11y-reset {display: inline-block; margin-top: 10px; background: none; border: none; color:var(--color-1); font-weight: var(--er-fw-bold); cursor: pointer; padding: 0;}
-	#a11y-reset:hover {color: var(--color-2);}
+	#a11y-reset {display: inline-block; margin-top: 10px; background: none; border: none; color: var(--er-link); font-weight: var(--er-fw-bold); cursor: pointer; padding: 0;}
+	#a11y-reset:hover {color: var(--er-link-hover);}
 
 </style>
 
