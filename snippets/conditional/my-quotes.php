@@ -1,0 +1,385 @@
+<?php
+// NOTE: When in mu-plugins, add: defined('ABSPATH') || exit;
+
+// =======================================
+// META BOX: LINKED CONTENT
+// =======================================
+
+function q_add_metabox() {
+    add_meta_box(
+        'q_related_content',
+        esc_html__( 'Linked Content', 'textdomain' ),
+        'q_metabox_callback',
+        'my-quotes',
+        'side',
+        'default'
+    );
+}
+add_action( 'add_meta_boxes', 'q_add_metabox' );
+
+function q_metabox_callback( $post ) {
+    wp_nonce_field( 'q_save_related_content', 'q_related_content_nonce' );
+    $selected      = get_post_meta( $post->ID, 'related_content', true );
+    $allowed_types = array( 'page', 'post', 'my-traits', 'my-interests' );
+    foreach ( $allowed_types as $type ) {
+        $posts = get_posts( array(
+            'post_type'      => $type,
+            'post_status'    => 'publish',
+            'posts_per_page' => -1,
+            'orderby'        => 'title',
+            'order'          => 'ASC',
+        ) );
+        if ( empty( $posts ) ) continue;
+        $pt_obj = get_post_type_object( $type );
+        echo '<label style="display: block; margin-bottom: 4px; font-weight: 600;">' . esc_html( $pt_obj->labels->singular_name ) . '</label>';
+        echo '<select name="q_related_content_field[]" style="width: 90%; margin-bottom: 12px;">';
+        echo '<option value="">&mdash; None &mdash;</option>';
+        foreach ( $posts as $p ) {
+            echo '<option value="' . esc_attr( $p->ID ) . '" ' . selected( $selected, $p->ID, false ) . '>' . esc_html( $p->post_title ) . '</option>';
+        }
+        echo '</select>';
+    }
+}
+
+function q_save_related_content( $post_id ) {
+    if ( ! isset( $_POST['q_related_content_nonce'] ) ) return;
+    if ( ! wp_verify_nonce( $_POST['q_related_content_nonce'], 'q_save_related_content' ) ) return;
+    if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) return;
+    if ( ! current_user_can( 'edit_post', $post_id ) ) return;
+    $value = '';
+    if ( ! empty( $_POST['q_related_content_field'] ) && is_array( $_POST['q_related_content_field'] ) ) {
+        foreach ( $_POST['q_related_content_field'] as $v ) {
+            $v = sanitize_text_field( $v );
+            if ( $v ) { $value = $v; break; }
+        }
+    }
+    if ( $value ) {
+        update_post_meta( $post_id, 'related_content', $value );
+    } else {
+        delete_post_meta( $post_id, 'related_content' );
+    }
+}
+add_action( 'save_post', function( $post_id ) {
+    if ( get_post_type( $post_id ) === 'my-quotes' ) q_save_related_content( $post_id );
+});
+
+// =======================================
+// HELPERS
+// =======================================
+
+// Styles and scripts load only where quote markup was actually rendered:
+// the two shortcodes and the single-quote filter mark the page while rendering.
+// Block themes render the template before wp_head, so the mark is set in time —
+// wherever the shortcode sits (content, synced pattern, template part).
+// Guards both q_output_styles() and q_output_scripts() — call q_mark_assets() in any new output
+function q_mark_assets() {
+    $GLOBALS['q_assets_needed'] = true;
+}
+function q_should_load_assets() {
+    return ! empty( $GLOBALS['q_assets_needed'] ) || is_singular( 'my-quotes' );
+}
+
+// Appends the quotes slider markup to the content of a single my-quotes post
+function q_append_slider_on_single_quote( $content ) {
+    if ( ! is_singular( 'my-quotes' ) || ! in_the_loop() || ! is_main_query() ) {
+        return $content;
+    }
+    q_mark_assets();
+    $related_id = (int) get_post_meta( get_the_ID(), 'related_content', true );
+    $prefix     = '';
+    if ( $related_id ) {
+        $related_url   = get_permalink( $related_id );
+        $related_title = get_the_title( $related_id );
+        if ( $related_url && $related_title ) {
+            $prefix = '<h3><a href="' . esc_url( $related_url ) . '">' . esc_html( $related_title ) . '</a></h3>';
+        }
+    }
+    $output = q_render_pattern( 'single-quote-appendix' );
+    if ( ! preg_match( '/<blockquote\b[^>]*>(.*)<\/blockquote>/is', $content, $m ) ) {
+        return $prefix . '<div class="my-quote-text-content">' . $content . '</div>' . $output;
+    }
+    $inner = $m[1];
+    $pullquote =
+        '<div class="wp-block-group has-global-padding is-layout-constrained wp-block-group-is-layout-constrained">'
+      . '<figure class="wp-block-pullquote has-text-align-left">'
+      .     '<blockquote>' . $inner . '</blockquote>'
+      .   '</figure>'
+      . '</div>';
+    return $prefix . '<div class="my-quote-text-content">' . $pullquote . '</div>' . $output;
+}
+add_filter( 'the_content', 'q_append_slider_on_single_quote' );
+
+// Fetches Block Pattern by Slug and returns its processed HTML
+function q_render_pattern( $slug ) {
+    $pattern_post = get_posts( array(
+        'post_type'      => 'wp_block',
+        'name'           => $slug,
+        'post_status'    => 'publish',
+        'posts_per_page' => 1,
+    ) );
+    if ( empty( $pattern_post ) ) {
+        return '<!-- q_render_pattern: pattern "' . esc_html( $slug ) . '" not found -->';
+    }
+    return do_shortcode( do_blocks( $pattern_post[0]->post_content ) );
+}
+
+// Renders a Quote's Block Content as safe HTML. Handles Gutenberg Blocks via do_blocks()
+function q_render_content( $post_obj ) {
+    if ( empty( $post_obj->post_content ) ) return '';
+    return wp_kses_post( do_blocks( $post_obj->post_content ) );
+}
+
+// Returns all published Quotes, newest first. Optionally filtered by Category Slug
+// Used by the [quotes_slider] Shortcode. No pagination — fine unless Quote Count grows large
+function q_get_quotes_for_slider( $category = '' ) {
+    $args = array(
+        'post_type'      => 'my-quotes',
+        'post_status'    => 'publish',
+        'posts_per_page' => -1,
+        'orderby'        => 'date',
+        'order'          => 'DESC',
+    );
+    if ( $category ) {
+        // Split comma-separated Slugs into an Array
+        $terms = array_filter( array_map( 'sanitize_title', explode( ',', $category ) ) );
+        $args['tax_query'] = array( array(
+            'taxonomy' => 'groups',
+            'field'    => 'slug',
+            'terms'    => $terms,
+            'operator' => 'IN',
+        ) );
+    }
+    return get_posts( $args );
+}
+
+// Builds a DPS for a given post ID. Auto-detects Post Type
+function q_dps_slider_card( $post_id ) {
+    $post_type = get_post_type( (int) $post_id );
+    if ( ! $post_type ) return '';
+    return do_shortcode( sprintf(
+        '[display-posts post_type="%s" id="%d" image_size="large" wrapper="div" wrapper_class="display-posts-listing"]',
+        esc_attr( $post_type ),
+        (int) $post_id
+    ) );
+}
+
+// Finds the most recent published Quote linked to a given Content ID
+// If the ID itself is a Quote, returns it directly (Edge Case: Shortcode on the Quote Post itself)
+function q_get_quote_for( $content_id ) {
+    $content_id = (int) $content_id;
+    if ( ! $content_id ) return null;
+    $is_quote = get_post_type( $content_id ) === 'my-quotes';
+    $args = array(
+        'post_type'      => 'my-quotes',
+        'post_status'    => 'publish',
+        'posts_per_page' => 1,
+        'orderby'        => 'date',
+        'order'          => 'DESC',
+    );
+    if ( $is_quote ) {
+        $args['p'] = $content_id;
+    } else {
+        $args['meta_key']   = 'related_content';
+        $args['meta_value'] = $content_id;
+    }
+    $results = get_posts( $args );
+    return ! empty( $results ) ? $results[0] : null;
+}
+
+// =======================================
+// FRONTEND STYLES
+// =======================================
+
+function q_output_styles() {
+	if ( ! q_should_load_assets() ) return;
+    ?>
+	<style>
+		/* MY QUOTES feature only (CPT, [quote_text], [quotes_slider], single-quote pages).
+		   Generic quote/pullquote base lives in the theme's style.css, Part B §8-9. */
+		body.dark-mode .my-quote-slide-content {background: var(--color-10); border: 1px solid var(--color-4);}
+		.quote-text p, .quote-text ul, .quote-text li {font-size: var(--er-fs-body);}
+		/* Shortcode [quotes_slider]: Shared Layout → For both horizontal and vertical */
+		.my-quote-slide-dps .display-posts-listing {margin: 0;}
+		.my-quote-slide-dps .display-posts-listing img {display: block; width: 100%; height: auto;}
+		.my-quote-slide-content {padding: 1.5em; box-sizing: border-box; background: var(--color-8); border: 1px solid var(--color-5); border-radius: 25px; display: flex; flex-direction: column; justify-content: center;}
+		/* Shortcode [quotes_slider]: Horizontal Layout → Image left (33%), Content right (66%) */
+		.my-quote-slide-inner.layout-horizontal {display: flex; flex-direction: row; align-items: stretch; gap: 1.5em;}
+		/* Shortcode [quotes_slider]: Horizontal Layout on Mobile → Stack Image above Content */
+		@media (min-width: 769px) {
+			.my-quote-slide-inner.layout-horizontal .my-quote-slide-dps {flex: 0 0 33.33%; max-width: 33.33%;}
+			.my-quote-slide-inner.layout-horizontal .my-quote-slide-content {flex: 0 0 calc(66.66% - 1.5em); max-width: calc(66.66% - 1.5em);}
+		}
+		@media (max-width: 768px) {
+			.my-quote-slide-inner.layout-horizontal {flex-direction: column;}
+			.my-quote-slide-inner.layout-horizontal .my-quote-slide-dps,
+			.my-quote-slide-inner.layout-horizontal .my-quote-slide-content {flex: 0 0 100%; max-width: 100%;}
+			.my-quote-slide-inner.layout-horizontal .my-quote-slide-content .wp-block-quote {margin-bottom: 0; padding-bottom: 0;}
+			.my-quote-slide-inner.layout-horizontal .my-quote-slide-content .wp-block-quote cite {position: static; display: block; text-align: right; margin-top: 0.8em; margin-right: 30px;}
+		}
+		/* Shortcode [quotes_slider]: Vertical Layout → Image top, Content below — Always stacked */
+		.my-quote-slide-inner.layout-vertical {display: flex; flex-direction: column; gap: 1.5em;}
+		.my-quote-slide-inner.layout-vertical .my-quote-slide-content .wp-block-quote p,
+		.my-quote-slide-inner.layout-vertical .my-quote-slide-content .wp-block-quote ul,
+		.my-quote-slide-inner.layout-vertical .my-quote-slide-content .wp-block-quote li {font-size: var(--er-fs-body);}
+		.my-quote-slide-inner.layout-vertical .my-quote-slide-content .wp-block-quote {margin-bottom: 1.5em !important; position: relative;}
+		.my-quote-slide-inner.layout-vertical .my-quote-slide-content .wp-block-quote cite {position: absolute; top: calc(100% - 0.5em); bottom: auto; right: 30px;}
+		/* Shortcode [quotes_slider]: Typography and List Offset inside Card */
+		.my-quote-slide-content .wp-block-quote {margin: 0 auto !important;}
+		.my-quote-slide-content .wp-block-quote p,
+		.my-quote-slide-content .wp-block-quote ul,
+		.my-quote-slide-content .wp-block-quote li {font-size: var(--er-fs-lg);}
+		/* Shortcode [quote_text]: Typography to match that of [quotes_slider] → Higher Specificity wins */
+		.single-my-quotes .my-quote-text-content .wp-block-quote p,
+		.single-my-quotes .my-quote-text-content .wp-block-quote ul,
+		.single-my-quotes .my-quote-text-content .wp-block-quote li {font-size: var(--er-fs-body);}
+		/* Shortcode [quote_text]: Default Typography for this Output */
+		.my-quote-text-content .wp-block-quote p,
+		.my-quote-text-content .wp-block-quote ul,
+		.my-quote-text-content .wp-block-quote li {font-size: var(--er-fs-body);}
+		/* Shortcode [quote_text]: Style "See all Quotes" Link after cite Eric Roth (only outside .single-my-quotes) */
+		.my-quote-text-content .wp-block-quote cite .q-see-all-link {display: inline-block; margin-left: 0.4rem; font-size: var(--er-fs-xs); font-style: italic; font-weight: normal; white-space: nowrap; vertical-align: middle;}
+		.my-quote-text-content .wp-block-pullquote blockquote p {margin-left: 0 !important;}
+	</style>
+    <?php
+}
+add_action( 'wp_head', 'q_output_styles' );
+
+// Conditionally loaded — Only on Singular Posts / Pages containing [quotes_slider] or [quote_text]
+function q_output_scripts() {
+	if ( ! q_should_load_assets() ) return;
+	?>
+	<script>
+	( function() {
+		'use strict';
+		var DESKTOP_MIN = 769; // Below this, horizontal cards stack and CSS handles sizing
+		var FLOOR_PX    = 14;   // Smallest quote font before shrinking stops (~0.75rem)
+		var STEP_PX     = 0.5;
+		// Inject "See all Quotes" link into the Eric Roth cite (only outside single quote pages)
+		function injectSeeAllLink() {
+			if ( document.body.classList.contains( 'single-my-quotes' ) ) return;
+			document.querySelectorAll( '.my-quote-text-content .wp-block-quote cite' ).forEach( function( cite ) {
+				if ( ! cite.textContent.includes( 'Eric Roth' ) ) return;
+				if ( cite.querySelector( '.q-see-all-link' ) ) return;
+				var link = document.createElement( 'a' );
+				link.href        = '/about-me/my-quotes/';
+				link.className    = 'q-see-all-link';
+				link.textContent  = '> See all of Eric\'s Quotes';
+				cite.appendChild( link );
+			} );
+		}
+		// Horizontal slider cards have a fixed height (driven by the image column). Shrink a long quote's font until it fits, leaving room for the cite.
+		function horizontalQuotes() {
+			return document.querySelectorAll(
+				'.slideshow-quotes .layout-horizontal .my-quote-slide-content .wp-block-quote'
+			);
+		}
+		function fitQuote( quote ) {
+			var card = quote.closest( '.my-quote-slide-content' );
+			if ( ! card ) return;
+			var cite = quote.querySelector( 'cite' );
+			var text = quote.querySelectorAll( 'p, ul, li' );
+			if ( ! text.length ) return;
+			text.forEach( function( el ) { el.style.fontSize = ''; } );
+			var cs     = getComputedStyle( card );
+			var budget = card.clientHeight
+				- parseFloat( cs.paddingTop )
+				- parseFloat( cs.paddingBottom )
+				- ( cite ? cite.offsetHeight : 0 )
+				- 8; // Breathing gap above the cite
+			var size  = parseFloat( getComputedStyle( text[0] ).fontSize );
+			var guard = 0;
+			while ( quote.scrollHeight > budget && size > FLOOR_PX && guard++ < 200 ) {
+				size -= STEP_PX;
+				text.forEach( function( el ) { el.style.fontSize = size + 'px'; } );
+			}
+		}
+		function fitAll() {
+			var quotes = horizontalQuotes();
+			if ( window.innerWidth < DESKTOP_MIN ) {
+				// Stacked layout: hand sizing back to CSS
+				quotes.forEach( function( quote ) {
+					quote.querySelectorAll( 'p, ul, li' ).forEach( function( el ) { el.style.fontSize = ''; } );
+				} );
+				return;
+			}
+			quotes.forEach( fitQuote );
+		}
+		function init() {
+			injectSeeAllLink();
+			// Fires once on observe and whenever a card changes size (window resize included)
+			var ro = new ResizeObserver( fitAll );
+			document.querySelectorAll(
+				'.slideshow-quotes .layout-horizontal .my-quote-slide-content'
+			).forEach( function( card ) { ro.observe( card ); } );
+			document.fonts.ready.then( fitAll ); // card size stays, text size changes
+		}
+		document.addEventListener( 'DOMContentLoaded', init ); // footer script: the page is still loading
+	} )();
+	</script>
+	<?php
+}
+add_action( 'wp_footer', 'q_output_scripts', 100 );
+
+// =======================================
+// SHORTCODE: [quote_text]
+// =======================================
+
+function mq_shortcode_quote_text( $atts ) {
+    $atts = shortcode_atts( array(
+        'id' => 0,
+    ), $atts, 'quote_text' );
+    $raw_ids = array_filter( array_map( 'intval', explode( ',', $atts['id'] ) ) );
+    if ( empty( $raw_ids ) ) {
+        $raw_ids = array( get_the_ID() );
+    }
+    $quote = null;
+    foreach ( $raw_ids as $lookup_id ) {
+        $quote = q_get_quote_for( $lookup_id );
+        if ( $quote ) break;
+    }
+    if ( ! $quote ) return '';
+    q_mark_assets();
+    $text = q_render_content( $quote );
+    return '<div class="my-quote-text-content">' . $text . '</div>';
+}
+add_shortcode( 'quote_text', 'mq_shortcode_quote_text' );
+
+// =======================================
+// SHORTCODE: [quotes_slider]
+// =======================================
+
+function mq_shortcode_quotes_slider( $atts ) {
+    $atts = shortcode_atts( array(
+    'category' => '',
+    'layout'   => '',
+	), $atts, 'quotes_slider' );
+	$layout = in_array( $atts['layout'], array( 'horizontal', 'vertical' ), true )
+		? $atts['layout']
+		: '';
+	if ( ! $layout ) return '';
+    $quotes = q_get_quotes_for_slider( $atts['category'] );
+    if ( empty( $quotes ) ) return '';
+    q_mark_assets();
+    ob_start(); ?>
+    <div class="slideshow-quotes">
+        <?php foreach ( $quotes as $quote_post ) :
+            $text       = q_render_content( $quote_post );
+            $related_id = (int) get_post_meta( $quote_post->ID, 'related_content', true );
+            $dps_card   = $related_id ? q_dps_slider_card( $related_id ) : '';
+            if ( ! $text && ! $dps_card ) continue;
+        ?>
+            <div class="my-quote-slide">
+                <div class="my-quote-slide-inner layout-<?php echo esc_attr( $layout ); ?>">
+                    <?php if ( $dps_card ) : ?>
+                        <div class="my-quote-slide-dps"><?php echo wp_kses_post( $dps_card ); ?></div>
+                    <?php endif; ?>
+                    <?php if ( $text ) : ?>
+                        <div class="my-quote-slide-content"><?php echo $text; ?></div>
+                    <?php endif; ?>
+                </div>
+            </div>
+        <?php endforeach; ?>
+    </div>
+    <?php return ob_get_clean();
+}
+add_shortcode( 'quotes_slider', 'mq_shortcode_quotes_slider' );
