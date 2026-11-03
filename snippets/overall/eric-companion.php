@@ -407,7 +407,6 @@ add_action( 'wp_head', function() {
 		const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
 		if (storedPreference === 'true' || (storedPreference === null && prefersDark)) {
 			document.documentElement.style.background = '#070c12';
-			document.documentElement.classList.add('dark-mode-preload');
 		}
 	} catch(e) {
 		console.warn('Dark mode initialization failed:', e);
@@ -841,7 +840,8 @@ add_action( 'wp_ajax_er_load_more', 'er_load_more_handler' );
 add_action( 'wp_ajax_nopriv_er_load_more', 'er_load_more_handler' );
 
 function er_load_more_handler() {
-	check_ajax_referer( 'er_load_more_nonce', 'nonce' );
+	// Read-only (published posts only, every input validated below), so no nonce:
+	// a nonce baked into a page cached for days expires and would break loading silently.
 
 	// Search mode: mixed post types, no taxonomy/term filter.
 	$search = isset( $_POST['search'] ) ? sanitize_text_field( wp_unslash( $_POST['search'] ) ) : '';
@@ -1310,7 +1310,6 @@ add_action( 'wp_footer', function() {
 		document.addEventListener('DOMContentLoaded', function() {
 			var body             = document.body;
 			var changeModeSwitch = document.getElementById('change-mode-switch');
-			var changeModeButton = document.getElementById('change-mode-button');
 			var visualToggle     = document.querySelector('#dark-mode-toggle-btn .toggle-visual');
 			var statusEl         = document.getElementById('dark-mode-status');
 
@@ -1326,8 +1325,9 @@ add_action( 'wp_footer', function() {
 				}
 			} catch(e) { console.warn('Could not load dark mode preference'); }
 
-			// Remove preload class (added in wp_head to prevent flash)
-			document.documentElement.classList.remove('dark-mode-preload');
+			// Drop the wp_head flash guard's dark <html> background: body.dark-mode (set just above)
+			// paints the dark page from here on, and a later switch to light must not leave it behind.
+			document.documentElement.style.background = '';
 
 			// Sync toggle with current state
 			var isDark = body.classList.contains('dark-mode');
@@ -1337,7 +1337,6 @@ add_action( 'wp_footer', function() {
 			var changeMode = function() {
 				var isDark = body.classList.toggle('dark-mode');
 				if (changeModeSwitch) { changeModeSwitch.checked = isDark; changeModeSwitch.setAttribute('aria-checked', isDark); }
-				if (changeModeButton) { changeModeButton.setAttribute('aria-checked', isDark); }
 				if (statusEl) { statusEl.textContent = isDark ? 'Dark mode enabled' : 'Light mode enabled'; }
 				try { localStorage.setItem('changeMode', isDark ? 'true' : 'false'); } catch(e) { console.warn('LocalStorage unavailable'); }
 			};
@@ -1351,12 +1350,10 @@ add_action( 'wp_footer', function() {
 				el.addEventListener('keydown', function(e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); changeMode(); } });
 			};
 			addAccessibility(changeModeSwitch);
-			addAccessibility(changeModeButton);
 			if (visualToggle) { visualToggle.setAttribute('aria-hidden', 'true'); }
 
 			// Event listeners
 			if (changeModeSwitch) { changeModeSwitch.addEventListener('change', changeMode); }
-			if (changeModeButton) { changeModeButton.addEventListener('click', changeMode); }
 			if (visualToggle) {
 				visualToggle.addEventListener('click', function() {
 					if (changeModeSwitch) { changeModeSwitch.checked = !changeModeSwitch.checked; }
@@ -1366,10 +1363,10 @@ add_action( 'wp_footer', function() {
 		});
 
 		// ---- 9b. Infinite scroll: ajax config + card-reveal helpers ----
-		// Infinite Scroll - erLoadMore Object injected here for use by Observer below
+		// Infinite Scroll - erLoadMore Object injected here for use by Observer below.
+		// No nonce: pages are cached for days and a baked-in nonce expires after 12–24 h (see doc 2.3).
 		const erLoadMore = {
-			ajaxUrl: '<?php echo esc_url( admin_url( "admin-ajax.php" ) ); ?>',
-			nonce:   '<?php echo wp_create_nonce( "er_load_more_nonce" ); ?>'
+			ajaxUrl: '<?php echo esc_url( admin_url( "admin-ajax.php" ) ); ?>'
 		};
 
 		// Card Reveal Animation - Helpers defined outside DOMContentLoaded so revealCards() is accessible from the Infinite Scroll Handler below
@@ -1442,7 +1439,6 @@ add_action( 'wp_footer', function() {
 
 				const formData = new FormData();
 				formData.append( 'action',      'er_load_more' );
-				formData.append( 'nonce',       erLoadMore.nonce );
 				formData.append( 'post_type',   postType );
 				formData.append( 'taxonomy',    taxonomy );
 				formData.append( 'limit',       limit );
