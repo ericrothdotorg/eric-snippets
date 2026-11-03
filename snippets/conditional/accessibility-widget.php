@@ -105,8 +105,8 @@ add_action('wp_footer', function () {
 
 	/* == APPLIED STATES == */
 
-	body.a11y-underline-always a:link {text-decoration: underline;}
-	body.a11y-underline-never a:link {text-decoration: none;}
+	body.a11y-underline-always a:any-link {text-decoration: underline;}
+	body.a11y-underline-never a:any-link {text-decoration: none;}
 
 </style>
 
@@ -115,22 +115,14 @@ add_action('wp_footer', function () {
 	var a11yPrefs={underline:null,'focus-width':null,'focus-color':null},
 	a11yStore='er_a11y_prefs',
 	a11yColors={orange:'#ed7d31',green:'#339966',purple:'#7b5ea7',white:'var(--color-8)',dark:'var(--color-6)'},
-	a11yWidths={thick:'3px','extra-thick':'5px'},
-	a11yResolvedColors={};
+	a11yWidths={thick:'3px','extra-thick':'5px'};
 
 	function a11ySave(){try{localStorage.setItem(a11yStore,JSON.stringify(a11yPrefs))}catch(e){}}
-
-	function a11yResolve(val){
-		if(a11yResolvedColors[val]) return a11yResolvedColors[val];
-		var resolved=val.startsWith('var(') ? getComputedStyle(document.documentElement).getPropertyValue(val.slice(4,-1).trim()).trim() : val;
-		a11yResolvedColors[val]=resolved;
-		return resolved;
-	}
 
 	function a11yApplyRootVars(){
 		var root=document.documentElement;
 		if(a11yPrefs['focus-color'] && a11yPrefs['focus-color']!=='default'){
-			root.style.setProperty('--a11y-focus-color', a11yResolve(a11yColors[a11yPrefs['focus-color']]));
+			root.style.setProperty('--a11y-focus-color', a11yColors[a11yPrefs['focus-color']]);
 		} else {
 			root.style.removeProperty('--a11y-focus-color');
 		}
@@ -143,14 +135,13 @@ add_action('wp_footer', function () {
 
 	function a11yApplyFocus(el){
 		if(!a11yPrefs['focus-color'] && !a11yPrefs['focus-width']) return;
-		if(a11yPrefs['focus-color'] && a11yPrefs['focus-color'] !== 'default') el.style.outlineColor = a11yResolve(a11yColors[a11yPrefs['focus-color']]);
+		if(a11yPrefs['focus-color'] && a11yPrefs['focus-color'] !== 'default') el.style.outlineColor = a11yColors[a11yPrefs['focus-color']];
 		else el.style.outlineColor = '';
 		if(a11yPrefs['focus-width'] && a11yPrefs['focus-width']!=='default') el.style.outlineWidth = a11yWidths[a11yPrefs['focus-width']];
 		else el.style.outlineWidth = '';
 	}
 
 	function a11yClearFocus(el){
-		if(!a11yPrefs['focus-color'] && !a11yPrefs['focus-width']) return;
 		el.style.outlineColor = '';
 		el.style.outlineWidth = '';
 	}
@@ -229,7 +220,7 @@ add_action('wp_footer', function () {
 	.a11y-label {font-weight: var(--er-fw-bold); text-transform: uppercase; margin-bottom: 10px;}
 
 	.a11y-options {display: flex; flex-wrap: wrap; gap: 8px;}
-	.a11y-option {background: var(--color-7); border: 1px solid var(--color-5); border-radius: 6px; padding: 7px 12px; font-size: var(--er-fs-sm); cursor: pointer; color:var(--color-3); transition: background .15s ease; border-color .15s ease;}
+	.a11y-option {background: var(--color-7); border: 1px solid var(--color-5); border-radius: 6px; padding: 7px 12px; font-size: var(--er-fs-sm); cursor: pointer; color:var(--color-3); transition: background .15s ease, border-color .15s ease;}
 	.a11y-option:hover {background: var(--color-5);}
 	.a11y-option.is-active {background: var(--color-1); border-color: var(--color-1); color: var(--color-8); font-weight: var(--er-fw-bold);}
 	.a11y-option:focus-visible {outline: 2px solid var(--color-1); outline-offset: 2px;}
