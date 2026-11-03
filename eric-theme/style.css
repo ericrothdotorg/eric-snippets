@@ -195,7 +195,7 @@ label {
 	--er-list-gap:    0.1em;                       /* gap between items   */
 	--er-para-list-gap: 0.5rem;                    /* paragraph-to-list gap */
 	--er-para-gap:      1.3rem;                    /* gap between content paragraphs */
-	--er-list-indent: clamp(1.5rem, 4vw, 2rem);    /* indent per level    */
+	--er-list-indent: clamp(1.5rem, 4vw, 2rem);    /* indent of the top level (sub-levels: section 5) */
 
     /* Table row density — base + compact/roomy opt-ins (set padding-block in the table rules) */
     --er-table-pad-base:         0.25em;   /* base row padding */
@@ -362,8 +362,11 @@ body.dark-mode .wp-block-group.has-border-color {border-color: var(--color-9);}
    keeps card metas flush in every context.
    ============================================================ */
 
-/* indent — every level of an editorial list */
+/* indent — top level of an editorial list */
 :is(.wp-block-post-content, .wp-block-quote, .quote-text) :is(ul, ol):not(.wp-block-navigation):not(.entry-meta) {padding-inline-start: var(--er-list-indent);}
+/* nested levels: each sub-list's bullet starts exactly where its parent item's text starts
+   (1.05em = the width an outside bullet takes up left of the text, so it scales with the font). */
+:is(.wp-block-post-content, .wp-block-quote, .quote-text) :is(ul, ol):not(.wp-block-navigation):not(.entry-meta) :is(ul, ol) {padding-inline-start: 1.05em;}
 
 /* item rhythm — gap below each item */
 :is(.wp-block-post-content, .wp-block-quote, .quote-text) :is(ul, ol):not(.wp-block-navigation):not(.entry-meta) > li {margin-block: 0 var(--er-list-gap);}
