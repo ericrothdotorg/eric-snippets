@@ -1,4 +1,5 @@
 <?php
+<?php
 /**
  * Eric — theme functions.
  *
@@ -111,7 +112,7 @@ add_filter( 'default_wp_template_part_areas', 'er_theme_template_part_areas' );
  * Two separate problems:
  * a) WP 7.1 bug: while the mobile overlay is open, core binds every submenu toggle's
  *    aria-expanded to state.isSubmenuOpen, which is true for all of them. The accordion
- *    rule in assets/styles/core-navigation.css keys on that attribute, so every submenu
+ *    rule in style.css §10 (navigation base) keys on that attribute, so every submenu
  *    expanded at once. The PHP below rebinds to state.isMenuOpen (per submenu, as before
  *    7.1); screen readers then hear each submenu's own state. Does nothing once core
  *    stops emitting state.isSubmenuOpen.
