@@ -1,4 +1,0 @@
-/* Hide empty pagination container */
-.wp-block-post-template + .wp-block-group:empty {
-	display: none;
-}
