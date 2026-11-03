@@ -873,14 +873,6 @@
 				"typography": {
 					"fontWeight": "700",
 					"textDecoration": "none"
-				},
-				":hover": {
-					"color": {
-						"text": "var(--wp--preset--color--primary-alt)"
-					},
-					"typography": {
-						"textDecoration": "none"
-					}
 				}
 			}
 		},
