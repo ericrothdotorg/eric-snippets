@@ -1187,54 +1187,26 @@ function er_post_footer_js() {
 // 8. HEADER / NAV
 // ======================================
 
-// Header-scroll/submenu-positioning JS and the mobile-overlay Socials/Support
-// injection. Bar and submenu CSS are in style.css §10.
+// Header-scroll JS and the mobile-overlay Socials/Support injection.
+// Bar and submenu CSS (incl. the submenu position) are in style.css §10.
 
-// ---- 8a. Header scroll + top-level submenu positioning (own wp_footer closure) ----
-// Adds .er-scrolled past 50px and opens top-level submenus flush with the header's
-// bottom edge in both heights. Split into its own closure so all header JS lives here.
+// ---- 8a. Header scroll (own wp_footer closure) ----
+// Adds .er-scrolled past 50px; the bar height and the submenu position follow from it in CSS.
 add_action( 'wp_footer', function() {
 	?>
 	<script>
 		document.addEventListener("DOMContentLoaded", function() {
-			var shrunkHeight = 90;
-			var normalHeight = 120;
-			var transitionMs = 300;
-			var wasShrunk    = false;
-			var header       = document.querySelector(".er-header");
+			var header = document.querySelector(".er-header");
 			if (!header) return;
-
-			// Top-level submenus: The top <ul> has class __container; nested submenus have class __submenu-container, so this matches first-level only
-			function topLevelSubmenus() {
-				return document.querySelectorAll(".er-header .wp-block-navigation__container > .wp-block-navigation-item > .wp-block-navigation__submenu-container");
-			}
-			function currentHeight() {
-				return (header.classList.contains("er-scrolled") || window.innerWidth <= 1050) ? shrunkHeight : normalHeight;
-			}
-			function positionSubmenus(headerHeight) {
-				topLevelSubmenus().forEach(function(menu) {
-					if (window.innerWidth <= 1050) { menu.style.top = ""; return; }
-					var liTop = menu.parentElement.getBoundingClientRect().top;
-					menu.style.top = (headerHeight - liTop) + "px";
-				});
-			}
-
-			topLevelSubmenus().forEach(function(menu) {
-				var li = menu.parentElement;
-				li.addEventListener("mouseenter", function() { positionSubmenus(currentHeight()); });
-				li.addEventListener("focusin",    function() { positionSubmenus(currentHeight()); });
-			});
-
-			positionSubmenus(currentHeight());
-			window.addEventListener("resize", function() { positionSubmenus(currentHeight()); }, { passive: true });
-
-			window.addEventListener("scroll", function() {
+			var wasShrunk = false;
+			function update() {
 				var shrunk = window.scrollY > 50;
 				if (shrunk === wasShrunk) return;
 				wasShrunk = shrunk;
 				header.classList.toggle("er-scrolled", shrunk);
-				setTimeout(function() { positionSubmenus(shrunk ? shrunkHeight : normalHeight); }, transitionMs);
-			}, { passive: true });
+			}
+			window.addEventListener("scroll", update, { passive: true });
+			update(); // a page can load already scrolled (anchor link, back-navigation)
 		});
 	</script>
 	<?php
