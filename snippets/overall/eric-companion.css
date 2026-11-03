@@ -92,8 +92,8 @@ body.dark-mode .paragraph-highlight {
 
 /* ---- Tabs (page 17552 — custom-HTML .tabs/.tab-content; JS = setupTabs() in Site Essentials & Cookies PHP ---- */
 body.page-id-17552 .tabs {overflow: hidden;}
-body.page-id-17552 .tabs button {float: left; padding: 7.5px 10px; margin: 0px 2.5px; color: var(--color-1); font-weight: var(--er-fw-bold); background: var(--color-8); border: solid var(--color-5); border-width: 1px 1px 0 1px; border-radius: 5px 5px 0 0; cursor: pointer;}
-body.page-id-17552 .tabs button:hover {color: var(--color-2);}
+body.page-id-17552 .tabs button {float: left; padding: 7.5px 10px; margin: 0px 2.5px; color: var(--er-link); font-weight: var(--er-fw-bold); background: var(--color-8); border: solid var(--color-5); border-width: 1px 1px 0 1px; border-radius: 5px 5px 0 0; cursor: pointer;}
+body.page-id-17552 .tabs button:hover {color: var(--er-link-hover);}
 body.page-id-17552 .tab-content {display: none; background: var(--color-8); border: 1px solid var(--color-5); border-radius: 5px 15px 15px 15px; padding: 0rem 2rem 2rem 2rem;}
 body.dark-mode.page-id-17552 .tabs button {background: var(--color-10); border: solid var(--color-4); border-width: 1px 1px 0 1px;}
 body.dark-mode.page-id-17552 .tab-content {background: var(--color-10); border: 1px solid var(--color-4);}
@@ -103,8 +103,8 @@ body.dark-mode.page-id-17552 .tab-content {background: var(--color-10); border: 
    ============================================================ */
 
 /* ---- B1. Details & summary ---- */
-summary {color: var(--color-1); font-weight: var(--er-fw-bold); cursor: pointer;}   /* raw-HTML <details> rely on this */
-summary:hover {color: var(--color-2);}
+summary {color: var(--er-link); font-weight: var(--er-fw-bold); cursor: pointer;}   /* raw-HTML <details> rely on this */
+summary:hover {color: var(--er-link-hover);}
 summary:focus {outline: var(--a11y-focus-width) solid var(--a11y-focus-color); outline-offset: var(--a11y-focus-offset);}
 summary:focus:not(:focus-visible) {outline: none;}
 /* Overrides the summary weight from theme.json (600). */
@@ -141,8 +141,8 @@ summary:focus:not(:focus-visible) {outline: none;}
 .details-accordion summary:focus:not(:focus-visible) {outline: none;}
 .details-accordion summary > * {margin-left: 0.5rem;}
 .details-accordion summary > *:first-child {margin-left: 0;}
-.details-accordion summary::before {content: "+"; font-weight: var(--er-fw-bold); color: var(--color-1); margin-right: 0.5rem;}
-.details-accordion[open] summary::before {content: "−"; color: var(--color-1);}
+.details-accordion summary::before {content: "+"; font-weight: var(--er-fw-bold); color: var(--er-link); margin-right: 0.5rem;}
+.details-accordion[open] summary::before {content: "−";}
 .details-accordion summary:hover {background: var(--color-7);}
 .details-accordion > :where(:not(summary)) {margin-left: 1.25rem; margin-right: 1.25rem;}
 body.dark-mode .details-accordion summary {background: var(--color-10); border-top: 1px solid var(--color-4); border-bottom: 1px solid var(--color-4);}
@@ -166,7 +166,7 @@ body.dark-mode .details-accordion summary:focus {background: var(--color-6);}
 .tag-cloud a:hover,
 .tag-cloud a:focus-visible,
 .er-archive-filter .er-filter-tab:hover,
-.er-archive-filter .er-filter-tab:focus-visible {background: none; color: var(--color-2);}
+.er-archive-filter .er-filter-tab:focus-visible {background: none; color: var(--er-link-hover);}
 .tag-cloud a:focus,
 .er-archive-filter .er-filter-tab:focus {outline: var(--a11y-focus-width) solid var(--a11y-focus-color); outline-offset: var(--a11y-focus-offset);}
 .tag-cloud a:focus:not(:focus-visible),
@@ -220,8 +220,8 @@ body.dark-mode .wp-image-148107 {content: url("/wp-content/uploads/2025/07/githu
 .image-bedps img:hover {transform: scale(1.05);}
 /* bedps captions act as card titles (medium size, bold). Written specifically enough to win over the theme's figcaption rule and the base rule. */
 figure.image-bedps figcaption.wp-element-caption {margin-top: 16px; margin-bottom: 16px; font-size: var(--er-fs-md); font-weight: var(--er-fw-bold);}
-.image-bedps-figcaption {margin-top: 16px !important; margin-bottom: 16px !important; font-size: var(--er-fs-md) !important; color: var(--color-1) !important;} /* Custom HTML: Photo Album "The Countries" */
-.image-bedps-figcaption:hover {color: var(--color-2) !important;}
+.image-bedps-figcaption {margin-top: 16px !important; margin-bottom: 16px !important; font-size: var(--er-fs-md) !important; color: var(--er-link) !important;} /* Custom HTML: Photo Album "The Countries" */
+.image-bedps-figcaption:hover {color: var(--er-link-hover) !important;}
 body.dark-mode .image-bedps {background: var(--color-10); border: 1px solid var(--color-10);}
 body.dark-mode .image-bedps:hover {background: var(--color-6);}
 
@@ -366,7 +366,7 @@ body.dark-mode .box-shadow {background: var(--color-10); border: 1px solid var(-
 body.dark-mode .er-cpt-grid .entry-meta .er-reading-time,
 body.dark-mode .er-related-posts .entry-meta .er-reading-time {color: var(--color-5);}
 .er-cpt-grid .entry-meta .meta-categories,
-.er-related-posts .entry-meta .meta-categories {color: var(--color-1);}
+.er-related-posts .entry-meta .meta-categories {color: var(--er-link);}
 body.dark-mode .er-cpt-grid .entry-meta .meta-categories svg,
 body.dark-mode .er-related-posts .entry-meta .meta-categories svg {fill: var(--color-5);}
 
@@ -481,14 +481,12 @@ body.single-my-quotes .er-post-footer {margin-block-start: var(--wp--preset--spa
 .er-postnav-thumb img {width: 64px; height: 64px; border-radius: 50%; object-fit: cover; display: block;}
 .er-postnav-text {display: flex; flex-direction: column; min-width: 0;}
 .er-postnav-tag {color: inherit; font-weight: var(--er-fw-normal);}
-.er-postnav-title {font-weight: var(--er-fw-bold); color: var(--color-1); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;}
-.er-postnav-title:hover {color: var(--color-2);}
+.er-postnav-title {font-weight: var(--er-fw-bold); color: var(--er-link); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;}
+.er-postnav-title:hover {color: var(--er-link-hover);}
 
 /* Post-footer dark mode */
 body.dark-mode .er-pf-net-label {color: var(--color-7);}
 body.dark-mode .er-postnav::before {background: var(--color-3);}
-body.dark-mode .er-postnav-title {color: var(--color-1);}
-body.dark-mode .er-postnav-title:hover {color: var(--color-2);}
 
 /* Post-footer mobile: keep prev/next on ONE line, tighten thumb + gap */
 @media (max-width: 600px) {
@@ -583,7 +581,7 @@ footer.flex-container {max-width: var(--er-wide-row); margin-inline: auto; colum
 /* ---- Filter tabs (pill row; .er-active = current). Pill styling SHARED with .tag-cloud a (section B above). Here: centred wrap, inter-tab spacing, persistent red active tab. ---- */
 .er-archive-filter {text-align: center; margin-bottom: 35px;}
 .er-archive-filter .er-filter-tab {margin: 0 5px 10px; text-decoration: none; font-size: var(--er-fs-xs);} /* 14px matches the tag-cloud block's inline font-size (smallest/largest both 14px) so the shared padding renders identical pills */
-.er-archive-filter .er-filter-tab.er-active {background: none; color: var(--color-2);}
+.er-archive-filter .er-filter-tab.er-active {background: none; color: var(--er-link-hover);}
 
 /* ---- Breadcrumbs (inline trail: home icon, chevrons, links). One wrapped row, uppercase, small, muted chevrons; dark + light contexts. ---- */
 .er-breadcrumbs ol {
@@ -601,9 +599,7 @@ footer.flex-container {max-width: var(--er-wide-row); margin-inline: auto; colum
 	text-transform: uppercase;
 	letter-spacing: var(--er-ls-label);
 }
-/* Links use the site link colour (blue, red hover); current page muted. Same across light/dark. */
-.er-breadcrumbs a {color: var(--color-1);}
-.er-breadcrumbs a:hover {color: var(--color-2);}
+/* Links use the site link colours (style.css §3; hero + footer are dark contexts); current page muted. */
 .er-breadcrumbs [aria-current="page"] {color: var(--color-3);}
 .er-breadcrumb-home-icon {display: block;} /* icon sizes: width/height attributes in er_breadcrumbs() */
 .er-breadcrumb-separator {margin-inline: 8px; color: var(--color-9);}
