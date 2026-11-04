@@ -492,6 +492,16 @@ footer.flex-container {max-width: var(--er-wide-row); margin-inline: auto; colum
 .flex-item-footer-left,
 .flex-item-footer-middle,
 .flex-item-footer-right {max-width: 430px; flex-grow: 1;}
+/* From 1200px: three columns stay in one row whatever the text length (e.g. translated pages);
+   the widths match the English layout. Below 1200px the row wraps as before.
+   contain: the tag-cloud row spans all columns but must not widen them. */
+@media (min-width: 1200px) {
+	footer.flex-container {display: grid; grid-template-columns: minmax(0, 347fr) minmax(max-content, 430fr) minmax(0, 413fr);}
+	footer.flex-container > :last-child {grid-column: 1 / -1; contain: inline-size;}
+}
+/* Longer (translated) text: toggles stay on one line, wrapped lines stay left-aligned */
+#tts-toggle-btn, #dark-mode-toggle-btn {flex: none; flex-wrap: nowrap;}
+.copyright-text, .site-updates-text {text-align: left;}
 
 /* ---- Footer column LEFT ---- */
 .qr-and-links-wrapper {display: flex; align-items: center;}
