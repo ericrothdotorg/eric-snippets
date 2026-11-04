@@ -134,7 +134,7 @@ add_action('wp_footer', function () {
 
 		var synth = window.speechSynthesis;
 
-		// Keep in sync with $er_langs in the "Google Translate" snippet.
+		// Keep in sync with $er_langs in the "Language Switcher" snippet.
 		var LANG_MAP = {
 			'ar': 'ar-SA', 'da': 'da-DK', 'de': 'de-DE', 'es': 'es-ES',
 			'fi': 'fi-FI', 'fr': 'fr-FR', 'hi': 'hi-IN', 'id': 'id-ID',
@@ -156,7 +156,7 @@ add_action('wp_footer', function () {
 			marks: [],         // where each slideshow slide starts in the text
 			lastSync: null,    // slide currently shown, to avoid redundant clicks
 			blocks: null,      // translated page: live blocks still to be read
-			waiting: false     // translated page: waiting for Google to translate a block
+			waiting: false     // translated page: waiting for a block to be translated
 		};
 
 		// --- Safe localStorage ---------------------------------------
@@ -216,15 +216,16 @@ add_action('wp_footer', function () {
 			return candidates[0];
 		}
 
-		// Translated by Google (same cookie the Google Translate snippet reads)
-		function isTranslated() {
-			var m = document.cookie.match(/(?:^|; )googtrans=([^;]*)/);
-			return !!m && m[1] !== '/en/en';
-		}
+		// Translated by the Language Switcher snippet (window.erLang), or by the
+		// browser's own "Translate" (Chrome / Edge mark <html> with translated-ltr / -rtl)
+		function ownLang() { return (window.erLang && window.erLang.current()) || null; }
+		function browserTranslated() { return /translated-/.test(document.documentElement.className); }
+		function isTranslated() { return !!ownLang() || browserTranslated(); }
 
+		// Browser translation: best effort from <html lang>, which not every browser updates
 		function targetLang() {
-			var raw = store.get('preferredLang') || 'en';
-			return LANG_MAP[raw] || LANG_MAP[raw.split('-')[0]] || 'en-US';
+			var raw = ownLang() || (browserTranslated() ? document.documentElement.lang : '') || 'en';
+			return LANG_MAP[raw] || LANG_MAP[raw.split('-')[0]] || raw;
 		}
 
 		// --- Spoken cues for non-text content -------------------------
@@ -283,8 +284,8 @@ add_action('wp_footer', function () {
 			.map(function (sel) { return sel + ':not(.er-related-posts)'; })
 			.join(',');
 
-		// In the page from load on, so Google Translate translates the cues together
-		// with the page (it skips nodes added after it has translated).
+		// In the page from load on, so a translation picks the cues up together with the
+		// page (the browser's own translation may skip nodes added after it has translated).
 		// Idempotent, so re-running on enable catches content added since load.
 		// Delete a line here to drop that announcement entirely.
 		function insertCues() {
@@ -530,9 +531,10 @@ add_action('wp_footer', function () {
 			synth.speak(u);
 		}
 
-		// Translated page: Google only translates what is on screen or close to it.
-		// So each block is scrolled into view when reading reaches it, and read
-		// once Google has translated that part (or after 5 s, whatever is there).
+		// Translated page: read block by block from the live page. Each block is scrolled
+		// into view when reading reaches it and read once it is translated (or after 5 s,
+		// whatever is there). The Language Switcher reports that per block; the browser's
+		// own translation only translates what is on screen or close to it.
 		function nextBlock(session, voice, lang) {
 			var el = state.blocks.shift();
 			var slide = el.closest('.eric-slider-slide');
@@ -547,23 +549,10 @@ add_action('wp_footer', function () {
 				window.scrollTo({ top: r.top + window.scrollY - window.innerHeight / 3, behavior: reduce ? 'auto' : 'smooth' });
 			}
 
-			// Google wraps what it translated in <font>. Done when this block or the next
-			// one has it, or when Google's batch for the scrolled-to area has landed
-			// (a block of names or numbers may get no <font> of its own).
-			var fonts = document.getElementsByTagName('font');
-			var before = fonts.length, count = before;
-			var t0 = Date.now(), changed = t0;
 			state.waiting = true;
-			(function wait() {
+			function read() {
 				if (session !== state.session) return;
-				var now = Date.now();
-				if (fonts.length !== count) { count = fonts.length; changed = now; }
-				var ready = /translated-/.test(document.documentElement.className) &&
-					(!scrolled || el.querySelector('font') || (state.blocks[0] && state.blocks[0].querySelector('font')) ||
-					 (count > before && now - changed > 300));
-				if (!ready && now - t0 < 5000) { setTimeout(wait, 100); return; }
 				state.waiting = false;
-
 				var t = (pruneClone(el.cloneNode(true)).textContent || '').replace(/\s+/g, ' ').trim();
 				if (t) {
 					if (!/[.!?\u2026:;]$/.test(t)) t += '.';
@@ -571,6 +560,24 @@ add_action('wp_footer', function () {
 				}
 				startWatchdog(); // it stops itself whenever nothing is speaking, e.g. while waiting
 				speakNext(session, voice, lang);
+			}
+
+			if (ownLang()) { window.erLang.ready(el, 5000).then(read); return; }
+
+			// Browser's own translation (Chrome / Edge wrap what they translated in <font>):
+			// done when this block or the next one has it, or when the batch for the
+			// scrolled-to area has landed (a block of names or numbers may get no <font>).
+			var fonts = document.getElementsByTagName('font');
+			var before = fonts.length, count = before;
+			var t0 = Date.now(), changed = t0;
+			(function wait() {
+				if (session !== state.session) return;
+				var now = Date.now();
+				if (fonts.length !== count) { count = fonts.length; changed = now; }
+				var ready = !scrolled || el.querySelector('font') || (state.blocks[0] && state.blocks[0].querySelector('font')) ||
+					(count > before && now - changed > 300);
+				if (!ready && now - t0 < 5000) { setTimeout(wait, 100); return; }
+				read();
 			})();
 		}
 
