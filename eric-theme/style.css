@@ -949,11 +949,11 @@ body.rtl .wp-block-navigation__responsive-container.is-menu-open .wp-block-navig
 	height: 100vh;
 	height: 100dvh;
 	bottom: auto;
-	background-color: #0e1825 !important;
+	background-color: var(--color-10) !important;
 }
 /* Some WP builds paint the modal bg on the inner content wrapper too. */
 .er-header .wp-block-navigation__responsive-container.is-menu-open .wp-block-navigation__responsive-container-content {
-	background-color: #0e1825 !important;
+	background-color: var(--color-10) !important;
 }
 /* Mobile menu: consistent vertical rhythm, open or closed */
 .er-header .wp-block-navigation__responsive-container.is-menu-open .wp-block-navigation__responsive-container-content {gap: 0;}
