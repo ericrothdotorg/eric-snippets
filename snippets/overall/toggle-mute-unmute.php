@@ -75,7 +75,7 @@ add_action('wp_head', function () {
 		border-radius: 5px;
 		background: var(--color-3);
 		color: var(--color-8);
-		font-size: 16px;
+		font-size: var(--er-fs-sm);
 		line-height: 1;
 		cursor: pointer;
 		transition: background 0.2s;
