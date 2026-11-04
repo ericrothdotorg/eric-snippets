@@ -848,23 +848,50 @@ body.rtl .wp-block-navigation__responsive-container.is-menu-open .wp-block-navig
 	height: 3rem;
 }
 
-/* ---- Search button: square brand-blue box, white (hardcoded) magnifier, hover -> brand hover colour. ---- */
-
+/* ---- Search: brand-blue square buttons (header toggle + submit), white (hardcoded) magnifier, hover -> brand hover colour. ---- */
 .er-header-search {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
+	flex: none;
 	width: 34px;
 	height: 34px;
+	padding: 0;
+	border: 0;
 	background: var(--color-1);
 	border-radius: 6px;
 	color: var(--color-8); /* SVG strokes with currentColor */
+	cursor: pointer;
 	transition: background 0.2s ease;
 }
 .er-header-search:hover,
 .er-header-search:focus-visible {
 	background: var(--color-2);
 	color: var(--color-8);
+}
+/* Search panel: native popover (toggle, Esc, click outside, autofocus without JS). Top layer, so it escapes
+   .er-header's backdrop-filter containing block; placed under the bar, right edge on the header inner row. */
+.er-header-search-panel {
+	inset: auto;
+	top: var(--er-header-h);
+	right: calc((100% - var(--er-wide-row)) / 2);
+	width: min(24rem, var(--er-wide-row));
+	margin: 0;
+	padding: 0.75rem;
+	border: 0;
+	border-radius: 0 0 6px 6px;
+	background: rgba(0, 0, 0, 0.65);
+	backdrop-filter: blur(10px);
+	-webkit-backdrop-filter: blur(10px);
+}
+.er-header-search-panel:popover-open {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+.er-header-search-panel input[type=search] {
+	flex: 1;
+	min-width: 0;
 }
 
 /* ---- Desktop / overlay breakpoint ----
