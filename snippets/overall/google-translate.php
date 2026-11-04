@@ -80,7 +80,7 @@ add_action('wp_footer', function () {
 		border: 1px solid var(--color-5);
 		border-radius: 4px;
 		font-family: Arial, sans-serif;
-		font-size: 14px;
+		font-size: var(--er-fs-xs);
 		line-height: 1.2;
 		color: var(--color-9);
 	}
@@ -111,7 +111,7 @@ add_action('wp_footer', function () {
 		background: var(--color-1);
 		color: var(--color-8);
 		font-family: Arial, sans-serif;
-		font-size: 14px;
+		font-size: var(--er-fs-xs);
 		cursor: pointer;
 		appearance: none;
 	}
@@ -124,10 +124,10 @@ add_action('wp_footer', function () {
 	}
 
 	/* Google Translate widget cosmetics */
-	.goog-te-gadget {font-family: Arial, sans-serif; font-size: 14px;}
+	.goog-te-gadget {font-family: Arial, sans-serif; font-size: var(--er-fs-xs);}
 	/* Google's top bar after a translation: hidden, "English (original)" in the select takes its place */
 	body > .skiptranslate > iframe {display: none !important;}
-	.goog-te-combo {width: 200px; padding: 8px; border: 1px solid var(--color-5); border-radius: 4px; font-size: 14px;}
+	.goog-te-combo {width: 200px; padding: 8px; border: 1px solid var(--color-5); border-radius: 4px; font-size: var(--er-fs-xs);}
 
 	/* Only counteract the banner offset when Google actually translated */
 	html.translated-ltr body, html.translated-rtl body {top: 0 !important;}
