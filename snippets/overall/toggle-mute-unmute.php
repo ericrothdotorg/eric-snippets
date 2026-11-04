@@ -18,7 +18,7 @@ add_action('wp_head', function () {
 	#tts-toggle-btn {gap: 10px;} /* flex + centring from .flex-container (style.css §4) */
 	#tts-toggle-btn img {opacity: 0.5;}
 	#tts-toggle-btn input[type='checkbox'] {position: absolute; opacity: 0; width: 0; height: 0;}
-	#tts-toggle-btn input[type='checkbox']:focus-visible + .toggle-visual {outline: 1px solid var(--color-8); outline-offset: 2px;}
+	#tts-toggle-btn input[type='checkbox']:focus-visible + .toggle-visual {outline: var(--a11y-focus-width) solid var(--color-8); outline-offset: var(--a11y-focus-offset);}
 	#tts-toggle-btn .toggle-visual {
 		background: var(--color-3);
 		border: 1px solid var(--color-4);
@@ -83,7 +83,7 @@ add_action('wp_head', function () {
 		appearance: none;
 	}
 	#tts-controls button:hover {background: var(--color-4);}
-	#tts-controls button:focus-visible {outline: 2px solid var(--color-8); outline-offset: 2px;}
+	#tts-controls button:focus-visible {outline: var(--a11y-focus-width) solid var(--color-8); outline-offset: var(--a11y-focus-offset);}
 	</style>
 	<?php
 });
