@@ -51,7 +51,7 @@ add_action('wp_footer', function () {
 		transition: transform 0.2s ease;
 	}
 	#er-lang-toggle:hover {transform: scale(1.1);}
-	#er-lang-toggle:focus-visible {outline: 2px solid var(--color-3); outline-offset: 2px;}
+	#er-lang-toggle:focus-visible {outline: var(--a11y-focus-width) solid var(--a11y-focus-color); outline-offset: var(--a11y-focus-offset);}
 
 	#google_translate_element {
 		display: none;
@@ -116,7 +116,7 @@ add_action('wp_footer', function () {
 		appearance: none;
 	}
 	#er-lang-retry:hover {background: var(--color-2);}
-	#er-lang-retry:focus-visible {outline: 2px solid var(--color-1); outline-offset: 2px;}
+	#er-lang-retry:focus-visible {outline: var(--a11y-focus-width) solid var(--a11y-focus-color); outline-offset: var(--a11y-focus-offset);}
 	#google_translate_element.has-error #er-lang-retry {display: block;}
 	@keyframes er-lang-spin {to {transform: rotate(360deg);}}
 	@media (prefers-reduced-motion: reduce) {
