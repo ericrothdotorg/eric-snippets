@@ -726,6 +726,11 @@ add_action('wp_footer', function () {
 					document.cookie = 'cookieaccepted=' + value + '; max-age=<?php echo COOKIE_MAX_AGE; ?>; path=/; SameSite=Lax' + (location.protocol === 'https:' ? '; Secure' : '');
 					notice.style.visibility = "hidden";
 					notice.setAttribute("aria-hidden", "true");
+					// Pass the choice on to Clarity (consent signal, see MS Clarity Analytics below)
+					if (typeof window.clarity === "function") {
+						var c = value ? "granted" : "denied";
+						window.clarity("consentv2", {ad_Storage: c, analytics_Storage: c});
+					}
 				};
 				// Move Focus to the Accept Button when Banner appears
 				setTimeout(function() { acceptBtn.focus(); }, 0);
@@ -926,6 +931,10 @@ add_action('wp_footer', function () {
 					t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
 										y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
 				})(window, document, "clarity", "script", "<?php echo CLARITY_ID; ?>");
+				// Consent signal from the banner choice: "granted" only after Accept; Essentials or
+				// no choice yet = "denied" (Clarity's no-consent mode: no cookies, per page view only).
+				var c = /(?:^|;\s*)cookieaccepted=1(?:;|$)/.test(document.cookie) ? "granted" : "denied";
+				window.clarity("consentv2", {ad_Storage: c, analytics_Storage: c});
 			}
 			var events=['scroll','pointerdown','pointermove','keydown','touchstart'];
 			function start(){
