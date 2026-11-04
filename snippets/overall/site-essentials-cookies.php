@@ -627,7 +627,7 @@ add_action('wp_footer', function () {
 		#cookie-notice button:not(#cookie-close) {position: relative; font-weight: var(--er-fw-normal); color: var(--color-8); background: var(--color-4); border-radius: 5px; padding: 8px; margin-top: 15px; width: 48%; cursor: pointer; border: none; margin-left: 2%; display: inline-block; overflow: hidden;}
 		#cookie-notice button:not(#cookie-close):first-child {margin-left: 0;}
 		#cookie-accept:hover, #cookie-reject:hover {background: var(--color-3) !important;}
-		#cookie-notice button:focus-visible {outline: 2px solid var(--color-3); outline-offset: 0px;}
+		#cookie-notice button:focus-visible {outline: var(--a11y-focus-width) solid var(--a11y-focus-color); outline-offset: var(--a11y-focus-offset);}
 		@media (max-width: 480px) {#cookie-notice {max-width: 100%; bottom: 0; left: 0; border-radius: 0;} #cookie-notice button:not(#cookie-close) {font-size: 14px; padding: 8px 5px;}}
 	</style>
 
@@ -664,7 +664,7 @@ add_action('wp_footer', function () {
 		.er-back-to-top {position: fixed; bottom: 25px; right: 25px; z-index: 999; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: var(--color-3); border-radius: 50%; box-shadow: 0 0 10px rgba(0,0,0,.2); color: var(--color-8); opacity: 0; visibility: hidden; transition: opacity 0.3s ease, visibility 0.3s ease, transform 0.2s ease;}
 		.er-back-to-top.er-show {opacity: 1; visibility: visible;}
 		.er-back-to-top:hover {transform: scale(1.1);}
-		.er-back-to-top:focus-visible {outline: 2px solid var(--color-3); outline-offset: 2px;}
+		.er-back-to-top:focus-visible {outline: var(--a11y-focus-width) solid var(--a11y-focus-color); outline-offset: var(--a11y-focus-offset);}
 		.er-back-to-top svg {display: block; fill: var(--color-8);} /* fill pinned directly: the button is an <a>, so currentColor would inherit the theme's link/hover colors */
 	</style>
 
