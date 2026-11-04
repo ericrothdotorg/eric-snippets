@@ -33,6 +33,7 @@ add_action( 'init', static function () {
  *      roll   ±3.5°, ~42 s per sway           FS: float r=...
  *      drift  wide, never-repeating path      draw(): U.O
  *      stars  passing layers                  FS: float ph=T*.1...
+ *      lens   mouse bends the stars (soft bulge, eased; not on touch)   FS: vec2 ld=...
  *    Changing the image: upload it, set ER_FP_IMAGE, regenerate the two poster
  *    strings from a blurred ~48 × 29 / 24 × 50 WebP of the opening frame.
  * ========================================================================== */
@@ -130,11 +131,12 @@ if (!root || !root.dataset.img || navigator.webdriver || /lighthouse|headlesschr
 const cv = root.querySelector('canvas');
 
 const FS = `precision highp float;
-uniform vec2 R,O;uniform float T,N,K;uniform sampler2D I;
+uniform vec2 R,O;uniform float T,N,K;uniform vec3 L;uniform sampler2D I;
 float h(vec2 p){p=fract(p*vec2(233.34,851.73));p+=dot(p,p+23.45);return fract(p.x*p.y);}
 vec3 tc(float t){return t<.5?mix(vec3(.66,.78,1.),vec3(1.,.97,.93),t*2.):mix(vec3(1.,.97,.93),vec3(1.,.8,.6),t*2.-1.);}
 void main(){
 vec2 u=(gl_FragCoord.xy*2.-R)/R.y;
+vec2 ld=u-L.xy;u-=ld*(L.z*.3*exp(-dot(ld,ld)/.09));
 float r=.06*sin(T*.15);u=mat2(cos(r),sin(r),-sin(r),cos(r))*u;
 float as=R.x/R.y,px=2./R.y;
 float P=step(as,1.),S=mix(max(as/K,min(1.,as/(.72*K))),.7,P),a=-.94*P,ca=cos(a),sa=sin(a);
@@ -154,6 +156,7 @@ float rad=.012+.022*h(cc+5.5);
 float bb=smoothstep(rad+q,rad*.3,d)+.18*exp(-d/(rad*2.+q))*smoothstep(.3,.1,d);
 float fd=smoothstep(0.,.3,zz)*smoothstep(1.,.8,zz)*(.4+.6*s/.06);
 col+=tc(h(cc+9.))*bb*fd;}}
+vec2 lu=(gl_FragCoord.xy*2.-R)/R.y-L.xy;col+=vec3(.55,.68,1.)*L.z*exp(-abs(length(lu)-.21)*40.)*.015;
 vec2 w=gl_FragCoord.xy/R-.5;col*=1.-dot(w,w)*.35;
 gl_FragColor=vec4(min(col,1.)+(fract(sin(dot(gl_FragCoord.xy+N,vec2(12.99,78.23)))*43758.5)-.5)*.012,1.);}`;
 
@@ -174,7 +177,7 @@ function start() {
 	gl.enableVertexAttribArray(0);
 	gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
 	const U = {};
-	'R O T N K'.split(' ').forEach((k) => { U[k] = gl.getUniformLocation(pr, k); });
+	'R O T N K L'.split(' ').forEach((k) => { U[k] = gl.getUniformLocation(pr, k); });
 
 	const img = new Image();
 	img.crossOrigin = 'anonymous';
@@ -204,6 +207,18 @@ function start() {
 		const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 		let seen = true, run = false, dead = false, raf = 0, last = 0, shown = false, clock = 0;
 
+		/* Lens: the mouse bends the stars around it, easing in and out (mouse / pen only: a finger scrolls the page) */
+		const lens = { x: 0, y: 0, s: 0, tx: 0, ty: 0, ts: 0 };
+		window.addEventListener('pointermove', (e) => {
+			if (e.pointerType === 'touch') return;
+			const r = cv.getBoundingClientRect();
+			if (!r.height) return;
+			lens.tx = ((e.clientX - r.left) * 2 - r.width) / r.height;
+			lens.ty = ((r.bottom - e.clientY) * 2 - r.height) / r.height;
+			lens.ts = 1;
+		}, { passive: true });
+		document.documentElement.addEventListener('pointerleave', () => { lens.ts = 0; });
+
 		const draw = (now) => {
 			const w = clock / 1000;
 			size();
@@ -211,6 +226,8 @@ function start() {
 			gl.uniform2f(U.O, 0.05 * Math.sin(w * 0.15), 0.012 + 0.03 * Math.sin(w * 0.11));
 			gl.uniform1f(U.T, w);
 			gl.uniform1f(U.N, (now / 1000) % 1000);
+			lens.x += (lens.tx - lens.x) * 0.12; lens.y += (lens.ty - lens.y) * 0.12; lens.s += (lens.ts - lens.s) * 0.08;
+			gl.uniform3f(U.L, lens.x, lens.y, lens.s);
 			gl.drawArrays(gl.TRIANGLES, 0, 3);
 			if (!shown) { shown = true; cv.classList.add('is-on'); }
 		};
