@@ -3,7 +3,7 @@
 
 The code snippets behind [ericroth.org](https://ericroth.org/): Everything dynamic on the site. Shortcodes, header bar, custom post types, quotes, stats and more.
 
-**Tags:** wordpress, code-snippets, eric-theme, eric-slider
+**Tags:** wordpress, code-snippets, eric-theme, eric-slider, eric-snippets
 
 ---
 
