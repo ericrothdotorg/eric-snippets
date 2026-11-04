@@ -100,7 +100,7 @@ add_action('wp_footer', function () {
 
 	#a11y-link {position: fixed; bottom: 25px; right: 125px; z-index: 999; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; transition: transform .2s ease; background: var(--color-3); border-radius: 50%; padding: 0; cursor: pointer; box-shadow: 0 0 10px rgba(0,0,0,.2); border: none;}
 	#a11y-link:hover {transform: scale(1.1);}
-	#a11y-link:focus-visible {outline: 2px solid var(--color-3); outline-offset: 2px;}
+	#a11y-link:focus-visible {outline: var(--a11y-focus-width) solid var(--a11y-focus-color); outline-offset: var(--a11y-focus-offset);}
 	#a11y-link img {width: 22px; height: 22px; display: block; filter: brightness(0) invert(1);}
 
 	/* == APPLIED STATES == */
@@ -223,7 +223,7 @@ add_action('wp_footer', function () {
 	.a11y-option {background: var(--color-7); border: 1px solid var(--color-5); border-radius: 6px; padding: 7px 12px; font-size: var(--er-fs-sm); cursor: pointer; color:var(--color-3); transition: background .15s ease, border-color .15s ease;}
 	.a11y-option:hover {background: var(--color-5);}
 	.a11y-option.is-active {background: var(--color-1); border-color: var(--color-1); color: var(--color-8); font-weight: var(--er-fw-bold);}
-	.a11y-option:focus-visible {outline: 2px solid var(--color-1); outline-offset: 2px;}
+	.a11y-option:focus-visible {outline: var(--a11y-focus-width) solid var(--a11y-focus-color); outline-offset: var(--a11y-focus-offset);}
 	.a11y-option.swatch {width: 32px; height: 32px; padding: 0; border-radius: 50%; border: 2px solid var(--color-5);}
 	.a11y-option.swatch.is-active {outline: 3px solid var(--color-1) !important; outline-offset: var(--a11y-focus-offset);}
 
