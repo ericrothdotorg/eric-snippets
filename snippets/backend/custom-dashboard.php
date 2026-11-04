@@ -63,7 +63,7 @@ function custom_render_theme_snapshot_widget() {
 	// Changelog = the active theme's own readme.txt (== Changelog == section).
 	custom_render_button_row([
 		'Site Editor'    => admin_url('site-editor.php'),
-		'View Changelog' => get_stylesheet_directory_uri() . '/readme.txt',
+		'View Changelog' => get_stylesheet_directory_uri() . '/readme.txt?ver=' . filemtime($theme_dir . '/readme.txt'),
 	]);
 }
 
