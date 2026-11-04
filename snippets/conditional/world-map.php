@@ -252,7 +252,7 @@ function er_map_engine_script() {
 	wp_print_inline_script_tag( er_map_engine_js(), array( 'id' => 'er-map-js' ) );
 }
 
-/* Layer order: land, shade, past dots, markers, zoom buttons. */
+/* Layer order: land, shade, past dots, markers, zoom + enlarge buttons, close button (enlarged only). */
 function er_map_layers() {
 	$open  = '<svg class="%s" viewBox="' . ER_MAP_BOX_REACH
 		. '" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" focusable="false" aria-hidden="true">';
@@ -328,7 +328,12 @@ function er_map_layers() {
 		. $shade
 		. sprintf( $open, 'erc-dots' ) . '<path class="erc-past" d=""/><path class="erc-past erc-lg" d=""/></svg>'
 		. '<div class="erc-markers"><span class="erc-others"></span><span class="erm-pin" hidden><span class="erm-card" role="status"></span></span></div>'
-		. '<div class="erm-zoom"><button type="button" data-zoom="2" aria-label="Zoom in">+</button><button type="button" data-zoom="0.5" aria-label="Zoom out">&minus;</button></div>';
+		. '<div class="erm-zoom"><button type="button" data-zoom="2" aria-label="Zoom in">+</button><button type="button" data-zoom="0.5" aria-label="Zoom out">&minus;</button>'
+		. '<button type="button" class="erm-full-btn" aria-pressed="false" aria-label="Enlarge map">'
+		. '<svg class="erm-i-in" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false"><path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+		. '<svg class="erm-i-out" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false"><path d="M6 2v4H2M14 6h-4V2M10 14v-4h4M2 10h4v4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+		. '</button></div>'
+		. '<button type="button" class="erm-close" aria-label="Close enlarged map">&times;</button>';
 }
 
 // Land, Miller projection, 2000 × 1466.4, clipped to x 0–2000 (Natural Earth).
@@ -506,7 +511,7 @@ window.ERMap = window.ERMap || (() => {
 	/* ---- Stage: one map instance ---- */
 
 	function stage(root) {
-		const svgs = root.querySelectorAll('svg');
+		const svgs = root.querySelectorAll(':scope > svg');   // map layers only, not button icons
 		const bands = root.querySelectorAll('.erc-night');
 		const suns = root.querySelectorAll('.erc-sun');
 		const nightClip = root.querySelector('.erc-nightclip');
@@ -568,7 +573,7 @@ JS;
 /* ============================================================================
  * 3  SITE REACH — [live_user_map], [currently_visited_pages], [past_visited_pages]
  *    Interactive map (drag, pinch, ctrl+wheel, +/− and double-click to zoom;
- *    tap a dot for details) plus two tables. One request every ER_MAP_POLL
+ *    tap a dot for details; enlarge button for the whole window) plus two tables. One request every ER_MAP_POLL
  *    seconds feeds all three; polling pauses while the tab is hidden.
  *    Shortcode names are the old ones, so the page content stays as it is.
  * ========================================================================== */
@@ -674,7 +679,39 @@ function er_reach_css() {
 	background: rgba(7,12,18,.6); color: #e1e8ed; font: 600 18px/1 system-ui, sans-serif; cursor: pointer;
 }
 .er-reach .erm-zoom button:hover{background: rgba(7,12,18,.85)}
-.er-reach .erm-zoom button:focus-visible{outline: 2px solid var(--color-1, #1e73be); outline-offset: 2px}
+.er-reach .erm-zoom button:focus-visible{outline: var(--a11y-focus-width) solid var(--a11y-focus-color); outline-offset: var(--a11y-focus-offset)}
+
+/* Enlarge: the whole map over the page, like the image lightbox. The map is moved into
+   .erm-full (a child of <body>) while enlarged, so no transformed ancestor can trap it. */
+.er-reach .erm-zoom .erm-full-btn{margin-top: 6px; display: flex; align-items: center; justify-content: center}
+.er-reach .erm-i-out,
+.er-reach.is-full .erm-i-in{display: none}
+.er-reach.is-full .erm-i-out{display: block}
+.er-reach .erm-close{
+	position: absolute; z-index: 2; right: 10px; top: 10px; display: none;
+	width: 36px; height: 36px; padding: 0; border: 0; border-radius: 8px;
+	background: rgba(7,12,18,.6); color: #e1e8ed; font: 400 26px/1 system-ui, sans-serif; cursor: pointer;
+}
+.er-reach .erm-close:hover{background: rgba(7,12,18,.85)}
+.er-reach .erm-close:focus-visible{outline: var(--a11y-focus-width) solid var(--a11y-focus-color); outline-offset: var(--a11y-focus-offset)}
+.er-reach.is-full .erm-close{display: block}
+.erm-full{
+	position: fixed; inset: 0; z-index: 100000;
+	display: flex; align-items: center; justify-content: center;
+	padding: clamp(10px, 3vmin, 40px);
+	background: rgba(7,12,18,.92);
+	animation: erm-in .25s ease-out;
+}
+@keyframes erm-in{from{opacity: 0}}
+/* Landscape: the whole band, as large as it fits. Portrait: the whole window, pannable. */
+.erm-full > .er-reach{width: min(100%, calc((100dvh - 2 * clamp(10px, 3vmin, 40px)) * 2000 / 1013)); max-height: 100%; min-height: 0; touch-action: none}
+@media (orientation: portrait){
+	.erm-full > .er-reach{width: 100%; height: 100%; aspect-ratio: auto}
+}
+html.erm-lock{overflow: hidden}
+@media (prefers-reduced-motion: reduce){
+	.erm-full{animation: none}
+}
 
 .erm-stats{display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 20px; margin-top: 12px; padding: 0 4px}
 .erm-stats .erm-sep{margin: 0 .6em; opacity: .5}
@@ -802,7 +839,7 @@ function er_reach_js() {
 		const segStart = () => { seg = { sv: tv || cur, p0: new Map(Array.from(ptrs, ([k, p]) => [k, { x: p.x, y: p.y }])) }; };
 
 		root.addEventListener('pointerdown', (e) => {
-			if (!cur || e.button > 0 || e.target.closest('.erm-pin, .erm-zoom')) return;
+			if (!cur || e.button > 0 || e.target.closest('.erm-pin, .erm-zoom, .erm-close')) return;
 			try { root.setPointerCapture(e.pointerId); } catch (err) {}
 			const p = pos(e);
 			ptrs.set(e.pointerId, p);
@@ -858,7 +895,7 @@ function er_reach_js() {
 		root.addEventListener('pointercancel', endPointer);
 
 		root.addEventListener('dblclick', (e) => {
-			if (!cur || e.target.closest('.erm-pin, .erm-zoom')) return;
+			if (!cur || e.target.closest('.erm-pin, .erm-zoom, .erm-close')) return;
 			const p = pos(e);
 			commit(zoomed(cur, p.x, p.y, 2));
 		});
@@ -873,11 +910,44 @@ function er_reach_js() {
 			wheelTimer = setTimeout(() => { if (tv) commit(tv); tv = null; }, 150);
 		}, { passive: false });
 
-		root.querySelectorAll('.erm-zoom button').forEach((btn) => {
+		root.querySelectorAll('.erm-zoom button[data-zoom]').forEach((btn) => {
 			btn.addEventListener('click', () => {
 				if (cur) commit(zoomed(cur, w / 2, h / 2, parseFloat(btn.dataset.zoom) || 1));
 			});
 		});
+
+		/* ---- Enlarge: the whole map over the page; back with ×, Esc, the button or a click beside it ---- */
+
+		const fullBtn = root.querySelector('.erm-full-btn');
+		const closeBtn = root.querySelector('.erm-close');
+		let holder = null, layer = null;
+		function setFull(on) {
+			if (!fullBtn || on === root.classList.contains('is-full')) return;
+			if (on) {
+				holder = document.createElement('div');            // keeps the map's place, no jump in the page
+				holder.style.height = root.offsetHeight + 'px';
+				root.before(holder);
+				layer = document.createElement('div');
+				layer.className = 'erm-full';
+				layer.addEventListener('click', (e) => { if (e.target === layer) setFull(false); });
+				document.body.append(layer);
+				layer.append(root);
+				document.documentElement.classList.add('erm-lock');
+			} else {
+				holder.replaceWith(root);
+				layer.remove();
+				holder = layer = null;
+				document.documentElement.classList.remove('erm-lock');
+			}
+			root.classList.toggle('is-full', on);
+			fullBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+			fullBtn.setAttribute('aria-label', on ? 'Reduce map' : 'Enlarge map');
+			hide();
+			(on ? closeBtn : fullBtn).focus({ preventScroll: true });
+		}
+		if (fullBtn) fullBtn.addEventListener('click', () => setFull(!root.classList.contains('is-full')));
+		if (closeBtn) closeBtn.addEventListener('click', () => setFull(false));
+		document.addEventListener('keydown', (e) => { if (e.key === 'Escape') setFull(false); });
 
 		/* ---- Popup: nearest dot within reach of the tap ---- */
 
