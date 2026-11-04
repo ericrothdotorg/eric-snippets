@@ -9,7 +9,7 @@ The code snippets behind [ericroth.org](https://ericroth.org/): Everything dynam
 
 **Code Snippets:** [snippets](snippets)
 
-Modular PHP, JavaScript and CSS, organized by purpose: backend, conditional and overall. Run with [Code Snippets  ↗](https://wordpress.org/plugins/code-snippets/).
+Modular PHP, JavaScript and CSS, organized by purpose: backend, conditional and overall.
 
 **Eric Theme:** [eric-theme](https://github.com/ericrothdotorg/eric-theme)
 
