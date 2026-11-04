@@ -628,7 +628,7 @@ add_action('wp_footer', function () {
 		#cookie-notice button:not(#cookie-close):first-child {margin-left: 0;}
 		#cookie-accept:hover, #cookie-reject:hover {background: var(--color-3) !important;}
 		#cookie-notice button:focus-visible {outline: var(--a11y-focus-width) solid var(--a11y-focus-color); outline-offset: var(--a11y-focus-offset);}
-		@media (max-width: 480px) {#cookie-notice {max-width: 100%; bottom: 0; left: 0; border-radius: 0;} #cookie-notice button:not(#cookie-close) {font-size: 14px; padding: 8px 5px;}}
+		@media (max-width: 480px) {#cookie-notice {max-width: 100%; bottom: 0; left: 0; border-radius: 0;} #cookie-notice button:not(#cookie-close) {font-size: var(--er-fs-xs); padding: 8px 5px;}}
 	</style>
 
 	<script>
