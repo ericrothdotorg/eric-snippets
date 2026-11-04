@@ -20,7 +20,7 @@ WordPress developers who'd rather write fifty lines than install another plugin,
 
 ## How the pieces fit
 
-The snippets are one of four parts. The theme owns layout, design tokens and CSS; the snippets bring everything that stores, counts, sends or decides something. See the [eric-theme README](https://github.com/ericrothdotorg/eric-theme#how-the-pieces-fit) for which shortcodes the templates use, and [website-lab](https://github.com/ericrothdotorg/website-lab) for the overview.
+The snippets are one of four parts. The theme owns layout, design tokens and CSS; the snippets bring everything that stores, counts, sends or decides something. See the [eric-theme README](https://github.com/ericrothdotorg/eric-theme#how-the-pieces-fit) for which shortcodes the templates use.
 
 ---
 
