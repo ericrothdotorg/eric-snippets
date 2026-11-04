@@ -2,7 +2,7 @@
 
 **Contributors:** [ericrothdotorg](https://github.com/ericrothdotorg)
 
-The code snippets behind [ericroth.org](https://ericroth.org/): Everything dynamic on the site. Shortcodes, custom post types, stats, forms, the admin dashboard and more, as self-contained PHP and CSS files, run with Code Snippets.
+The code snippets behind [ericroth.org](https://ericroth.org/): Everything dynamic on the site. Shortcodes, custom post types, stats, forms, the admin dashboard and more, as self-contained PHP and CSS files.
 
 **Tags:** eric-snippets, wordpress, website-lab, eric-theme, eric-slider, shortcodes, php, custom-post-types
 
