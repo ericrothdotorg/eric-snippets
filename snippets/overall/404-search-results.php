@@ -103,3 +103,32 @@ add_filter( 'template_include', function( $template ) {
     }
     return $template;
 }, 99 );
+
+// ======================================
+// SEO TITLE for the synthetic Pages
+// ======================================
+
+// The SEO Framework reads the query on template_redirect, before the swap above
+// (template_include), and keeps that state: it then sees neither the search / 404
+// nor the page and falls back to "Untitled". Give it the private page's title.
+
+add_filter( 'the_seo_framework_title_from_generation', function( $title, $args ) {
+    if ( null === $args && ! empty( $GLOBALS['er_synthetic_page'] ) ) {
+        return get_the_title( $GLOBALS['er_synthetic_page'] );
+    }
+    return $title;
+}, 10, 2 );
+
+// ======================================
+// NOINDEX for the synthetic Pages
+// ======================================
+
+// Same cause as the title above: The SEO Framework no longer sees the search / 404,
+// so its default noindex for them is missing. Set it back.
+
+add_filter( 'the_seo_framework_robots_meta_array', function( $meta, $args ) {
+    if ( null === $args && ! empty( $GLOBALS['er_synthetic_page'] ) ) {
+        $meta['noindex'] = 'noindex';
+    }
+    return $meta;
+}, 10, 2 );
