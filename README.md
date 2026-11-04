@@ -1,19 +1,19 @@
-# My Website Code
+# Eric Snippets
 **Contributors:** [ericrothdotorg](https://github.com/ericrothdotorg)
 
-My website code. Does stuff. I (mostly) know what it does. Ha!
+The code snippets behind [ericroth.org](https://ericroth.org/): Everything dynamic on the site. Shortcodes, header bar, custom post types, quotes, stats and more.
 
-**Tags:** wordpress, block-theme, website-lab, eric-slider
+**Tags:** wordpress, code-snippets, eric-theme, eric-slider
 
 ---
 
-**Eric Theme:** [eric-theme](https://github.com/ericrothdotorg/eric-theme)
-
-The block theme (FSE) behind [ericroth.org](https://ericroth.org/), now in its own repository. Its README explains how theme, snippets, Eric Slider and the Display Posts plugin fit together. Installable zip: [Releases](https://github.com/ericrothdotorg/eric-theme/releases).
-
 **Code Snippets:** [snippets](snippets)
 
-Everything dynamic on the site: Shortcodes, header bar, custom post types, quotes, stats and more.
+Modular PHP, JavaScript and CSS, organized by purpose: backend, conditional and overall. Run with [Code Snippets  ↗](https://wordpress.org/plugins/code-snippets/).
+
+**Eric Theme:** [eric-theme](https://github.com/ericrothdotorg/eric-theme)
+
+The block theme (FSE) behind ericroth.org. Its README explains how theme, snippets, Eric Slider and the Display Posts plugin fit together. Installable zip: [Releases](https://github.com/ericrothdotorg/eric-theme/releases).
 
 **Eric Slider:** [eric-slider](https://github.com/ericrothdotorg/eric-slider)
 
