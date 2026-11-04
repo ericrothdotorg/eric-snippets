@@ -48,7 +48,9 @@ add_action('wp_footer', function () {
 		box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
 		cursor: pointer;
 		appearance: none;
+		transition: transform 0.2s ease;
 	}
+	#er-lang-toggle:hover {transform: scale(1.1);}
 	#er-lang-toggle:focus-visible {outline: 2px solid var(--color-3); outline-offset: 2px;}
 
 	#google_translate_element {
