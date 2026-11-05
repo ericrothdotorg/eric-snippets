@@ -3,19 +3,20 @@
 
 /* ============================================================================
  * FRONTPAGE STUFF — front page only. Scope: front-end.
- *   1  Cover       [er_frontpage_cover]: WebGL image cover, CSS poster first
+ *   1  Cover       [er_frontpage_cover]: turning logo on --color-6, CSS only
  *   2  Cover host  classes on the Group around the cover
- *   3  Styles      brand header, stat tiles
+ *   3  Styles      brand header, values row, stat tiles
  *   4  Portals     hover of the cards (.er-portal)
  *   5  Surprise    /surprise/ redirects to a random published entry
  * Feature code that merely also runs on the front page stays with its feature.
  * ========================================================================== */
 
-/* Cover image (2000 × 1200 or similar) and the page its credit links to. */
-defined( 'ER_FP_IMAGE' )  || define( 'ER_FP_IMAGE',
-	'https://ericroth.org/wp-content/uploads/2026/10/Milky-Way-Galaxy.jpg' );
-defined( 'ER_FP_CREDIT' ) || define( 'ER_FP_CREDIT',
-	'https://science.nasa.gov/image-detail/amf-5ec7f45a-11bb-46f2-8dbc-723aee71b471/' );
+/* Cover logo: the ericroth.org lettering as a ring (SVG, gradient included,
+   centred on the knot) and the knot (WebP). */
+defined( 'ER_FP_RING' ) || define( 'ER_FP_RING',
+	'https://ericroth.org/wp-content/uploads/2026/11/er-cover-ring.svg' );
+defined( 'ER_FP_KNOT' ) || define( 'ER_FP_KNOT',
+	'https://ericroth.org/wp-content/uploads/2026/11/er-cover-knot.webp' );
 
 add_action( 'init', static function () {
 	add_shortcode( 'er_frontpage_cover', 'er_fp_cover_shortcode' );
@@ -24,18 +25,20 @@ add_action( 'init', static function () {
 /* ============================================================================
  * 1  COVER — [er_frontpage_cover]
  *    Place first, as a direct child of a Group (Shortcode or Custom HTML block).
- *    First paint: CSS poster only (blurred opening frame, inline). After load +
- *    idle: image + WebGL (push-in/out, drift, roll sway, passing stars; portrait
- *    turns the image upright). Bots, headless, software GL, any failure: poster
- *    stays.
- *    Motion (all start at 0, so the opening frame matches the poster):
- *      zoom   1.04–1.24×, 40 s each way      FS: float z=...
- *      roll   ±3.5°, ~42 s per sway           FS: float r=...
- *      drift  wide, never-repeating path      draw(): U.O
- *      stars  passing layers                  FS: float ph=T*.1...
- *      lens   mouse bends the stars (soft bulge, eased; not on touch)   FS: vec2 ld=...
- *    Changing the image: upload it, set ER_FP_IMAGE, regenerate the two poster
- *    strings from a blurred ~48 × 29 / 24 × 50 WebP of the opening frame.
+ *    First paint: the plain --color-6 background, nothing else. After load +
+ *    idle: the two logo images load, fade in and turn (CSS animations, transform
+ *    only; no animation script). Bots and headless browsers: background only.
+ *    Reduced motion: the logo fades in and stands still. Off screen or hidden
+ *    tab: paused.
+ *    Motion and strength:
+ *      ring   flat turn, 140 s, opacity .45     CSS: .er-cover-ring
+ *      knot   3D turn, 60 s, opacity .2         CSS: .er-cover-knot
+ *    Size (from the cover box, so it follows the content height):
+ *      ring   the larger of 128 % of the shorter side and 72 % of the height
+ *             (phones: wider than the screen, lettering above and below the content)
+ *      knot   56 % of the shorter side
+ *    Changing the logo: upload the files, set ER_FP_RING / ER_FP_KNOT. The ring
+ *    image must be square with the ring centred, or it wobbles while turning.
  * ========================================================================== */
 
 function er_fp_cover_shortcode() {
@@ -47,224 +50,62 @@ function er_fp_cover_shortcode() {
 	add_action( 'wp_footer', 'er_fp_cover_script', 20 );
 
 	return '<style id="er-cover-css">' . er_fp_cover_css() . '</style>'
-		. '<p class="er-cover-credit"><a href="' . esc_url( ER_FP_CREDIT ) . '" target="_blank" rel="noopener">Image Credit</a></p>'
-		. '<div class="er-cover" aria-hidden="true" data-img="' . esc_url( ER_FP_IMAGE ) . '"><canvas></canvas></div>';
+		. '<div class="er-cover" aria-hidden="true" data-ring="' . esc_url( ER_FP_RING )
+		. '" data-knot="' . esc_url( ER_FP_KNOT ) . '"></div>';
 }
 
 function er_fp_cover_script() {
 	wp_print_inline_script_tag( er_fp_cover_js(), array( 'id' => 'er-cover-js' ) );
 }
 
-/* Poster: tiny blurred opening frame, WebP base64 (portrait | landscape). */
-function er_fp_cover_poster( $portrait ) {
-	return $portrait
-		? 'UklGRogBAABXRUJQVlA4IHwBAACQCQCdASoYADIAPi0ShkKhoQ3+qgAMAWJQBOmUI/3kCWfriRmK+1YWbRPiWI3uWo4x'
-			. 'coi+nyjXyQiHrUxN9u1xJqvl1hIRiQmMRD96AaRkfkjzmZ0AAP7/nZVX8aQYHx/1vRpUlkWRVy+d8dYrdzfjkVxYEcSv'
-			. 'bLJPlPDS5zCNwA6Y0QKFWS2oiaJpiV7iMt4Wm9bA9Tz5p58J3fwXvKmnh484QPjtgtl9zcmecwD4PhjZXusPNDWNxOcu'
-			. 'anN88VlDHwGjcVUaUqHhtdvePCjfVU3X7JciXoD78N7i2b2m1OA106neCgFh1e/EHg6MG9uhMO+1CiUibIBSPBprNqwr'
-			. 'UN2jONTJxwtDmO4liQg74yZF8hSMSc47y9JUZ2/5yoA8WT3fTW7HQksdYiuwXImuNn4tHpEo7PTu3JHpPGr2VtD3QdQU'
-			. 'Z4PufVO3VxCrx/cQfm82Ik63jBpEBn58EA5Mc/zhEKyATaSBvLxp5xMBqo/NChF+tzXT0gAAAA=='
-		: 'UklGRuIBAABXRUJQVlA4INYBAAAwCgCdASowAB0APjESiEKiISEYCq6oIAMEswBOmUI9WkCU7+l4vd3A553TdN5mrMfg'
-			. 'T4HFtLlA4inEyoj8y+/aOQ4LVIG1eB6FYERJq7jhmrNI/9BxeFusIAAA/v/+GNOt/8kL4tqX497Gx4xjSYBaWfI+tew+'
-			. 'mlQQVOZdSafzfS5+B37+I6Y6/qgeW4QnNrsSGH/tZ0KllHc80RIYRouwqBsaD1iNKsHV2EpsCcKUwT0sKDxXodjFceln'
-			. 'D9GXIxBeUwgXGqX+sGvL77ZcxrvP/K5wtCL9mj5CF5kSF5N2D3142zrsDhLV5n5WbuTYf0bJ4zDtjvvVv+CJ2QNrspEX'
-			. 'mjkLXLz+3Jb5dKldJRB2EVeifIGE7zo7cvmK5e18YnZtf38UisYfPaiQTJCPlBXU1pfVhDfTC71QvMeIMDIB52mJLU7J'
-			. 'JwCFY4h76koimS2N/QkBZHp8QPUB7knTxjp1ZnPbtl2VHCHtX93Mysx8ZvI620EzmWzBaRyTEoZRuX7cw06glB3nySIW'
-			. 'v+nbaWqdBQgyMnXHcrJPycGkH5DmW5adgLATkCQNDRoVJ5pSA2zOnPZfKU8/G5ZuXkKG+pPLpDj+TUgXhN8Ya23vTGNm'
-			. 'Rl4Gh7AAAA==';
-}
-
 function er_fp_cover_css() {
-	$css = <<<'CSS'
+	return <<<'CSS'
 .wp-block-group.er-cover-host{position:relative;display:flex;flex-direction:column;justify-content:center;
 justify-content:safe center;min-height:100svh;width:auto;max-width:none;margin:0;overflow:clip;
-background-color:#0c0d14}
+background-color:var(--color-6)}
+:where(.wp-block-group.er-cover-host){--er-link:var(--color-11);--er-link-hover:var(--color-12)}
 .er-cover-anc.er-cover-anc{margin-top:0}
 :empty:has(+ .wp-block-group.er-cover-host){display:none}
-.wp-block-group.er-cover-host>:not(.er-cover):not(.er-cover-credit){position:relative;z-index:1;width:100%}
+.wp-block-group.er-cover-host>:not(.er-cover){position:relative;z-index:1;width:100%}
 .wp-block-group.er-cover-host>.er-cover+*{margin-top:0}
 div.er-cover{position:absolute;inset:0;z-index:0;display:block;width:100%;height:100%;max-width:none;
-margin:0;overflow:hidden;pointer-events:none;
-background:#0c0d14 url(data:image/webp;base64,%LAND%) center/cover no-repeat}
-@media (max-aspect-ratio:1/1){div.er-cover{background-image:url(data:image/webp;base64,%PORT%)}}
-div.er-cover::before{content:"";position:absolute;inset:0;
-background-image:
-radial-gradient(1px 1px at 46% 24%,rgba(235,240,255,0.55) 50%,transparent 100%),
-radial-gradient(1px 1px at 88% 11%,rgba(235,240,255,0.55) 50%,transparent 100%),
-radial-gradient(1px 1px at 73% 17%,rgba(235,240,255,0.55) 50%,transparent 100%),
-radial-gradient(1.5px 1.5px at 79% 12%,rgba(235,240,255,0.55) 50%,transparent 100%),
-radial-gradient(1px 1px at 32% 9%,rgba(235,240,255,0.55) 50%,transparent 100%),
-radial-gradient(1px 1px at 60% 58%,rgba(235,240,255,0.75) 50%,transparent 100%),
-radial-gradient(1.5px 1.5px at 35% 16%,rgba(235,240,255,0.75) 50%,transparent 100%),
-radial-gradient(1.5px 1.5px at 59% 12%,rgba(235,240,255,0.75) 50%,transparent 100%),
-radial-gradient(1.5px 1.5px at 20% 33%,rgba(235,240,255,0.75) 50%,transparent 100%),
-radial-gradient(1px 1px at 85% 79%,rgba(235,240,255,0.75) 50%,transparent 100%),
-radial-gradient(1px 1px at 78% 79%,rgba(235,240,255,0.95) 50%,transparent 100%),
-radial-gradient(1px 1px at 11% 33%,rgba(235,240,255,0.95) 50%,transparent 100%),
-radial-gradient(1px 1px at 76% 22%,rgba(235,240,255,0.95) 50%,transparent 100%),
-radial-gradient(1.5px 1.5px at 58% 23%,rgba(235,240,255,0.95) 50%,transparent 100%);
-background-size:
-233px 197px,233px 197px,233px 197px,233px 197px,233px 197px,
-331px 283px,331px 283px,331px 283px,331px 283px,331px 283px,
-467px 409px,467px 409px,467px 409px,467px 409px}
-.er-cover canvas{position:absolute;inset:0;width:100%;height:100%;display:block;opacity:0;
-transition:opacity 1.8s ease}
-.er-cover canvas.is-on{opacity:1}
-.wp-block-group.er-cover-host>.er-cover-credit{position:absolute;z-index:2;right:12px;bottom:8px;
-width:auto;margin:0;font-size:11px;line-height:1.4;text-shadow:0 1px 2px rgba(0,0,0,.85)}
-.wp-block-group.er-cover-host>.er-cover-credit a{color:rgba(225,232,237,.62);font-weight:400;
-text-decoration:none}
-.wp-block-group.er-cover-host>.er-cover-credit a:hover,
-.wp-block-group.er-cover-host>.er-cover-credit a:focus-visible{color:#fff;text-decoration:underline}
+margin:0;overflow:hidden;pointer-events:none;container-type:size;perspective:150vmax;perspective:150cqmax}
+.er-cover img{position:absolute;left:50%;top:50%;max-width:none;height:auto;translate:-50% -50%;
+opacity:0;transition:opacity 1.8s ease;will-change:transform}
+.er-cover .er-cover-ring{width:128vmin;width:max(128cqmin,72cqh);animation:er-cover-ring 140s linear infinite}
+.er-cover .er-cover-knot{width:56vmin;width:56cqmin;transform:rotateX(12deg);animation:er-cover-knot 60s linear infinite}
+.er-cover.is-on .er-cover-ring{opacity:.45}
+.er-cover.is-on .er-cover-knot{opacity:.2}
+.er-cover.is-paused img{animation-play-state:paused}
+@keyframes er-cover-ring{to{rotate:-360deg}}
+@keyframes er-cover-knot{from{transform:rotateX(12deg) rotateY(0deg)}to{transform:rotateX(12deg) rotateY(360deg)}}
+@media (prefers-reduced-motion:reduce){.er-cover img{animation:none;transition:none}}
 CSS;
-	return strtr( $css, array(
-		'%LAND%' => er_fp_cover_poster( false ),
-		'%PORT%' => er_fp_cover_poster( true ),
-	) );
 }
 
 function er_fp_cover_js() {
 	$js = <<<'JS'
 (() => {
 const root = document.querySelector('.er-cover');
-if (!root || !root.dataset.img || navigator.webdriver || /lighthouse|headlesschrome/i.test(navigator.userAgent)) return;
-const cv = root.querySelector('canvas');
+if (!root || !root.dataset.ring || navigator.webdriver || /lighthouse|headlesschrome/i.test(navigator.userAgent)) return;
 
-const FS = `precision highp float;
-uniform vec2 R,O;uniform float T,N,K;uniform vec3 L;uniform sampler2D I;
-float h(vec2 p){p=fract(p*vec2(233.34,851.73));p+=dot(p,p+23.45);return fract(p.x*p.y);}
-vec3 tc(float t){return t<.5?mix(vec3(.66,.78,1.),vec3(1.,.97,.93),t*2.):mix(vec3(1.,.97,.93),vec3(1.,.8,.6),t*2.-1.);}
-void main(){
-vec2 u=(gl_FragCoord.xy*2.-R)/R.y;
-vec2 ld=u-L.xy;u-=ld*(L.z*.3*exp(-dot(ld,ld)/.09));
-float r=.06*sin(T*.15);u=mat2(cos(r),sin(r),-sin(r),cos(r))*u;
-float as=R.x/R.y,px=2./R.y;
-float P=step(as,1.),S=mix(max(as/K,min(1.,as/(.72*K))),.7,P),a=-.94*P,ca=cos(a),sa=sin(a);
-float z=1.04+.20*(.5-.5*cos(T*.0785));
-vec2 iu=mat2(ca,sa,-sa,ca)*(u-O)/(S*z)+vec2(-.02,.13)*P,t=vec2(iu.x/K,iu.y)*.5+.5;
-vec3 bg=mix(vec3(.12,.13,.16),vec3(.08,.1,.15),gl_FragCoord.y/R.y);
-float m=smoothstep(0.,.1,t.y)*smoothstep(1.,.9,t.y)*smoothstep(0.,.05,t.x)*smoothstep(1.,.95,t.x);
-if(m<1.){vec2 g=u*110.,c=floor(g),f=fract(g)-.5;float hs=h(c);
-if(hs<.06){vec2 sp=(vec2(h(c+1.3),h(c+7.1))-.5)*.6;float d=length(f-sp),e=h(c+4.2);
-bg+=tc(h(c+9.))*smoothstep(max(px*99.,.12),0.,d)*(.1+1.1*e*e*e*e);}}
-vec3 col=mix(bg,texture2D(I,clamp(t,0.,1.)).rgb,m);
-for(int i=0;i<4;i++){float ph=T*.1+float(i)*.25,zz=fract(ph),id=floor(ph)*4.+float(i);
-float sc=24.*max(1.-zz,.03);vec2 gg=u*sc+vec2(h(vec2(id,.3)),h(vec2(.7,id)))*97.;
-vec2 cc=floor(gg),ff=fract(gg)-.5;float s=h(cc+id);
-if(s<.06){vec2 sp=(vec2(h(cc+1.3+id),h(cc+7.1-id))-.5)*.62;float d=length(ff-sp),q=px*sc;
-float rad=.012+.022*h(cc+5.5);
-float bb=smoothstep(rad+q,rad*.3,d)+.18*exp(-d/(rad*2.+q))*smoothstep(.3,.1,d);
-float fd=smoothstep(0.,.3,zz)*smoothstep(1.,.8,zz)*(.4+.6*s/.06);
-col+=tc(h(cc+9.))*bb*fd;}}
-vec2 lu=(gl_FragCoord.xy*2.-R)/R.y-L.xy;col+=vec3(.55,.68,1.)*L.z*exp(-abs(length(lu)-.21)*40.)*.015;
-vec2 w=gl_FragCoord.xy/R-.5;col*=1.-dot(w,w)*.35;
-gl_FragColor=vec4(min(col,1.)+(fract(sin(dot(gl_FragCoord.xy+N,vec2(12.99,78.23)))*43758.5)-.5)*.012,1.);}`;
+/* Both images are requested only here, after load: nothing of the cover competes with FCP / LCP. */
+const img = (cls, src) => {
+	const i = new Image();
+	i.className = cls; i.alt = ''; i.decoding = 'async'; i.src = src;
+	return i.decode().then(() => i);
+};
 
 function start() {
-	const gl = cv.getContext('webgl', { alpha: false, depth: false, stencil: false, antialias: false,
-		failIfMajorPerformanceCaveat: true, powerPreference: 'low-power' });
-	if (!gl) return;
-	const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); return s; };
-	const pr = gl.createProgram();
-	gl.attachShader(pr, sh(gl.VERTEX_SHADER, 'attribute vec2 p;void main(){gl_Position=vec4(p,0.,1.);}'));
-	gl.attachShader(pr, sh(gl.FRAGMENT_SHADER, FS));
-	gl.bindAttribLocation(pr, 0, 'p');
-	gl.linkProgram(pr);
-	if (!gl.getProgramParameter(pr, gl.LINK_STATUS)) return;
-	gl.useProgram(pr);
-	gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
-	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
-	gl.enableVertexAttribArray(0);
-	gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
-	const U = {};
-	'R O T N K L'.split(' ').forEach((k) => { U[k] = gl.getUniformLocation(pr, k); });
-
-	const img = new Image();
-	img.crossOrigin = 'anonymous';
-	img.decoding = 'async';
-	img.src = root.dataset.img;
-	img.decode().then(() => {
-		const tex = gl.createTexture();
-		gl.bindTexture(gl.TEXTURE_2D, tex);
-		gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, img);
-		[gl.TEXTURE_WRAP_S, gl.TEXTURE_WRAP_T].forEach((p) => gl.texParameteri(gl.TEXTURE_2D, p, gl.CLAMP_TO_EDGE));
-		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-		gl.uniform1f(U.K, img.naturalWidth / img.naturalHeight);
-		animate();
-	}).catch(() => {});
-
-	function animate() {
-		const MAX = Math.min(window.devicePixelRatio || 1, 1.5);
-		let q = Math.min(1, MAX), W = 0, H = 0, n = 0, acc = 0;
-		const size = () => {
-			const r = cv.getBoundingClientRect();
-			const w = Math.max(1, Math.round(r.width * q)), h = Math.max(1, Math.round(r.height * q));
-			if (w !== W || h !== H) { W = cv.width = w; H = cv.height = h; gl.viewport(0, 0, W, H); }
-		};
-
-		const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-		let seen = true, run = false, dead = false, raf = 0, last = 0, shown = false, clock = 0;
-
-		/* Lens: the mouse bends the stars around it, easing in and out (mouse / pen only: a finger scrolls the page) */
-		const lens = { x: 0, y: 0, s: 0, tx: 0, ty: 0, ts: 0 };
-		window.addEventListener('pointermove', (e) => {
-			if (e.pointerType === 'touch') return;
-			const r = cv.getBoundingClientRect();
-			if (!r.height) return;
-			lens.tx = ((e.clientX - r.left) * 2 - r.width) / r.height;
-			lens.ty = ((r.bottom - e.clientY) * 2 - r.height) / r.height;
-			lens.ts = 1;
-		}, { passive: true });
-		document.documentElement.addEventListener('pointerleave', () => { lens.ts = 0; });
-
-		const draw = (now) => {
-			const w = clock / 1000;
-			size();
-			gl.uniform2f(U.R, W, H);
-			gl.uniform2f(U.O, 0.05 * Math.sin(w * 0.15), 0.012 + 0.03 * Math.sin(w * 0.11));
-			gl.uniform1f(U.T, w);
-			gl.uniform1f(U.N, (now / 1000) % 1000);
-			lens.x += (lens.tx - lens.x) * 0.12; lens.y += (lens.ty - lens.y) * 0.12; lens.s += (lens.ts - lens.s) * 0.08;
-			gl.uniform3f(U.L, lens.x, lens.y, lens.s);
-			gl.drawArrays(gl.TRIANGLES, 0, 3);
-			if (!shown) { shown = true; cv.classList.add('is-on'); }
-		};
-
-		const frame = (now) => {
-			raf = 0;
-			if (!run) return;
-			const dt = last ? Math.min(100, now - last) : 16;
-			last = now;
-			clock += dt;
-			draw(now);
-			if (++n > 1) acc += dt;
-			if (n === 41) {
-				const avg = acc / 40;
-				n = 0; acc = 0;
-				if (avg > 24) {
-					if (q <= 0.35) { run = false; dead = true; return; }
-					q = Math.max(0.35, q * 0.8);
-				} else if (avg < 15 && q < MAX) {
-					q = Math.min(MAX, q * 1.12);
-				}
-			}
-			raf = requestAnimationFrame(frame);
-		};
-
-		const toggle = () => {
-			const want = seen && !document.hidden && !reduce && !dead;
-			if (want && !run) { run = true; last = 0; n = 0; acc = 0; raf = raf || requestAnimationFrame(frame); }
-			if (!want) run = false;
-		};
-
-		cv.addEventListener('webglcontextlost', () => { dead = true; run = false; cv.classList.remove('is-on'); });
-		if (reduce) { requestAnimationFrame(draw); return; }
+	Promise.all([img('er-cover-ring', root.dataset.ring), img('er-cover-knot', root.dataset.knot)]).then((imgs) => {
+		root.append(...imgs);
+		requestAnimationFrame(() => requestAnimationFrame(() => root.classList.add('is-on')));
+		/* Pause while off screen or in a hidden tab */
+		let seen = true;
+		const toggle = () => root.classList.toggle('is-paused', !seen || document.hidden);
 		if ('IntersectionObserver' in window) new IntersectionObserver((e) => { seen = e[0].isIntersecting; toggle(); }).observe(root);
 		document.addEventListener('visibilitychange', toggle);
-		toggle();
-	}
+	}).catch(() => {});
 }
 
 const idle = window.requestIdleCallback || ((f) => setTimeout(f, 300));
@@ -346,8 +187,8 @@ function er_fp_cover_children( $block, $instance ) {
 }
 
 /* ============================================================================
- * 3  STYLES — brand header and stat tiles. rotate3d keyframe: Eric
- *    Companion CSS.
+ * 3  STYLES — brand header, values row and stat tiles. rotate3d keyframe:
+ *    Eric Companion CSS.
  * ========================================================================== */
 
 add_action( 'wp_head', 'er_fp_styles', 10 );
@@ -365,14 +206,14 @@ function er_fp_styles_css() {
 	.er-brand-frontpage {display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 1.75rem;}
 	.er-brand-frontpage-logo img {width: clamp(45px, 9vw, 85px); aspect-ratio: 1 / 1; height: auto; animation: rotate3d 5s linear infinite; position: relative; top: 0.05em;}
 	.er-brand-frontpage-logo img:hover {animation-play-state: paused;}
-	.er-brand-frontpage-title {font-size: clamp(2rem, 6vw, 3.5rem); font-weight: var(--er-fw-bold); color: var(--color-8); line-height: 1; letter-spacing: 0.1em; text-shadow: 0.10em 0.10em 0.15em rgba(0, 0, 0, 0.25);}
+	.er-brand-frontpage-title {font-size: clamp(2rem, 6vw, 3.5rem); font-weight: var(--er-fw-bold); color: var(--color-7); line-height: 1; letter-spacing: 0.1em; text-shadow: 0.10em 0.10em 0.15em rgba(0, 0, 0, 0.25);}
 	.er-brand-frontpage-teaser {display: block; width: 100%; max-width: 850px; box-sizing: border-box; margin: 0 auto; border-radius: 25px;}
 
 	/* Stat tiles over the cover (Views & Like | Dislike Voting): front-page colours.
 	   Size, squares, centring and phone layout come from the Voting snippet. */
 	.page-id-179 p:has(> .er-stat-line) {gap: 35px;}
 	@media (max-width: 600px) {.page-id-179 p:has(> .er-stat-line) {gap: 10px;}}
-	.page-id-179 .er-stat-line {background: rgba(0, 0, 0, 0.65) !important; border: none !important; color: var(--color-5) !important;}
+	.page-id-179 .er-stat-line {background: var(--color-10) !important; border: 1px solid var(--color-4) !important; color: var(--color-5) !important;}
 	.page-id-179 .er-stat-foot {border-top-color: var(--color-3) !important; color: var(--color-5) !important;}
 	.page-id-179 .er-stat-icon {filter: brightness(0) invert(1) brightness(0.95) !important;}
 
@@ -381,14 +222,15 @@ function er_fp_styles_css() {
 	.er-fp-values .er-num {display: inline-grid; font-size: var(--er-fs-xxl);}
 	.er-fp-values .er-num > * {grid-area: 1 / 1; text-align: center; text-box: trim-both cap alphabetic;}
 	.er-fp-values .er-num-final {visibility: hidden;}
-	.er-fp-values .counter-value {font-size: inherit; vertical-align: baseline; color: #FFFF00;}
+	.er-fp-values .counter-value {font-size: inherit; vertical-align: baseline; color: var(--color-11); transition: color 0.2s ease;}
+	.er-fp-values a:is(:hover, :focus-visible) .counter-value {color: var(--color-12);}
 	@media (max-width: 600px) {.er-fp-values .er-num {font-size: var(--er-fs-xl);}}
 
-	/* Each value is a link: Same hover language as the portal cards, so it reads as clickable.
-	   text-box trims the fonts' built-in space (number: above the digits, link: below the
-	   baseline), so the padding looks even on all sides. */
-	.er-fp-values a {display: inline-block; padding: 0.65em 0.5em 0.70em 0.5em; line-height: 1.1; text-box: trim-end cap alphabetic; border-radius: 10px; transition: background 0.2s ease;}
-	.er-fp-values a:hover, .er-fp-values a:focus-visible {background: rgba(0, 0, 0, 0.65);}
+	/* Each value is a link: the number carries the dark link colours (--color-11, hover
+	   --color-12, rule above); the word keeps the row's text colour (color:inherit on the
+	   link in the editor). The padding keeps the row's spacing. text-box trims the fonts'
+	   built-in space (number: above the digits, link: below the baseline). */
+	.er-fp-values a {display: inline-block; padding: 0.65em 0.5em 0.70em 0.5em; line-height: 1.1; text-box: trim-end cap alphabetic;}
 
 	/* Space above and below the content once it is taller than the screen, so it clears the fixed header */
 	@media (max-width: 1200px) {.wp-block-group.er-cover-host > .wp-block-group {padding-top: var(--wp--preset--spacing--x-large); padding-bottom: var(--wp--preset--spacing--x-large);}}
@@ -399,9 +241,10 @@ CSS;
  * 4  PORTALS — the portal cards (.er-portal) in their grid (.er-portals).
  *    Columns: 4 side by side, 2 × 2 below 1200px, so a card never sits
  *    alone in a row (the editor's auto grid would go 4-3-2-1).
- *    Hover: same values as the counter discs: scale 1.05, background
- *    --color-6, 0.2 s. Whole-card click comes from the heading link +
- *    .is-clickable-card (Eric Companion PHP 9f).
+ *    Hover: scale 1.05 and the border turns --color-12, 0.2 s. The card's
+ *    background and border (--color-11, the link colour, so it reads as
+ *    clickable) are set in the editor; !important beats its inline colour. Whole-card click comes from the heading
+ *    link + .is-clickable-card (Eric Companion PHP 9f).
  * ========================================================================== */
 
 add_action( 'wp_head', 'er_fp_portals_styles', 10 );
@@ -418,8 +261,8 @@ function er_fp_portals_css() {
 	.wp-block-group.er-portals {grid-template-columns: repeat(4, minmax(0, 1fr));}
 	@media (max-width: 1200px) {.wp-block-group.er-portals {grid-template-columns: repeat(2, minmax(0, 1fr));}}
 	@media (max-width: 600px) {.wp-block-group.er-portals {gap: 12px;}}
-	.er-portal {transition: transform 0.2s ease, background 0.2s ease;}
-	.er-portal:hover, .er-portal:focus-within {transform: scale(1.05); background: var(--color-6) !important;}
+	.er-portal {transition: transform 0.2s ease, border-color 0.2s ease;}
+	.er-portal:hover, .er-portal:focus-within {transform: scale(1.05); border-color: var(--color-12) !important;}
 CSS;
 }
 
