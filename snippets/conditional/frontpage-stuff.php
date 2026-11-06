@@ -64,20 +64,20 @@ function er_fp_cover_css() {
 /* ===== COVER SETTINGS: change the values here, nothing else needs touching ===== */
 div.er-cover {
 --er-logo-x: 75%;						/* where ring and knot sit across the width (50% = centre) */
---er-logo-x-tall: 84%;					/* the same on phones / portrait screens */
+--er-logo-x-tall: 85%;					/* the same on phones / portrait screens */
 --er-ring-size: max(150cqh,118cqw);		/* ring diameter: % of cover height (cqh) or width (cqw), the larger wins */
 --er-ring-size-tall: max(200cqw,95cqh);	
---er-ring-opacity: .45;					/* lettering strength: 0 = invisible, 1 = full */
+--er-ring-opacity: .35;					/* lettering strength: 0 = invisible, 1 = full */
 --er-ring-turn: 75s;					/* one full turn of the lettering (higher = slower) */
 --er-knot-size: max(60cqh,42cqw);		
 --er-knot-size-tall: 110cqw;				
---er-knot-opacity: .2;					/* knot strength */
---er-knot-turn: 30s;					/* one full 3D turn of the knot */
---er-light-width: 38%;					/* how far the light reaches in from the left */
+--er-knot-opacity: .25;					/* knot strength */
+--er-knot-turn: 25s;					/* one full 3D turn of the knot */
+--er-light-width: 35%;					/* how far the light reaches in from the left */
 --er-light-width-tall: 55%;				
---er-light-low: .5;						/* the light breathes between full and this strength */
---er-light-breath: 10s;					/* one breath, in or out */
---er-fade-in: 1.8s;						/* fade-in of logo and light after the page has loaded */
+--er-light-low: .50;					/* the light breathes between full and this strength */
+--er-light-breath: 5s;					/* one breath, in or out */
+--er-fade-in: 1.75s;					/* fade-in of logo and light after the page has loaded */
 }
 /* ===== end of settings ===== */
 
