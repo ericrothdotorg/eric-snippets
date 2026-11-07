@@ -44,7 +44,7 @@ This is the code of one particular site, shared as it is. Use it, take it apart,
 
 - **With a snippets plugin:** Add a file as a snippet in the plugin of your choice. File-based execution, where the plugin supports it, keeps the code in version control.
 - **As a must-use plugin:** Drop the file into `wp-content/mu-plugins/` and add `defined('ABSPATH') || exit;` after `<?php`. Every file carries this note at the top.
-- **Adapt before you run:** Function and shortcode names start with `er_`. Page IDs, paths and settings belong to ericroth.org and need changing for your site.
+- **Adapt before you run:** Function and shortcode names start with `er_`. Page IDs, paths and settings belong to [ericroth.org](https://ericroth.org/) and may be changed for your site.
 ---
 
 ## License
