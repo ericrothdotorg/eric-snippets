@@ -4,7 +4,7 @@
 /* ============================================================================
  * FRONTPAGE STUFF — front page only. Scope: front-end.
  *   1  Cover       [er_frontpage_cover]: turning logo on --color-6, CSS only
- *   2  Cover host  classes on the Group around the cover
+ *   2  Cover host  the class er-cover-host, set in the editor
  *   3  Styles      brand header, values row, stat tiles
  *   4  Portals     hover of the cards (.er-portal)
  *   5  Surprise    /surprise/ redirects to a random published entry
@@ -18,22 +18,29 @@ defined( 'ER_FP_RING' ) || define( 'ER_FP_RING',
 defined( 'ER_FP_KNOT' ) || define( 'ER_FP_KNOT',
 	'https://ericroth.org/wp-content/uploads/2026/11/er-cover-knot.webp' );
 
+/* Cover words: the outlined text running along the left edge. */
+defined( 'ER_FP_WORDS' ) || define( 'ER_FP_WORDS', 'One Human | Many Worlds. The Origin Is One.' );
+
 add_action( 'init', static function () {
 	add_shortcode( 'er_frontpage_cover', 'er_fp_cover_shortcode' );
 }, 20 );
 
 /* ============================================================================
  * 1  COVER — [er_frontpage_cover]
- *    Place first, as a direct child of a Group (Shortcode or Custom HTML block).
+ *    Place first, as a direct child of a Group (Shortcode or Custom HTML block),
+ *    and give that Group the class er-cover-host (Module 2).
  *    First paint: The plain --color-6 background, nothing else. After load +
- *    idle: The two logo images load, fade in and turn and soft light in the
- *    logo colours fades in at the left edge (CSS animations, transform and
- *    opacity only; no animation script). Bots and headless browsers: Background
- *    only. Reduced motion: Logo and light fade in and stand still. Off screen
- *    or hidden tab: Paused.
+ *    idle: The two logo images load, fade in and turn, and the words
+ *    (ER_FP_WORDS, outlined) fade in at the left edge and run
+ *    slowly downwards, reading bottom to top (CSS animations, transform and
+ *    opacity only; the script only builds the words and sets their speed).
+ *    Phones and portrait screens: No words. Bots and headless browsers:
+ *    Background only. Reduced motion: Logo and words fade in and stand still.
+ *    Off screen or hidden tab: Paused.
  *    -------
- *    SETTINGS (position, size, strength, speed of ring, knot and light): The
+ *    SETTINGS (position, size, strength, speed of ring, knot and words): The
  *    block at the top of er_fp_cover_css() below, one commented line each.
+ *    Where the words switch off: the @container line marked "words off".
  *    Size follows the cover box, not the window, so it fits the content height;
  *    "tall" values apply when the cover is taller than wide (phones, portrait).
  *    Card hover: Module 4. Number colours and stat tiles: Module 3.
@@ -51,7 +58,8 @@ function er_fp_cover_shortcode() {
 
 	return '<style id="er-cover-css">' . er_fp_cover_css() . '</style>'
 		. '<div class="er-cover" aria-hidden="true" data-ring="' . esc_url( ER_FP_RING )
-		. '" data-knot="' . esc_url( ER_FP_KNOT ) . '"></div>';
+		. '" data-knot="' . esc_url( ER_FP_KNOT )
+		. '" data-words="' . esc_attr( ER_FP_WORDS ) . '"></div>';
 }
 
 function er_fp_cover_script() {
@@ -63,68 +71,66 @@ function er_fp_cover_css() {
 
 /* ===== COVER SETTINGS: change the values here, nothing else needs touching ===== */
 div.er-cover {
---er-logo-x: 75%;						/* where ring and knot sit across the width (50% = centre) */
---er-logo-x-tall: 85%;					/* the same on phones / portrait screens */
---er-ring-size: max(150cqh,118cqw);		/* ring diameter: % of cover height (cqh) or width (cqw), the larger wins */
---er-ring-size-tall: max(200cqw,95cqh);	
---er-ring-opacity: .35;					/* lettering strength: 0 = invisible, 1 = full */
---er-ring-turn: 75s;					/* one full turn of the lettering (higher = slower) */
+--er-logo-x: 75%;							/* where ring and knot sit across the width (50% = centre) */
+--er-logo-x-tall: 85%;						/* the same on phones / portrait screens */
+--er-ring-size: max(150cqh,118cqw);			/* ring diameter: % of cover height (cqh) or width (cqw), the larger wins */
+--er-ring-size-tall: max(200cqw, 95cqh);	
+--er-ring-opacity: .35;						/* lettering strength: 0 = invisible, 1 = full */
+--er-ring-turn: 75s;						/* one full turn of the lettering (higher = slower) */
 --er-knot-size: max(60cqh,42cqw);		
 --er-knot-size-tall: 110cqw;				
---er-knot-opacity: .25;					/* knot strength */
---er-knot-turn: 25s;					/* one full 3D turn of the knot */
---er-light-width: 35%;					/* how far the light reaches in from the left */
---er-light-width-tall: 55%;				
---er-light-low: .50;					/* the light breathes between full and this strength */
---er-light-breath: 5s;					/* one breath, in or out */
---er-fade-in: 1.75s;					/* fade-in of logo and light after the page has loaded */
+--er-knot-opacity: .25;						/* knot strength */
+--er-knot-turn: 25s;						/* one full 3D turn of the knot */
+--er-words-size: clamp(60px, 12cqh, 150px);	/* letter size of the words at the left edge */
+--er-words-colour: var(--color-7);			/* outline colour of the words */
+--er-words-stroke: 1px;						/* outline thickness */
+--er-words-opacity: .075;					/* words strength: 0 = invisible, 1 = full */
+--er-words-speed: 25;						/* speed in pixels per second (a plain number, no unit) */
+--er-words-x: 0.5em;						/* nudge from the left edge (negative = further out) */
+--er-words-gap: 0.5em;						/* space between one repeat of the words and the next */
+--er-fade-in: 1.75s;						/* fade-in of logo and words after the page has loaded */
 }
 /* ===== end of settings ===== */
 
-.wp-block-group.er-cover-host {position: relative; display: flex; flex-direction: column; justify-content: center;
+.wp-block-group.er-cover-host {position: relative; display: flex; flex-direction: column;
 justify-content: safe center; min-height: 100svh; width: auto; max-width: none; margin: 0; overflow: clip;
 background-color: var(--color-6);}
 :where(.wp-block-group.er-cover-host) {--er-link: var(--color-11); --er-link-hover: var(--color-12);}
-.er-cover-anc.er-cover-anc {margin-top: 0;}
 :empty:has(+ .wp-block-group.er-cover-host) {display: none;}
 .wp-block-group.er-cover-host>:not(.er-cover) {position: relative; z-index: 1; width: 100%;}
 .wp-block-group.er-cover-host>.er-cover+* {margin-top: 0;}
 div.er-cover {position: absolute; inset: 0; z-index: 0; display: block; width: 100%; height: 100%; max-width: none;
-margin: 0; overflow: hidden; pointer-events: none; container-type: size; perspective: 150vmax; perspective: 150cqmax;}
+margin: 0; overflow: hidden; pointer-events: none; container-type: size; perspective: 150cqmax;}
 .er-cover img {position: absolute; left: var(--er-logo-x); top: 50%; max-width: none; height: auto; translate: -50% -50%;
 opacity: 0; transition: opacity var(--er-fade-in) ease; will-change: transform;}
-.er-cover .er-cover-ring {width: 150vh; width: var(--er-ring-size); animation: er-cover-ring var(--er-ring-turn) linear infinite;}
-.er-cover .er-cover-knot {width: 60vh; width: var(--er-knot-size); animation: er-cover-knot var(--er-knot-turn) linear infinite;}
-/* Light: eight soft ovals in the logo colours, top to bottom, faded out to the right */
-div.er-cover::before {content: ""; position: absolute; top: -10%; bottom: -10%; left: -12%; width: var(--er-light-width); opacity: 0;
--webkit-mask: linear-gradient(90deg, #000 15%, rgba(0, 0, 0, .55) 45%, transparent); mask: linear-gradient(90deg, #000 15%, rgba(0, 0, 0, .55) 45%, transparent); background:
-radial-gradient(100% 34% at 0% 6%, rgba(203, 49, 49, .3), transparent 75%),
-radial-gradient(100% 34% at 0% 18.5%, rgba(254, 152, 48, .28), transparent 75%),
-radial-gradient(100% 34% at 0% 31%, rgba(252, 201, 0, .24), transparent 75%),
-radial-gradient(100% 34% at 0% 43.5%, rgba(152, 203, 48, .26), transparent 75%),
-radial-gradient(100% 34% at 0% 56%, rgba(0, 152, 49, .28), transparent 75%),
-radial-gradient(100% 34% at 0% 68.5%, rgba(0, 151, 151, .3), transparent 75%),
-radial-gradient(100% 34% at 0% 81%, rgba(0, 100, 203, .34), transparent 75%),
-radial-gradient(100% 34% at 0% 93.5%, rgba(152, 49, 152, .32), transparent 75%);}
+.er-cover .er-cover-ring {width: var(--er-ring-size); animation: er-cover-ring var(--er-ring-turn) linear infinite;}
+.er-cover .er-cover-knot {width: var(--er-knot-size); animation: er-cover-knot var(--er-knot-turn) linear infinite;}
+/* Words: one line set sideways (reads bottom to top), --er-words-x in from the left edge.
+   The script repeats the words until they are taller than the screen, doubles them, and
+   sets the duration from --er-words-speed; the loop moves down by exactly one half. */
+.er-cover .er-cover-words {position: absolute; top: 0; left: var(--er-words-x); writing-mode: vertical-rl; rotate: 180deg;
+font-size: var(--er-words-size); font-weight: var(--er-fw-normal, 400); line-height: 1; text-box: trim-both cap alphabetic;
+white-space: nowrap; color: transparent; -webkit-text-stroke: var(--er-words-stroke) var(--er-words-colour);
+opacity: 0; transition: opacity var(--er-fade-in) ease; animation: er-cover-words 120s linear infinite; will-change: transform;}
+.er-cover .er-cover-words > span {padding-inline-end: var(--er-words-gap);}
 @container (aspect-ratio < 1) {
 .er-cover img {left: var(--er-logo-x-tall);}
 .er-cover .er-cover-ring {width: var(--er-ring-size-tall);}
-.er-cover .er-cover-knot {width: var(--er-knot-size-tall);}
-div.er-cover::before {width: var(--er-light-width-tall); left: -20%;}}
+.er-cover .er-cover-knot {width: var(--er-knot-size-tall);}}
+@container (aspect-ratio < 1) or (width < 768px) {.er-cover .er-cover-words {display: none;}}	/* words off: phones, portrait, narrow */
 .er-cover.is-on .er-cover-ring {opacity: var(--er-ring-opacity);}
 .er-cover.is-on .er-cover-knot {opacity: var(--er-knot-opacity);}
-.er-cover.is-on::before {opacity: 1; animation: er-cover-in var(--er-fade-in) ease, er-cover-glow var(--er-light-breath) ease-in-out var(--er-fade-in) infinite alternate;}
-.er-cover.is-paused img, .er-cover.is-paused::before {animation-play-state: paused;}
+.er-cover.is-on .er-cover-words {opacity: var(--er-words-opacity);}
+.er-cover.is-paused img, .er-cover.is-paused .er-cover-words {animation-play-state: paused;}
 @keyframes er-cover-ring {to {rotate: -360deg;}}
 @keyframes er-cover-knot {from {transform: rotate3d(1, 1, 1, 0deg);} to {transform: rotate3d(1, 1, 1, 360deg);}}	/* tumbles like the logo at the top */
-@keyframes er-cover-in {from {opacity: 0;}}
-@keyframes er-cover-glow {to {opacity: var(--er-light-low);}}
-@media (prefers-reduced-motion: reduce) {.er-cover img {animation: none;} .er-cover.is-on::before {animation: er-cover-in var(--er-fade-in) ease;}}
+@keyframes er-cover-words {from {translate: 0 -50%;} to {translate: 0 0;}}
+@media (prefers-reduced-motion: reduce) {.er-cover img, .er-cover .er-cover-words {animation: none;}}
 CSS;
 }
 
 function er_fp_cover_js() {
-	$js = <<<'JS'
+	return <<<'JS'
 (() => {
 const root = document.querySelector('.er-cover');
 if (!root || !root.dataset.ring || navigator.webdriver || /lighthouse|headlesschrome/i.test(navigator.userAgent)) return;
@@ -136,8 +142,32 @@ const img = (cls, src) => {
 	return i.decode().then(() => i);
 };
 
+/* Words at the left edge: repeated until taller than cover and screen, then doubled, so moving
+   down by one half loops seamlessly. Duration = length of one half / --er-words-speed. */
+function words() {
+	const text = root.dataset.words || '';
+	if (!text) return;
+	const unit = () => {
+		const s = document.createElement('span');
+		s.textContent = text;
+		return s;
+	};
+	const w = document.createElement('div');
+	w.className = 'er-cover-words';
+	root.prepend(w);
+	w.append(unit());
+	if (!w.offsetHeight) { w.remove(); return; }
+	const need = Math.max(root.offsetHeight, screen.height) * 1.3;
+	while (w.offsetHeight < need && w.children.length < 40) w.append(unit());
+	const half = w.offsetHeight;
+	[...w.children].forEach((s) => w.append(s.cloneNode(true)));
+	const speed = parseFloat(getComputedStyle(root).getPropertyValue('--er-words-speed')) || 25;
+	w.style.animationDuration = (half / speed) + 's';
+}
+
 function start() {
 	Promise.all([img('er-cover-ring', root.dataset.ring), img('er-cover-knot', root.dataset.knot)]).then((imgs) => {
+		words();
 		root.append(...imgs);
 		requestAnimationFrame(() => requestAnimationFrame(() => root.classList.add('is-on')));
 		/* Pause while off screen or in a hidden tab */
@@ -153,78 +183,14 @@ const go = () => idle(start, { timeout: 2500 });
 if (document.readyState === 'complete') go(); else window.addEventListener('load', go, { once: true });
 })();
 JS;
-	/* Strips indentation and blank lines: use only block comments in the JS. */
-	return preg_replace( '/^\s+|\n\s*\n/m', '', $js );
 }
 
 /* ============================================================================
- * 2  COVER HOST — er-cover-host on the Group holding the shortcode, er-cover-anc
- *    on its parent and grandparent. Set server-side: :has() would restyle the
- *    cover on every counter tick.
+ * 2  COVER HOST — no code. In the editor, give the Group that holds the
+ *    shortcode the class er-cover-host (Block settings → Advanced → Additional
+ *    CSS class(es)). It makes that Group the full-height cover (Module 1 CSS).
+ *    If the Group is ever rebuilt, add the class again.
  * ========================================================================== */
-
-add_filter( 'render_block', 'er_fp_cover_mark_block', 10, 3 );
-
-function er_fp_cover_mark_block( $html, $block, $instance = null ) {
-	if ( ! is_front_page() ) {
-		return $html;
-	}
-	$depth = er_fp_cover_depth( $block, $instance, 2 );
-	if ( $depth < 0 ) {
-		return $html;
-	}
-	$p = new WP_HTML_Tag_Processor( $html );
-	if ( $p->next_tag() ) {
-		$p->add_class( 0 === $depth ? 'er-cover-host' : 'er-cover-anc' );
-	}
-	return $p->get_updated_html();
-}
-
-/* 0 = host Group, 1 = parent, 2 = grandparent, -1 = none. */
-function er_fp_cover_depth( $block, $instance, $max ) {
-	if ( er_fp_cover_is_host( $block ) ) {
-		return 0;
-	}
-	if ( $max <= 0 ) {
-		return -1;
-	}
-	foreach ( er_fp_cover_children( $block, $instance ) as $child ) {
-		$d = er_fp_cover_depth( $child, null, $max - 1 );
-		if ( $d >= 0 ) {
-			return $d + 1;
-		}
-	}
-	return -1;
-}
-
-function er_fp_cover_is_host( $block ) {
-	if ( 'core/group' !== ( $block['blockName'] ?? '' ) ) {
-		return false;
-	}
-	foreach ( $block['innerBlocks'] ?? array() as $inner ) {
-		if ( in_array( $inner['blockName'] ?? '', array( 'core/shortcode', 'core/html' ), true )
-			&& false !== strpos( (string) ( $inner['innerHTML'] ?? '' ), '[er_frontpage_cover' ) ) {
-			return true;
-		}
-	}
-	return false;
-}
-
-/* For Post Content: the blocks of the post it shows. */
-function er_fp_cover_children( $block, $instance ) {
-	if ( 'core/post-content' !== ( $block['blockName'] ?? '' ) ) {
-		return $block['innerBlocks'] ?? array();
-	}
-	$id = ( $instance instanceof WP_Block && ! empty( $instance->context['postId'] ) )
-		? (int) $instance->context['postId']
-		: (int) get_the_ID();
-	static $cache = array();
-	if ( ! isset( $cache[ $id ] ) ) {
-		$content      = $id ? (string) get_post_field( 'post_content', $id ) : '';
-		$cache[ $id ] = false !== strpos( $content, '[er_frontpage_cover' ) ? parse_blocks( $content ) : array();
-	}
-	return $cache[ $id ];
-}
 
 /* ============================================================================
  * 3  STYLES — brand header, values row and stat tiles. rotate3d keyframe:
@@ -251,11 +217,11 @@ function er_fp_styles_css() {
 
 	/* Stat tiles over the cover (Views & Like | Dislike Voting): front-page colours.
 	   Size, squares, centring and phone layout come from the Voting snippet. */
-	.page-id-179 p:has(> .er-stat-line) {gap: 35px;}
-	@media (max-width: 600px) {.page-id-179 p:has(> .er-stat-line) {gap: 10px;}}
-	.page-id-179 .er-stat-line {background: var(--color-10) !important; border: 1px solid var(--color-4) !important; color: var(--color-5) !important;}
-	.page-id-179 .er-stat-foot {border-top-color: var(--color-3) !important; color: var(--color-5) !important;}
-	.page-id-179 .er-stat-icon {filter: brightness(0) invert(1) brightness(0.95) !important;}
+	.home p:has(> .er-stat-line) {gap: 35px;}
+	@media (max-width: 600px) {.home p:has(> .er-stat-line) {gap: 10px;}}
+	.home .er-stat-line {background: var(--color-10) !important; border: 1px solid var(--color-4) !important; color: var(--color-5) !important;}
+	.home .er-stat-foot {border-top-color: var(--color-3) !important; color: var(--color-5) !important;}
+	.home .er-stat-icon {filter: brightness(0) invert(1) brightness(0.95) !important;}
 
 	/* Counted values row (Number Counter). Each number reserves the width of its
 	   final value (hidden copy behind it), so the row does not shift while counting. */
