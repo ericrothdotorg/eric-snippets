@@ -75,7 +75,7 @@ div.er-cover {
 --er-logo-x-tall: 85%;						/* the same on phones / portrait screens */
 --er-ring-size: max(150cqh,118cqw);			/* ring diameter: % of cover height (cqh) or width (cqw), the larger wins */
 --er-ring-size-tall: max(200cqw, 95cqh);	
---er-ring-opacity: .35;						/* lettering strength: 0 = invisible, 1 = full */
+--er-ring-opacity: .25;						/* lettering strength: 0 = invisible, 1 = full */
 --er-ring-turn: 75s;						/* one full turn of the lettering (higher = slower) */
 --er-knot-size: max(60cqh,42cqw);		
 --er-knot-size-tall: 110cqw;				
