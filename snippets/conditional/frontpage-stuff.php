@@ -19,7 +19,7 @@ defined( 'ER_FP_KNOT' ) || define( 'ER_FP_KNOT',
 	'https://ericroth.org/wp-content/uploads/2026/11/er-cover-knot.webp' );
 
 /* Cover words: the outlined text running along the left edge. */
-defined( 'ER_FP_WORDS' ) || define( 'ER_FP_WORDS', 'One Human | Many Worlds. The Origin Is One.' );
+defined( 'ER_FP_WORDS' ) || define( 'ER_FP_WORDS', 'ericroth.org | ' );
 
 add_action( 'init', static function () {
 	add_shortcode( 'er_frontpage_cover', 'er_fp_cover_shortcode' );
@@ -87,7 +87,7 @@ div.er-cover {
 --er-words-opacity: .075;					/* words strength: 0 = invisible, 1 = full */
 --er-words-speed: 25;						/* speed in pixels per second (a plain number, no unit) */
 --er-words-x: 0.5em;						/* nudge from the left edge (negative = further out) */
---er-words-gap: 0.5em;						/* space between one repeat of the words and the next */
+--er-words-gap: 0.0em;						/* space between one repeat of the words and the next */
 --er-fade-in: 1.75s;						/* fade-in of logo and words after the page has loaded */
 }
 /* ===== end of settings ===== */
