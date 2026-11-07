@@ -259,7 +259,7 @@ function er_fp_styles_css() {
 
 	/* Counted values row (Number Counter). Each number reserves the width of its
 	   final value (hidden copy behind it), so the row does not shift while counting. */
-	.er-fp-values .er-num {display: inline-grid; font-size: var(--er-fs-xxl); vertical-align: -0.1em;}
+	.er-fp-values .er-num {display: inline-grid; font-size: var(--er-fs-xxl); vertical-align: -0.1em; margin-inline-start: -0.1em;}
 	.er-fp-values .er-num > * {grid-area: 1 / 1; text-align: center; text-box: trim-both cap alphabetic;}
 	.er-fp-values .er-num-final {visibility: hidden;}
 	.er-fp-values .counter-value {font-size: inherit; vertical-align: baseline; color: var(--color-11); transition: color 0.2s ease;}
