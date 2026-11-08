@@ -57,9 +57,9 @@ add_shortcode('er_accessibility_settings', function () {
 			</div>
 			<div class="a11y-options">
 				<button class="a11y-option swatch" data-group="focus-color" data-value="default" style="background: var(--color-1)" aria-label="Default"></button>
-				<button class="a11y-option swatch" data-group="focus-color" data-value="orange" style="background: #ed7d31" aria-label="Orange"></button>
-				<button class="a11y-option swatch" data-group="focus-color" data-value="green" style="background: #339966" aria-label="Green"></button>
-				<button class="a11y-option swatch" data-group="focus-color" data-value="purple" style="background: #7b5ea7" aria-label="Purple"></button>
+				<button class="a11y-option swatch" data-group="focus-color" data-value="orange" style="background: var(--er-orange)" aria-label="Orange"></button>
+				<button class="a11y-option swatch" data-group="focus-color" data-value="green" style="background: var(--er-green)" aria-label="Green"></button>
+				<button class="a11y-option swatch" data-group="focus-color" data-value="purple" style="background: var(--er-purple)" aria-label="Purple"></button>
 				<button class="a11y-option swatch" data-group="focus-color" data-value="white" style="background: var(--color-8)" aria-label="White"></button>
 				<button class="a11y-option swatch" data-group="focus-color" data-value="dark" style="background: var(--color-6)" aria-label="Dark"></button>
 			</div>
@@ -114,7 +114,7 @@ add_action('wp_footer', function () {
 
 	var a11yPrefs={underline:null,'focus-width':null,'focus-color':null},
 	a11yStore='er_a11y_prefs',
-	a11yColors={orange:'#ed7d31',green:'#339966',purple:'#7b5ea7',white:'var(--color-8)',dark:'var(--color-6)'},
+	a11yColors={orange:'var(--er-orange)',green:'var(--er-green)',purple:'var(--er-purple)',white:'var(--color-8)',dark:'var(--color-6)'},
 	a11yWidths={thick:'3px','extra-thick':'5px'};
 
 	function a11ySave(){try{localStorage.setItem(a11yStore,JSON.stringify(a11yPrefs))}catch(e){}}
