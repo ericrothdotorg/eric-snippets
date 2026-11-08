@@ -54,19 +54,21 @@ body.dark-mode .two-columns-text, .three-columns-text, .four-columns-text {
 .four-columns-text {column-count: 4;}
 @media (max-width:768px) {.two-columns-text, .three-columns-text, .four-columns-text {column-count: 1; column-gap: 0; column-rule: none;}}
 
-/* ---- (Emphasized) design blocks ---- */
-.emphasized-design-green, .emphasized-design-red, .emphasized-design-orange {
+/* ---- (Emphasized) design blocks ----
+   Colours come from --er-orange / --er-green / --er-purple (style.css): they switch on dark
+   backgrounds by themselves. -red is the old name of -purple, kept because content still uses it. */
+.emphasized-design-green, .emphasized-design-purple, .emphasized-design-red, .emphasized-design-orange {
 	font-style: italic;
 	border-left: 1px solid var(--color-9);
 	margin-left: 2em;
 	padding-left: 2em;
 }
-.emphasized-design-green {color: #339966;} /* No var Color */
-.emphasized-design-red {color: #990033;} /* No var Color */
-.emphasized-design-orange {color: #ed7d31;} /* No var Color */
-.font-design-red {color: #990033;} /* No var Color */
-body.dark-mode .emphasized-design-red {color: #cc0044;} /* No var Color */
-body.dark-mode .font-design-red {color: #cc0044;} /* No var Color */
+.emphasized-design-green {color: var(--er-green);}
+.emphasized-design-orange {color: var(--er-orange);}
+.emphasized-design-purple, .emphasized-design-red {color: var(--er-purple);}
+.font-design-green {color: var(--er-green);}
+.font-design-orange {color: var(--er-orange);}
+.font-design-purple, .font-design-red {color: var(--er-purple);}
 
 /* ---- Higlighted columns & paragraphs ---- */
 .column-highlight {
@@ -537,7 +539,7 @@ footer.flex-container {max-width: var(--er-wide-row); margin-inline: auto; colum
 /* ---- Footer column RIGHT ---- */
 .site-updates-wrapper {display: flex; align-items: center; padding-top: 25px;}
 .site-updates-text {padding-left: 35px; margin: 0;}
-.content-text {color: #ed7d31;} /* No var Color */
+.content-text {color: var(--er-orange);}
 .content-text::before {content: "content"; animation: content-words 10s linear infinite;}
 @keyframes content-words {
 	9.09%  {content: " posts";}
