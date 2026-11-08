@@ -399,22 +399,22 @@ function er_map_base_css() {
 .erm .erc-dot,
 .erm .erc-ring,
 .erm .erc-hello{position: absolute; border-radius: 50%}
-.erm .erc-dot{left: -7px; top: -7px; width: 14px; height: 14px; background: #28a745; box-shadow: 0 0 0 2px rgba(40,167,69,.35)}
+.erm .erc-dot{left: -7px; top: -7px; width: 14px; height: 14px; background: var(--er-c-live); box-shadow: 0 0 0 2px color-mix(in srgb, var(--er-c-live) 35%, transparent)}
 .erm .erc-ring,
 .erm .erc-hello{left: -7.42px; top: -7.42px; width: 14.83px; height: 14.83px; opacity: 0}
-.erm .erc-ring{box-shadow: inset 0 0 0 0.83px #28a745; animation: erc-pulse 2.4s cubic-bezier(.2,.7,.3,1) infinite}
+.erm .erc-ring{box-shadow: inset 0 0 0 0.83px var(--er-c-live); animation: erc-pulse 2.4s cubic-bezier(.2,.7,.3,1) infinite}
 .erm .erc-ring-2{animation-delay: 1.2s}
 
 /* Only the most recent places pulse; the rest stay as still dots. */
 .erm .erc-me.is-still .erc-ring{display: none}
-.erm .erc-hello{box-shadow: inset 0 0 0 0.4px #28a745; animation: erc-hello 1.8s cubic-bezier(.2,.7,.3,1)}
+.erm .erc-hello{box-shadow: inset 0 0 0 0.4px var(--er-c-live); animation: erc-hello 1.8s cubic-bezier(.2,.7,.3,1)}
 @keyframes erc-pulse{0%{transform: scale(1); opacity: 0.85} 75%, 100%{transform: scale(6); opacity: 0}}
 @keyframes erc-fade{from{opacity: 0}}
 @keyframes erc-hello{0%{transform: scale(1); opacity: 1} 100%{transform: scale(10); opacity: 0}}
 
 @media (prefers-reduced-motion: reduce){
 	.erm > .erc-shade{transition: none}
-	.erm .erc-ring{animation: none; opacity: 0.5; left: -18.05px; top: -18.05px; width: 36.1px; height: 36.1px; box-shadow: inset 0 0 0 2.5px #28a745}
+	.erm .erc-ring{animation: none; opacity: 0.5; left: -18.05px; top: -18.05px; width: 36.1px; height: 36.1px; box-shadow: inset 0 0 0 2.5px var(--er-c-live)}
 	.erm .erc-others .erc-me{animation: none}
 	.erm .erc-hello{display: none}
 }
@@ -622,6 +622,8 @@ function er_reach_past_shortcode() {
 
 function er_reach_css() {
 	return <<<'CSS'
+/* Live-visitor green: map dots + legend. Set here for both, because the legend sits outside .er-reach. */
+.er-reach, .erm-stats{--er-c-live: #28a745}
 .er-reach{
 	--er-c-day: var(--color-9, #8da6b9);
 	--er-c-accent: var(--color-1, #1e73be);
@@ -717,7 +719,7 @@ html.erm-lock{overflow: hidden}
 .erm-stats .erm-sep{margin: 0 .6em; opacity: .5}
 .erm-stats .erm-key{display: inline-flex; align-items: center; gap: 6px; margin-left: 14px}
 .erm-stats .erm-key i{display: inline-block; width: 10px; height: 10px; border-radius: 50%}
-.erm-stats .erm-key i.is-live{background: #28a745; box-shadow: 0 0 0 2px rgba(40,167,69,.3)}
+.erm-stats .erm-key i.is-live{background: var(--er-c-live); box-shadow: 0 0 0 2px color-mix(in srgb, var(--er-c-live) 30%, transparent)}
 .erm-stats .erm-key i.is-past{background: var(--color-1, #1e73be);}
 .erm-muted{color: #999}
 
