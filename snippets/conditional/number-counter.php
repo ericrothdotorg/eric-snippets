@@ -28,7 +28,7 @@ add_action('wp_head', function() use ($counter_pages) {
         .counter-card:hover {transform: scale(1.05); background: var(--color-7);}
         .counter-card .counter-body {text-align: center; color: var(--color-3); transform: translateY(-5px);}
         .counter-body img {margin-bottom: 0.25em;}
-        .counter-value {color: #990033; font-size: var(--er-fs-xl); font-weight: var(--er-fw-bold);}
+        .counter-value {color: var(--er-purple); font-size: var(--er-fs-xl); font-weight: var(--er-fw-bold);}
         .counter-value, .counter-label {vertical-align: middle;}
         .counter-label {padding-left: 10px; font-size: var(--er-fs-md); font-weight: var(--er-fw-normal);}
 
