@@ -539,20 +539,13 @@ footer.flex-container {max-width: var(--er-wide-row); margin-inline: auto; colum
 /* ---- Footer column RIGHT ---- */
 .site-updates-wrapper {display: flex; align-items: center; padding-top: 25px;}
 .site-updates-text {padding-left: 35px; margin: 0;}
-.content-text {color: var(--er-orange);}
-.content-text::before {content: "content"; animation: content-words 10s linear infinite;}
-@keyframes content-words {
-	9.09%  {content: " posts";}
-	18.18% {content: " traits";}
-	27.27% {content: " projects";}
-	36.36% {content: " topics";}
-	45.45% {content: " galleries";}
-	54.54% {content: " feeds";}
-	63.63% {content: " pages";}
-	72.72% {content: " things";}
-	81.81% {content: " visitors";}
-	90.90% {content: " quotes";}
-}
+/* Rotating word after "for the latest": the 11 words are real text in parts / footer.html, so the
+   Language Switcher and the browser's own translation translate them. They sit on top of each other
+   (one grid cell, so the line keeps the width of the longest word) and take turns, each for 1/11 of
+   10 s; --i on each word = its turn. Screen readers get only the first word (the others are aria-hidden). */
+.content-text {display: inline-grid; color: var(--er-orange);}
+.content-text > span {grid-area: 1 / 1; visibility: hidden; animation: content-words 10s linear calc(var(--i) * 10s / 11) infinite;}
+@keyframes content-words {0%, 9.09% {visibility: visible;} 9.1%, 100% {visibility: hidden;}}
 
 /* ============================================================
    E. TEMPLATE-PART COMPONENTS
@@ -594,19 +587,19 @@ footer.flex-container {max-width: var(--er-wide-row); margin-inline: auto; colum
 }
 /* Links use the site link colours (style.css §3; hero + footer are dark contexts); current page muted. */
 .er-breadcrumbs [aria-current="page"] {color: var(--color-3);}
-.er-breadcrumb-home-icon {display: block;} /* icon sizes: width/height attributes in er_breadcrumbs() */
+.er-breadcrumb-home-icon {display: block;} /* icon sizes: width / height attributes in er_breadcrumbs() */
 .er-breadcrumb-separator {margin-inline: 8px; color: var(--color-9);}
 
 /* Space between the hero description (above) and the breadcrumb trail. */
 .er-hero-section .er-breadcrumbs {margin-top: 1.25rem;}
 
-/* Dark contexts (hero/footer): keep blue links; current page flips light for contrast. */
+/* Dark contexts (hero / footer): keep blue links; current page flips light for contrast. */
 .er-hero-section.has-background-dim .er-breadcrumbs [aria-current="page"],
 footer.wp-block-template-part .er-breadcrumbs [aria-current="page"] {color: var(--color-8);}
 
 /* Footer breadcrumbs: lifted OUT of footer.flex-container to a block row above the columns. Cap+centre+gutter match the column row; margin-bottom mirrors its row-gap. */
 footer.wp-block-template-part .er-breadcrumbs {
-	max-width: var(--er-wide-row); /* aligned to hero/content like the header (Session 11) */
+	max-width: var(--er-wide-row); /* aligned to hero / content like the header */
 	margin-inline: auto;
 	margin-bottom: 25px;
 }
@@ -812,10 +805,11 @@ body.dark-mode .er-author-links a {background: var(--color-6);}
 	.animate__animated,
 	.er-social-link-icon,
 	.er-social-icon-link,
-	.content-text::before {
+	.content-text > span {
 		animation: none !important;
 		transition: none !important;
 		transform: none !important;
 	}
+	.content-text > span:first-child {visibility: visible;}	/* no rotation: "content" stays */
 }
 @media (prefers-reduced-motion: no-preference) {.er-social-link-icon, .er-social-icon-link {transition: transform 0.1s ease;} .er-social-link-icon:hover, .er-social-icon-link:hover {transform: scale(1.1);}}
