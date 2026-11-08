@@ -836,8 +836,8 @@ add_shortcode( 'er_cpt_archive', function( $atts ) {
 	// Placed after the sentinel: the infinite-scroll JS expects the sentinel as the grid's next sibling.
 	if ( $is_term_archive ) {
 		$er_other_terms = array(
-			'category' => array( 'My-Blog', 'My Blog', 'https://ericroth.org/personal/my-blog/' ),
-			'topics'   => array( 'My-Interests', 'My Interests', 'https://ericroth.org/personal/my-interests/' ),
+			'category' => array( 'My-Blog', 'My Blog', '/personal/my-blog/' ),
+			'topics'   => array( 'My-Interests', 'My Interests', '/personal/my-interests/' ),
 		);
 		if ( isset( $er_other_terms[ $taxonomy ] ) ) {
 			// IDs of all terms except the current one → passed as include_id
