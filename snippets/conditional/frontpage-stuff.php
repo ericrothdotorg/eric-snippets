@@ -44,7 +44,8 @@ add_action( 'init', static function () {
  *    Where the words switch off: the @container line marked "words off".
  *    Size follows the cover box, not the window, so it fits the content height;
  *    "tall" values apply when the cover is taller than wide (phones, portrait).
- *    Card hover: Module 3. Number colours and stat tiles: Module 2.
+ *    COLOURS of the whole front page: the block FRONT PAGE COLOURS, right below
+ *    the cover settings in er_fp_cover_css(). Card hover: Module 3. Stat tiles: Module 2.
  *    Changing the logo: Upload the files, set ER_FP_RING / ER_FP_KNOT. The ring
  *    image must be square with the ring centred, or it wobbles while turning.
  * ========================================================================== */
@@ -95,8 +96,23 @@ div.er-cover {
 
 .wp-block-group.er-cover-host {position: relative; display: flex; flex-direction: column;
 justify-content: safe center; min-height: 100svh; width: auto; max-width: none; margin: 0; overflow: clip;
-background-color: var(--color-6);}
-:where(.wp-block-group.er-cover-host) {--er-link: var(--color-11); --er-link-hover: var(--color-12);}
+background-color: var(--er-fp-bg);}
+
+/* ===== FRONT PAGE COLOURS: every colour of the front page, change them here only =====
+   :where() keeps this at zero specificity, so a colour set on a block in the editor still wins. */
+:where(.wp-block-group.er-cover-host) {
+--er-link: var(--color-1);					/* links: counted numbers, link text */
+--er-link-hover: var(--color-2);			/* link hover, portal card border on hover */
+--er-fp-bg: var(--color-6);					/* cover background, portal card background on hover */
+--er-fp-title: var(--color-7);				/* brand title "ericroth.org" */
+--er-fp-tile-bg: var(--color-10);			/* stat tiles (views, likes, dislikes): background */
+--er-fp-tile-border: var(--color-4);		/* stat tiles: border */
+--er-fp-tile-text: var(--color-5);			/* stat tiles: text */
+--er-fp-tile-line: var(--color-3);			/* stat tiles: line above the foot text */
+--er-fp-tile-number: #FFD700;				/* stat tiles: the numbers */
+}
+/* ===== end of colours ===== */
+
 :empty:has(+ .wp-block-group.er-cover-host) {display: none;}	/* hide the empty block WordPress sometimes leaves just before the cover */
 .wp-block-group.er-cover-host>:not(.er-cover) {position: relative; z-index: 1; width: 100%;}
 .wp-block-group.er-cover-host>.er-cover+* {margin-top: 0;}
@@ -112,6 +128,7 @@ font-size: var(--er-words-size); font-weight: var(--er-fw-normal, 400); line-hei
 white-space: nowrap; color: transparent; -webkit-text-stroke: var(--er-words-stroke) var(--er-words-colour);
 opacity: 0; transition: opacity var(--er-fade-in) ease; animation: er-cover-words linear infinite; will-change: transform;}
 .er-cover .er-cover-words > span {padding-inline-end: var(--er-words-gap);}
+.er-cover .er-cover-words > span::before {content: attr(data-text);}
 @container (aspect-ratio < 1) {
 .er-cover img {left: var(--er-logo-x-tall);}
 .er-cover .er-cover-ring {width: var(--er-ring-size-tall);}
@@ -149,7 +166,7 @@ function words() {
 	if (!text) return;
 	const unit = () => {
 		const s = document.createElement('span');
-		s.textContent = text;
+		s.dataset.text = text;	/* shown via ::before: decorative, so it is no page text (no contrast error, nothing to read out) */
 		return s;
 	};
 	const w = document.createElement('div');
@@ -211,15 +228,16 @@ function er_fp_styles_css() {
 	.er-brand-frontpage {display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 1.75rem;}
 	.er-brand-frontpage-logo img {width: clamp(45px, 9vw, 85px); aspect-ratio: 1 / 1; height: auto; animation: rotate3d 5s linear infinite; position: relative; top: 0.05em;}	/* top: optical nudge, set by eye */
 	.er-brand-frontpage-logo img:hover {animation-play-state: paused;}
-	.er-brand-frontpage-title {font-size: clamp(2rem, 6vw, 3.5rem); font-weight: var(--er-fw-bold); color: var(--color-7); line-height: 1; letter-spacing: 0.1em; text-shadow: 0.10em 0.10em 0.15em rgba(0, 0, 0, 0.25);}
+	.er-brand-frontpage-title {font-size: clamp(2rem, 6vw, 3.5rem); font-weight: var(--er-fw-bold); color: var(--er-fp-title); line-height: 1; letter-spacing: 0.1em; text-shadow: 0.10em 0.10em 0.15em rgba(0, 0, 0, 0.25);}
 	.er-brand-frontpage-teaser {display: block; width: 100%; max-width: 850px; box-sizing: border-box; margin: 0 auto; border-radius: 25px;}
 
 	/* Stat tiles over the cover (Views & Like | Dislike Voting): front-page colours.
 	   Size, squares, centring and phone layout come from the Voting snippet. */
 	.home p:has(> .er-stat-line) {gap: 35px;}
 	@media (max-width: 600px) {.home p:has(> .er-stat-line) {gap: 10px;}}
-	.home .er-stat-line {background: var(--color-10) !important; border: 1px solid var(--color-4) !important; color: var(--color-5) !important;}
-	.home .er-stat-foot {border-top-color: var(--color-3) !important; color: var(--color-5) !important;}
+	.home .er-stat-line {background: var(--er-fp-tile-bg) !important; border: 1px solid var(--er-fp-tile-border) !important; color: var(--er-fp-tile-text) !important;}
+	.home .er-stat-foot {border-top-color: var(--er-fp-tile-line) !important; color: var(--er-fp-tile-text) !important;}
+	.home .er-stat-line .er-stat-value {color: var(--er-fp-tile-number);}	/* .er-stat-line outranks the Voting snippet's dark-mode rule */
 	.home .er-stat-icon {filter: brightness(0) invert(1) brightness(0.95) !important;}	/* icons near-white whatever their colour: black, then inverted to white, then 5 % darker */
 
 	/* Counted values row (Number Counter). Each number reserves the width of its
@@ -227,12 +245,12 @@ function er_fp_styles_css() {
 	.er-fp-values .er-num {display: inline-grid; font-size: var(--er-fs-xxl); vertical-align: -0.1em; margin-inline-start: -0.1em;}	/* -0.1em: optical nudges, set by eye */
 	.er-fp-values .er-num > * {grid-area: 1 / 1; text-align: center; text-box: trim-both cap alphabetic;}
 	.er-fp-values .er-num-final {visibility: hidden;}
-	.er-fp-values .counter-value {font-size: inherit; vertical-align: baseline; color: var(--color-11); transition: color 0.2s ease;}
-	.er-fp-values a:is(:hover, :focus-visible) .counter-value {color: var(--color-12);}
+	.er-fp-values .counter-value {font-size: inherit; vertical-align: baseline; color: var(--er-link); transition: color 0.2s ease;}
+	.er-fp-values a:is(:hover, :focus-visible) .counter-value {color: var(--er-link-hover);}
 	@media (max-width: 600px) {.er-fp-values .er-num {font-size: var(--er-fs-xl);}}
 
-	/* Each value is a link: the number carries the dark link colours (--color-11, hover
-	   --color-12, rule above); the word keeps the row's text colour (color:inherit on the
+	/* Each value is a link: the number carries the link colours (--er-link, hover
+	   --er-link-hover, rule above); the word keeps the row's text colour (color:inherit on the
 	   link in the editor). The padding keeps the row's spacing. text-box trims the fonts'
 	   built-in space (number: above the digits, link: below the baseline). */
 	.er-fp-values a {display: inline-block; padding: 0.65em 0.5em 0.70em 0.5em; line-height: 1.1; text-box: trim-end cap alphabetic;}	/* padding: optical nudge, set by eye */
@@ -246,9 +264,9 @@ CSS;
  * 3  PORTALS — the portal cards (.er-portal) in their grid (.er-portals).
  *    Columns: 4 side by side, 2 × 2 below 1200px, so a card never sits
  *    alone in a row (the editor's auto grid would go 4-3-2-1).
- *    Hover: scale 1.05, background --color-6 (the dark-mode element hover, as
+ *    Hover: scale 1.05, background --er-fp-bg (the dark-mode element hover, as
  *    on the Display Posts listings and counter discs) and the border turns
- *    --color-12, 0.2 s. The card's background and border (--color-11, the link
+ *    --er-link-hover, 0.2 s. The card's background and border (the link
  *    colour, so it reads as clickable) are set in the editor; !important beats
  *    its inline colours. Whole-card click comes from the heading
  *    link + .is-clickable-card (Eric Companion PHP 9f).
@@ -269,7 +287,7 @@ function er_fp_portals_css() {
 	@media (max-width: 1200px) {.wp-block-group.er-portals {grid-template-columns: repeat(2, minmax(0, 1fr));}}
 	@media (max-width: 600px) {.wp-block-group.er-portals {gap: 12px;}}
 	.er-portal {transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease;}
-	.er-portal:hover, .er-portal:focus-within {transform: scale(1.05); background: var(--color-6) !important; border-color: var(--color-12) !important;}
+	.er-portal:hover, .er-portal:focus-within {transform: scale(1.05); background: var(--er-fp-bg) !important; border-color: var(--er-link-hover) !important;}
 CSS;
 }
 
