@@ -831,7 +831,35 @@ add_shortcode( 'er_cpt_archive', function( $atts ) {
 	}
 
 	wp_reset_postdata();
-
+	
+	// Other terms of the same taxonomy below the grid (category + topics archives only).
+	// Placed after the sentinel: the infinite-scroll JS expects the sentinel as the grid's next sibling.
+	if ( $is_term_archive ) {
+		$er_other_terms = array(
+			'category' => array( 'My-Blog', 'My Blog', 'https://ericroth.org/personal/my-blog/' ),
+			'topics'   => array( 'My-Interests', 'My Interests', 'https://ericroth.org/personal/my-interests/' ),
+		);
+		if ( isset( $er_other_terms[ $taxonomy ] ) ) {
+			// IDs of all terms except the current one → passed as include_id
+			$er_other_ids = get_terms( array(
+				'taxonomy'   => $taxonomy,
+				'hide_empty' => true,
+				'fields'     => 'ids',
+				'exclude'    => array( $queried->term_id ),
+			) );
+			if ( ! empty( $er_other_ids ) && ! is_wp_error( $er_other_ids ) ) {
+				list( $er_anchor, $er_label, $er_url ) = $er_other_terms[ $taxonomy ];
+				printf(
+					'<h3 id="%s" class="wp-block-heading" style="margin-top:var(--wp--preset--spacing--medium)"><a href="%s">%s</a></h3>',
+					esc_attr( $er_anchor ),
+					esc_url( $er_url ),
+					esc_html( $er_label )
+				);
+				echo do_shortcode( '[display-taxonomies taxonomy="' . $taxonomy . '" include_id="' . implode( ',', $er_other_ids ) . '" show_count="true" order="ASC" orderby="title" image_size="large" wrapper="div" wrapper_class="display-posts-listing slideshow-multiple-items-4 daneden-slideInUp"]' );
+			}
+		}
+	}
+	
 	return ob_get_clean();
 } );
 
