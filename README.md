@@ -49,4 +49,4 @@ This is the code of one particular site, shared as it is. Use it, take it apart,
 
 ## License
 
-GPL v3 or later.
+GPL v3 or later. Parts are adapted from Bill Erickson's [Display Posts ↗](https://displayposts.com/) examples.
