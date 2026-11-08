@@ -200,14 +200,13 @@ function er_stat_tile_styles() {
             .er-stat-line .er-stat-foot {padding-top: 6px;}
         }
         .er-stat-label {display: flex; flex: 0 0 100%; align-items: center; margin-bottom: 6px; font-size: var(--er-fs-sm);}
-        .er-stat-value {display: block; margin: 0 0 10px; font-size: var(--er-fs-xl); font-weight: var(--er-fw-bold); color: #990033; line-height: 1.1;}
+        .er-stat-value {display: block; margin: 0 0 10px; font-size: var(--er-fs-xl); font-weight: var(--er-fw-bold); color: var(--er-purple); line-height: 1.1;}
         .er-stat-unit {display: block; margin: 0 0 10px; font-size: var(--er-fs-xs); color: var(--color-9);}
         .er-stat-foot {display: block; flex: 0 0 100%; padding-top: 8px; border-top: 1px solid var(--color-5); font-size: var(--er-fs-xs); color: var(--color-4);}
         .er-stat-total {font-weight: var(--er-fw-bold);}
         .er-stat-icon {display: inline-block; width: 1.25em; height: 1.25em; margin-right: 0.35em;}
         body.dark-mode .er-stat-icon {filter: brightness(0) invert(1) brightness(0.95);}
         body.dark-mode .er-stat-line {background: var(--color-10); border-color: var(--color-4); color: var(--color-5);}
-        body.dark-mode .er-stat-value {color: #990033;}
         body.dark-mode .er-stat-foot {border-color: var(--color-4); color: var(--color-5);}
     </style>';
 }
