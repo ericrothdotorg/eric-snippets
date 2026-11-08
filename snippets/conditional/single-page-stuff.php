@@ -34,7 +34,7 @@ add_action('wp_footer', function() {
     
     if (is_page(array('')) || is_single(array('131123'))) { ?>
         <style>
-            .world-population-design { text-align: center; color: #990033; font-size: var(--er-fs-xl); font-weight: var(--er-fw-bold); }
+            .world-population-design { text-align: center; color: var(--er-purple); font-size: var(--er-fs-xl); font-weight: var(--er-fw-bold); }
         </style>
         <script>
             (() => {
