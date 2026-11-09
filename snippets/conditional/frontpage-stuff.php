@@ -84,9 +84,9 @@ div.er-cover {
 --er-knot-opacity: .25;						/* knot strength */
 --er-knot-turn: 25s;						/* one full 3D turn of the knot */
 --er-words-size: clamp(60px, 12cqh, 150px);	/* letter size of the words at the left edge */
---er-words-colour: var(--color-7);			/* outline colour of the words */
+--er-words-colour: var(--er-purple);		/* outline colour of the words */
 --er-words-stroke: 1px;						/* outline thickness */
---er-words-opacity: .25;					/* words strength: 0 = invisible, 1 = full */
+--er-words-opacity: .50;					/* words strength: 0 = invisible, 1 = full */
 --er-words-speed: 75;						/* speed in pixels per second (a plain number, no unit) */
 --er-words-x: 0.5em;						/* nudge from the left edge (negative = further out) */
 --er-words-gap: 0.0em;						/* space between one repeat of the words and the next */
@@ -109,7 +109,7 @@ background-color: var(--er-fp-bg);}
 --er-fp-tile-border: var(--color-4);		/* stat tiles: border */
 --er-fp-tile-text: var(--color-5);			/* stat tiles: text */
 --er-fp-tile-line: var(--color-3);			/* stat tiles: line above the foot text */
---er-fp-tile-number: #FFD700;				/* stat tiles: the numbers */
+--er-fp-tile-number: #FFD700;			/* stat tiles: the numbers */
 }
 /* ===== end of colours ===== */
 
