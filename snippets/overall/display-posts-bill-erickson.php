@@ -261,6 +261,32 @@ function be_dps_option_output_grouped( $output, $atts ) {
 add_filter( 'display_posts_shortcode_output', 'be_dps_option_output_grouped', 10, 2 );
 
 // =====================================
+// FAQ CARDS
+// =====================================
+
+/* FAQ listings = [display-posts] with wrapper_class "display-posts-faqs" */
+function er_dps_is_faqs( $atts ) {
+    return ! empty( $atts['wrapper_class'] ) && in_array( 'display-posts-faqs', explode( ' ', $atts['wrapper_class'] ), true );
+}
+
+/* Whole-card click: marks each item .is-clickable-card; the click comes from Eric Companion PHP 9f */
+add_filter( 'display_posts_shortcode_post_class', function( $class, $post, $listing, $atts ) {
+    if ( er_dps_is_faqs( $atts ) ) {
+        $class[] = 'is-clickable-card';
+    }
+    return $class;
+}, 10, 4 );
+
+/* Image sizes: tells the browser the real display width (150px beside the text, up to full width
+   when stacked), so it picks a fitting file from srcset instead of the full 1024px one */
+add_filter( 'display_posts_shortcode_output', function( $output, $atts ) {
+    if ( ! er_dps_is_faqs( $atts ) ) {
+        return $output;
+    }
+    return preg_replace( '/\ssizes="(auto,\s*)?[^"]*"/', ' sizes="$1(max-width: 781px) 100vw, (max-width: 1200px) 50vw, 150px"', $output, 1 );
+}, 10, 2 );
+
+// =====================================
 // DPS FOR TAXONOMIES
 // =====================================
 
@@ -399,9 +425,9 @@ add_action( 'wp_head', function () {
     <style>
 		/* Base Styles (.screen-reader-text comes from WordPress core) */
 		.display-posts-listing {cursor: pointer;}
-		.display-posts-listing .listing-item {clear: both; overflow: hidden; background: var(--color-8); border: 1px solid var(--color-5); border-radius: 25px;}
+		.display-posts-listing .listing-item, .display-posts-faqs .listing-item {clear: both; overflow: hidden; background: var(--color-8); border: 1px solid var(--color-5); border-radius: 25px;}
 		.display-posts-listing:not(.grid) .listing-item {display: flex; flex-direction: column;}
-		.display-posts-listing .listing-item:hover {background: var(--color-7);}
+		.display-posts-listing .listing-item:hover, .display-posts-faqs .listing-item:hover {background: var(--color-7);}
 		.display-posts-listing img {aspect-ratio: 16/9; transition: transform 0.3s ease;}
 		.display-posts-listing:not(.grid) img {display: block; width: 100%; object-fit: cover;}
 		.display-posts-listing img:hover {transform: scale(1.05);}
@@ -433,11 +459,14 @@ add_action( 'wp_head', function () {
 		.display-posts-listing.grid#notorious-big .excerpt {font-size: var(--er-fs-body);}
 		@media (max-width: 768px) {.display-posts-listing.grid#notorious-big {grid-template-columns: 1fr;}}
 		
-		/* FAQs Layout */
-		.display-posts-faqs .listing-item {clear: both; overflow: hidden; margin-bottom: 20px;}
-		.display-posts-faqs .image {float: left; margin: 0 16px 0 0;}
-		.display-posts-faqs .title {display: block; text-align: justify; margin-top: -4px;}
-		.display-posts-faqs .excerpt {display: block; text-align: justify;}
+		/* FAQs Layout (card skin from Base Styles; image left, text beside; image on top when the card is narrower than 450px) */
+		.display-posts-faqs {container-type: inline-size;}
+		.display-posts-faqs .listing-item {display: grid; grid-template-columns: 150px minmax(0, 1fr); grid-template-rows: auto 1fr; column-gap: 16px; row-gap: 4px; align-items: start; padding: 12px;}
+		.display-posts-faqs .image {grid-row: 1 / 3;}
+		.display-posts-faqs .image img {display: block; width: 100%; height: auto; border-radius: 13px;}
+		.display-posts-faqs .title, .display-posts-faqs .excerpt {text-align: left;}
+		@container (width < 450px) {.display-posts-faqs .listing-item {grid-template-columns: minmax(0, 1fr); padding: 0;} .display-posts-faqs .image {grid-row: auto;} .display-posts-faqs .image img {border-radius: 0;} .display-posts-faqs .title, .display-posts-faqs .excerpt {padding: 0 12px;} .display-posts-faqs .excerpt {padding-bottom: 12px;}}
+		.details-accordion[open]:has(.display-posts-faqs) {padding-bottom: 2rem;}
 		
 		/* Trending Layout */
 		.display-posts-trending {display: flex; flex-wrap: wrap; gap: 20px;}
@@ -465,8 +494,8 @@ add_action( 'wp_head', function () {
 		.display-taxonomies .term-count {font-style: italic;} /* weight + colour inherited (light/dark) */
 		
 		/* Dark Mode */
-		body.dark-mode .display-posts-listing .listing-item {background: var(--color-10); border-color: var(--color-4);}
-    	body.dark-mode .display-posts-listing .listing-item:hover {background: var(--color-6);}
+		body.dark-mode .display-posts-listing .listing-item, body.dark-mode .display-posts-faqs .listing-item {background: var(--color-10); border-color: var(--color-4);}
+    	body.dark-mode .display-posts-listing .listing-item:hover, body.dark-mode .display-posts-faqs .listing-item:hover {background: var(--color-6);}
 		body.dark-mode .display-posts-listing.grid#small-version .listing-item {background: var(--color-10); border: 1px solid var(--color-10);}
     	body.dark-mode .display-posts-listing.grid#small-version .listing-item:hover {background: var(--color-6);}
 		body.dark-mode .display-posts-trending .listing-item {background: none; border: none;}
