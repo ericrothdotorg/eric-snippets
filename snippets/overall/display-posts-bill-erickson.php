@@ -408,7 +408,7 @@ add_action( 'wp_head', function () {
 		.display-posts-listing .title {display: flex; align-items: center; justify-content: center; padding: 16px 1rem; text-align: center; font-size: var(--er-fs-md); width: 100%;}
 		.listing-item .excerpt-dash {display: none;}
 		.display-posts-listing .excerpt {clear: right; text-align: center; margin: 0 16px 20px;}
-		.display-posts-listing .category-display, .display-posts-listing.grid .category-display {display: block; font-size: var(--er-fs-sm); text-align: center; margin: -8px 0 16px; opacity: 0.75;}
+		.display-posts-listing .category-display {display: block; font-size: var(--er-fs-sm); text-align: center; margin: -8px 0 16px; opacity: 0.75;}
 		
 		/* Grid Layout (2 columns) */
 		.display-posts-listing.grid {display: grid; grid-template-columns: repeat(2, 1fr); grid-gap: 1.75rem 1.5rem;}
