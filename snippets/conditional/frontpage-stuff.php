@@ -26,28 +26,13 @@ add_action( 'init', static function () {
 
 /* ============================================================================
  * 1  COVER — [er_frontpage_cover]
- *    Place first, as a direct child of a Group (Shortcode or Custom HTML block),
- *    and give that Group the class er-cover-host (Block settings → Advanced →
- *    Additional CSS class(es)); it makes the Group the full-height cover. If the
- *    Group is ever rebuilt, add the class again.
- *    First paint: The plain --color-6 background, nothing else. After load +
- *    idle: The two logo images load, fade in and turn, and the words
- *    (ER_FP_WORDS, outlined) fade in at the left edge and run
- *    slowly downwards, reading bottom to top (CSS animations, transform and
- *    opacity only; the script only builds the words and sets their speed).
- *    Phones and portrait screens: No words. Bots and headless browsers:
- *    Background only. Reduced motion: Logo and words fade in and stand still.
- *    Off screen or hidden tab: Paused.
- *    -------
- *    SETTINGS (position, size, strength, speed of ring, knot and words): The
- *    block at the top of er_fp_cover_css() below, one commented line each.
- *    Where the words switch off: the @container line marked "words off".
- *    Size follows the cover box, not the window, so it fits the content height;
- *    "tall" values apply when the cover is taller than wide (phones, portrait).
- *    COLOURS of the whole front page: the block FRONT PAGE COLOURS, right below
- *    the cover settings in er_fp_cover_css(). Card hover: Module 3. Stat tiles: Module 2.
- *    Changing the logo: Upload the files, set ER_FP_RING / ER_FP_KNOT. The ring
- *    image must be square with the ring centred, or it wobbles while turning.
+ *    Setup: First block inside a Group with the class er-cover-host
+ *    (Advanced → Additional CSS class). Rebuilt Group → add the class again.
+ *    Shows: Background first; after load, logo and words fade in and move.
+ *    No words below 1790px or in portrait. Reduced motion: no movement.
+ *    Bots: background only. Off screen: paused.
+ *    Settings + colours: the two blocks at the top of er_fp_cover_css().
+ *    New logo: set ER_FP_RING / ER_FP_KNOT (ring image square, ring centred).
  * ========================================================================== */
 
 function er_fp_cover_shortcode() {
@@ -124,7 +109,8 @@ opacity: 0; transition: opacity var(--er-fade-in) ease; will-change: transform;}
 .er-cover .er-cover-knot {width: var(--er-knot-size); animation: er-cover-knot var(--er-knot-turn) linear infinite;}
 /* Words: one line set sideways at the left edge, reading bottom to top. Built and timed by the script. */
 .er-cover .er-cover-words {position: absolute; top: 0; left: var(--er-words-x); writing-mode: vertical-rl; rotate: 180deg;
-font-size: var(--er-words-size); font-weight: var(--er-fw-normal, 400); line-height: 1; text-box: trim-both cap alphabetic;
+font-size: var(--er-words-size);
+font-weight: var(--er-fw-normal, 400); line-height: 1; text-box: trim-both cap alphabetic;
 white-space: nowrap; color: transparent; -webkit-text-stroke: var(--er-words-stroke) var(--er-words-colour);
 opacity: 0; transition: opacity var(--er-fade-in) ease; animation: er-cover-words linear infinite; will-change: transform;}
 .er-cover .er-cover-words > span {padding-inline-end: var(--er-words-gap);}
@@ -133,7 +119,7 @@ opacity: 0; transition: opacity var(--er-fade-in) ease; animation: er-cover-word
 .er-cover img {left: var(--er-logo-x-tall);}
 .er-cover .er-cover-ring {width: var(--er-ring-size-tall);}
 .er-cover .er-cover-knot {width: var(--er-knot-size-tall);}}
-@container (aspect-ratio < 1) or (width < 768px) {.er-cover .er-cover-words {display: none;}}	/* words off: phones, portrait, narrow */
+@container (aspect-ratio < 1) or (width < 1790px) {.er-cover .er-cover-words {display: none;}}	/* words off: until there is room left of the 1290px content */
 .er-cover.is-on .er-cover-ring {opacity: var(--er-ring-opacity);}
 .er-cover.is-on .er-cover-knot {opacity: var(--er-knot-opacity);}
 .er-cover.is-on .er-cover-words {opacity: var(--er-words-opacity);}
