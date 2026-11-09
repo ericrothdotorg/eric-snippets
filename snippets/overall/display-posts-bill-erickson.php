@@ -400,10 +400,10 @@ add_action( 'wp_head', function () {
 		/* Base Styles (.screen-reader-text comes from WordPress core) */
 		.display-posts-listing {cursor: pointer;}
 		.display-posts-listing .listing-item {clear: both; overflow: hidden; background: var(--color-8); border: 1px solid var(--color-5); border-radius: 25px;}
-.display-posts-listing:not(.grid) .listing-item {display: flex; flex-direction: column;}
+		.display-posts-listing:not(.grid) .listing-item {display: flex; flex-direction: column;}
 		.display-posts-listing .listing-item:hover {background: var(--color-7);}
 		.display-posts-listing img {aspect-ratio: 16/9; transition: transform 0.3s ease;}
-.display-posts-listing:not(.grid) img {display: block; width: 100%; object-fit: cover;}
+		.display-posts-listing:not(.grid) img {display: block; width: 100%; object-fit: cover;}
 		.display-posts-listing img:hover {transform: scale(1.05);}
 		.display-posts-listing .title {display: flex; align-items: center; justify-content: center; padding: 16px 1rem; text-align: center; font-size: var(--er-fs-md); width: 100%;}
 		.listing-item .excerpt-dash {display: none;}
@@ -462,7 +462,7 @@ add_action( 'wp_head', function () {
 		
 		/* DPS for Taxonomies */
 		.display-taxonomies .title {flex-wrap: wrap; gap: 0.4em;}
-.display-taxonomies .term-count {font-style: italic;} /* weight + colour inherited (light/dark) */
+		.display-taxonomies .term-count {font-style: italic;} /* weight + colour inherited (light/dark) */
 		
 		/* Dark Mode */
 		body.dark-mode .display-posts-listing .listing-item {background: var(--color-10); border-color: var(--color-4);}
