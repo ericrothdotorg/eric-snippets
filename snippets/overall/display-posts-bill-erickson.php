@@ -465,8 +465,7 @@ add_action( 'wp_head', function () {
 		.display-posts-faqs .image {grid-row: 1 / 3;}
 		.display-posts-faqs .image img {display: block; width: 100%; height: auto; border-radius: 13px;}
 		.display-posts-faqs .title, .display-posts-faqs .excerpt {text-align: left;}
-		@container (width < 450px) {.display-posts-faqs .listing-item {grid-template-columns: minmax(0, 1fr); padding: 0;} .display-posts-faqs .image {grid-row: auto;} .display-posts-faqs .image img {border-radius: 0;} .display-posts-faqs .title, .display-posts-faqs .excerpt {padding: 0 12px;} .display-posts-faqs .excerpt {padding-bottom: 12px;}}
-		.details-accordion[open]:has(.display-posts-faqs) {padding-bottom: 2rem;}
+		@container (width < 450px) {.display-posts-faqs .listing-item {grid-template-columns: minmax(0, 1fr); padding: 0;} .display-posts-faqs .image {grid-row: auto;} .display-posts-faqs .image img {border-radius: 0;} .display-posts-faqs .title, .display-posts-faqs .excerpt {padding: 0 12px;} .display-posts-faqs .title {padding-top: 10px;} .display-posts-faqs .excerpt {padding-bottom: 12px;}}
 		
 		/* Trending Layout */
 		.display-posts-trending {display: flex; flex-wrap: wrap; gap: 20px;}
