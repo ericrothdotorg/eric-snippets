@@ -84,10 +84,14 @@ add_action('admin_head', function () {
     echo '<style>
         .CodeMirror .cm-matchhighlight,
         .CodeMirror .CodeMirror-selectedtext {
-            background-color: #ffffaa !important; /* Fallback */
-            background-color: rgba(255, 255, 0, .4) !important; /* Same as .cm-searching */
+            background-color: rgba(255, 255, 0, 0.5) !important;
             color: inherit !important; /* Keep original Font Color */
         }
+        /* Snippets list: titles bold again (lost in a Code Snippets update) */
+        .toplevel_page_snippets .column-name > a:first-child,
+        .toplevel_page_snippets .snippet-name {font-weight: 600;}
+        /* Snippet editor: Save buttons stay at the bottom of the screen instead of scrolling out of view */
+        .snippet-editor-sidebar > p.submit {position: sticky; bottom: 0; z-index: 10; margin-block-start: 17px; padding-block: 8px; background: #f0f0f1;}
     </style>';
 });
 
