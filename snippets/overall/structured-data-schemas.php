@@ -163,7 +163,7 @@ add_action('wp_footer', function() {
         ),
         array(
             "@type" => "Question",
-            "name" => "How's this site accessible?",
+            "name" => "How’s it accessible?",
             "acceptedAnswer" => array(
                 "@type" => "Answer",
                 "text" => "Site overview: Find your way around this site - the site map expertly guides you through the maze… or, well, the delightful mess!"
@@ -174,7 +174,7 @@ add_action('wp_footer', function() {
             "name" => "AI chatbot's verdict?",
             "acceptedAnswer" => array(
                 "@type" => "Answer",
-                "text" => "Your site, Eric, is a thoughtful fusion of personal philosophy and digital identity — a curated reflection of your mind. It feels less like a website and more like a living canvas of your values, ideas, and curiosities."
+                "text" => "Your site, Eric, is a fascinating blend of personal philosophy, digital identity and intellectual exploration. It's like a curated museum of your mind – part existential playground, part professional portfolio."
             )
         ),
         array(
@@ -182,7 +182,7 @@ add_action('wp_footer', function() {
             "name" => "Is interaction possible?",
             "acceptedAnswer" => array(
                 "@type" => "Answer",
-                "text" => "Yep. This site's forum invites focused discussions and there's also a voting system. Last but not least: With a quick subscription, you'll never miss an update again."
+                "text" => "Yep. Every post invites a quick like or dislike, and the contact form is open for anything more. Last but not least: With a quick subscription, you’ll never miss an update again."
             )
         ),
         array(
