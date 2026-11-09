@@ -109,7 +109,7 @@ background-color: var(--er-fp-bg);}
 --er-fp-tile-border: var(--color-4);		/* stat tiles: border */
 --er-fp-tile-text: var(--color-5);			/* stat tiles: text */
 --er-fp-tile-line: var(--color-3);			/* stat tiles: line above the foot text */
---er-fp-tile-number: #FFD700;			/* stat tiles: the numbers */
+--er-fp-tile-number: #FFD700;				/* stat tiles: the numbers */
 }
 /* ===== end of colours ===== */
 
