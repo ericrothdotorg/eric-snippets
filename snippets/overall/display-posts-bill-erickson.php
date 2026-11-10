@@ -452,12 +452,9 @@ add_action( 'wp_head', function () {
 		@media (min-width: 992px) {.display-posts-listing.grid#six-columns {grid-template-columns: repeat(6, 1fr);}}
 		
 		/* Layout Variations */
-		.display-posts-listing#small-version, .display-posts-listing#notorious-big {overflow: hidden;}
+		.display-posts-listing#small-version {overflow: hidden;}
 		.display-posts-listing.grid#small-version .listing-item {margin-bottom: 0;}
 		.display-posts-listing.grid#small-version .title {min-height: 0; padding: 10px 0.5rem; font-size: var(--er-fs-xs);}
-		.display-posts-listing#notorious-big .title, .display-posts-listing.grid#notorious-big .title {min-height: 0; padding: 7.5px 1rem 2.5px; font-size: var(--er-fs-lg);}
-		.display-posts-listing.grid#notorious-big .excerpt {font-size: var(--er-fs-body);}
-		@media (max-width: 768px) {.display-posts-listing.grid#notorious-big {grid-template-columns: 1fr;}}
 		
 		/* FAQs Layout (card skin from Base Styles; image left, text beside; image on top when the card is narrower than 450px) */
 		.display-posts-faqs {container-type: inline-size;}
