@@ -832,12 +832,17 @@ add_shortcode( 'er_cpt_archive', function( $atts ) {
 
 	wp_reset_postdata();
 	
-	// Other terms of the same taxonomy below the grid (category + topics archives only).
+	// Other terms of the same taxonomy below the grid: category, topics and things,
+	// on the term archive (/topics/x/) and on the filtered listing page (?topics=x).
 	// Placed after the sentinel: the infinite-scroll JS expects the sentinel as the grid's next sibling.
-	if ( $is_term_archive ) {
+	$er_current_term = $is_term_archive
+		? $queried
+		: ( $active_slug !== '' ? get_term_by( 'slug', $active_slug, $taxonomy ) : false );
+	if ( $er_current_term instanceof WP_Term ) {
 		$er_other_terms = array(
 			'category' => array( 'My-Blog', 'My Blog', '/personal/my-blog/' ),
 			'topics'   => array( 'My-Interests', 'My Interests', '/personal/my-interests/' ),
+			'things'   => array( 'My-Pages', 'My Pages', '/my-pages/' ),
 		);
 		if ( isset( $er_other_terms[ $taxonomy ] ) ) {
 			// IDs of all terms except the current one → passed as include_id
@@ -845,7 +850,7 @@ add_shortcode( 'er_cpt_archive', function( $atts ) {
 				'taxonomy'   => $taxonomy,
 				'hide_empty' => true,
 				'fields'     => 'ids',
-				'exclude'    => array( $queried->term_id ),
+				'exclude'    => array( $er_current_term->term_id ),
 			) );
 			if ( ! empty( $er_other_ids ) && ! is_wp_error( $er_other_ids ) ) {
 				list( $er_anchor, $er_label, $er_url ) = $er_other_terms[ $taxonomy ];
