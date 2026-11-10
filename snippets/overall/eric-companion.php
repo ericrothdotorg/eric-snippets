@@ -855,12 +855,14 @@ add_shortcode( 'er_cpt_archive', function( $atts ) {
 			if ( ! empty( $er_other_ids ) && ! is_wp_error( $er_other_ids ) ) {
 				list( $er_anchor, $er_label, $er_url ) = $er_other_terms[ $taxonomy ];
 				printf(
-					'<h3 id="%s" class="wp-block-heading" style="margin-top:var(--wp--preset--spacing--medium)"><a href="%s">%s</a></h3>',
+					'<h3 id="%s" class="wp-block-heading" style="margin-top: var(--wp--preset--spacing--medium)"><a href="%s">%s</a></h3>',
 					esc_attr( $er_anchor ),
 					esc_url( $er_url ),
 					esc_html( $er_label )
 				);
+				echo '<div style="margin-bottom: var(--wp--preset--spacing--medium)">';
 				echo do_shortcode( '[display-taxonomies taxonomy="' . $taxonomy . '" include_id="' . implode( ',', $er_other_ids ) . '" show_count="true" order="ASC" orderby="title" image_size="large" wrapper="div" wrapper_class="display-posts-listing slideshow-multiple-items-4 daneden-slideInUp"]' );
+				echo '</div>';
 			}
 		}
 	}
