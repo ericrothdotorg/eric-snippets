@@ -97,22 +97,13 @@ function dps_get_page_menu_groups( $menu_location = 'menu_1' ) {
 }
 
 // =====================================
-// GERMAN TITLE DETECTOR
+// GERMAN PAGE DETECTOR
 // =====================================
 
-function dps_is_german_title( string $title ): bool {
-    $german_titles = [
-        'Berufswelt',
-        'Mein Hintergrund',
-        'Meine Eigenschaften',
-        'Meine Kompetenzen',
-        'Mein Kompass',
-        'Meine Publikationen',
-        'Meine Verfügbarkeit',
-        'Über Mich',
-        'Kontakt',
-    ];
-    return in_array( trim( $title ), $german_titles, true );
+/* German pages = the pages that do not count (Eric Companion PHP 1d: er_uncounted_ids):
+   Über Mich, Berufswelt and everything below them - one rule, no title list to keep. */
+function dps_is_german_page( int $post_id ): bool {
+    return function_exists( 'er_uncounted_ids' ) && in_array( $post_id, er_uncounted_ids(), true );
 }
 
 // =====================================
@@ -149,8 +140,7 @@ class DPS_Grouped_Collector {
                 $order      = $group_info['order'];
 			} else {
 				// Page exists but isn't in the Menu — Split into In German and Others
-				$title = get_the_title( $post );
-				if ( dps_is_german_title( $title ) ) {
+				if ( dps_is_german_page( $post->ID ) ) {
 					$term_id = 'menu_unlisted_de';
 					$label   = 'In German';
 					$order   = 9998;
@@ -285,6 +275,20 @@ add_filter( 'display_posts_shortcode_output', function( $output, $atts ) {
     }
     return preg_replace( '/\ssizes="(auto,\s*)?[^"]*"/', ' sizes="$1(max-width: 781px) 100vw, (max-width: 1200px) 50vw, 150px"', $output, 1 );
 }, 10, 2 );
+
+// =====================================
+// RANDOM LISTINGS
+// =====================================
+
+/* Random listings (orderby="rand", e.g. the random slider) never show the pages that
+   do not count - the site-wide rule from Eric Companion PHP 1d (er_uncounted_ids).
+   So no exclude="..." list is needed in the shortcode itself. */
+add_filter( 'display_posts_shortcode_args', function( $args ) {
+    if ( isset( $args['orderby'] ) && 'rand' === $args['orderby'] && function_exists( 'er_uncounted_ids' ) ) {
+        $args['post__not_in'] = array_merge( (array) ( $args['post__not_in'] ?? [] ), er_uncounted_ids() );
+    }
+    return $args;
+} );
 
 // =====================================
 // DPS FOR TAXONOMIES
@@ -463,6 +467,7 @@ add_action( 'wp_head', function () {
 		.display-posts-faqs .image img {display: block; width: 100%; height: auto; border-radius: 13px;}
 		.display-posts-faqs .title, .display-posts-faqs .excerpt {text-align: left;}
 		@container (width < 450px) {.display-posts-faqs .listing-item {grid-template-columns: minmax(0, 1fr); padding: 0;} .display-posts-faqs .image {grid-row: auto;} .display-posts-faqs .image img {border-radius: 0;} .display-posts-faqs .title, .display-posts-faqs .excerpt {padding: 0 12px;} .display-posts-faqs .title {padding-top: 10px;} .display-posts-faqs .excerpt {padding-bottom: 12px;}}
+		.details-accordion[open]:has(.display-posts-faqs) {padding-bottom: 2rem;}
 		
 		/* Trending Layout */
 		.display-posts-trending {display: flex; flex-wrap: wrap; gap: 20px;}
