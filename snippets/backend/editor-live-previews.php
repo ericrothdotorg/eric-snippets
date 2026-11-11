@@ -38,7 +38,7 @@ function shortcode_live_preview_get_snippet_css() {
 // PHP snippets whose CSS the editor needs. Read as text, never run, so their
 // scope does not matter. Add the ID of every new PHP snippet with content CSS.
 function shortcode_live_preview_php_style_snippet_ids() {
-    return apply_filters( 'shortcode_live_preview_php_style_snippet_ids', [ 14, 49, 75, 23, 36, 37, 42, 70 ] );
+    return apply_filters( 'shortcode_live_preview_php_style_snippet_ids', [ 14, 49, 75, 23, 36, 37, 42, 70, 79 ] );
 }
 
 // CSS from <style>…</style> or <<<'CSS' blocks. A match without "{" is PHP
