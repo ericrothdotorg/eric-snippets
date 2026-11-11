@@ -155,6 +155,8 @@ function er_trk_schedule_background_tracking() {
                 params.set('action', 'lum_background_track');
                 params.set('page_url', window.location.href);
 				params.set('post_id', '<?php echo (int) ((is_singular() && empty($GLOBALS['er_synthetic_page'])) ? get_the_ID() : 0); ?>');
+				// Site Journey: number of explored places (only while that snippet is active)
+				if (typeof window.erJourneyCount === 'function') params.set('journey', String(window.erJourneyCount()));
                 var ajaxUrl = '<?php echo admin_url('admin-ajax.php'); ?>';
                 // fetch with keepalive: survives leaving the page like sendBeacon,
                 // but the answer can be read. It carries the visitor's own position,
@@ -216,6 +218,10 @@ function er_trk_background_track() {
     // Skip known bots (double-check server-side)
     if (er_trk_is_bot($user_agent)) {
         wp_die('Bot detected');
+    }
+	// Site Journey: the visitor's progress number (only while that snippet is active)
+    if (isset($_POST['journey']) && function_exists('er_sj_store')) {
+        er_sj_store($visitor_id, absint($_POST['journey']));
     }
 	$geo_data = er_trk_get_geolocation($ip_address);
     $me = null;
