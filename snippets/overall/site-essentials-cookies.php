@@ -281,6 +281,10 @@ if (!is_admin()) {
     });
 }
 
+// [total_media] - Publications: a mix of pages, posts and PDFs, so counted by hand.
+// The number lives here only: front page and number discs both show [total_media].
+add_shortcode('total_media', fn() => 38);
+
 // [total_post], [total_page], etc. - Clear Cache when published / deleted
 add_action('transition_post_status', function($new_status, $old_status, $post) {
     if (($new_status === 'publish' || $old_status === 'publish') && $new_status !== $old_status) {
@@ -594,6 +598,9 @@ function get_post_count_cached($type) {
     $count = get_transient($cache_key);
     if ($count === false) {
         $count = wp_count_posts($type)->publish;
+        if ($type === 'page' && function_exists('er_uncounted_ids')) {
+            $count -= count(er_uncounted_ids()); // German pages do not count (Eric Companion PHP)
+        }
         set_transient($cache_key, $count, CACHE_POST_COUNT);
     }
     return $count;
