@@ -295,7 +295,7 @@ function er_fp_surprise() {
 		'post_type'      => array( 'post', 'page', 'my-interests', 'my-quotes', 'my-traits' ),
 		'post_status'    => 'publish',
 		'has_password'   => false,
-		'post__not_in'   => array( 14581, 179, 149904, 149998, 150200, 150120, 150034, 150233, 150223, 113713, 123635, 150455, 150449 ),
+		'post__not_in'   => function_exists( 'er_uncounted_ids' ) ? er_uncounted_ids() : array(),
 		'posts_per_page' => 1,
 		'orderby'        => 'rand',
 		'fields'         => 'ids',
