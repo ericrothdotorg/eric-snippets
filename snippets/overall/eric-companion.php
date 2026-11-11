@@ -7,7 +7,8 @@
 // 
 // CONTENTS
 // 
-//   1. SHARED HELPERS          taxonomy map, breadcrumbs, reading time
+//   1. SHARED HELPERS          taxonomy map, breadcrumbs, reading time,
+//                              counted pages (er_uncounted_ids)
 //                              (defined first; called by hero, cards, footer)
 //   2. PERFORMANCE             featured-image eager + fetchpriority filter
 //   3. HEAD SCRIPTS            dark-mode FOUC guard,
@@ -364,6 +365,37 @@ function er_reading_time( $post_id = null, $echo = false ) {
 		return $output;
 	}
 }
+
+// ---- 1d. Counted pages — er_uncounted_ids(); the site-wide counting rule ----
+// What counts on this site: every published page, post, interest, quote and
+// trait - except the pages returned here: the German pages (Über Mich,
+// Berufswelt and everything below them). Private pages never count anyway.
+// The same pages never come up at random. Used behind function_exists by
+// Site Essentials (counters), Frontpage Stuff (/surprise/), Display Posts
+// (random slider) and Site Journey.
+function er_uncounted_ids() {
+	$ids = get_transient( 'er_uncounted_ids' );
+	if ( is_array( $ids ) ) {
+		return $ids;
+	}
+	$ids = array();
+	foreach ( array( 150455, 149904 ) as $root ) { // Über Mich, Berufswelt
+		$ids[] = $root;
+		foreach ( get_pages( array( 'child_of' => $root, 'post_status' => 'publish' ) ) as $p ) {
+			$ids[] = (int) $p->ID;
+		}
+	}
+	set_transient( 'er_uncounted_ids', $ids, DAY_IN_SECONDS );
+	return $ids;
+}
+
+// A page saved, moved or deleted may change the list - and the page count with it
+function er_uncounted_flush() {
+	delete_transient( 'er_uncounted_ids' );
+	delete_transient( 'post_count_page' );
+}
+add_action( 'save_post_page', 'er_uncounted_flush' );
+add_action( 'deleted_post', 'er_uncounted_flush' );
 
 // ======================================
 // 2. PERFORMANCE & ASSET LOADING
@@ -782,7 +814,7 @@ add_shortcode( 'er_cpt_archive', function( $atts ) {
 	);
 	
 	if ( $post_type === 'page' ) {
-		$query_args['post__not_in'] = array( 14581, 159702 ); // exclude DUMMY and My Pages — must match 5c
+		$query_args['post__not_in'] = array( er_things_hub_id() ); // exclude My Pages (hub setting, 1a) — must match 5c
 	}
 	
 	if ( $active_slug !== '' ) {
@@ -939,7 +971,7 @@ function er_load_more_handler() {
 	);
 
 	if ( $post_type === 'page' ) {
-		$query_args['post__not_in'] = array( 14581, 159702 ); // exclude DUMMY and My Pages — must match 5b
+		$query_args['post__not_in'] = array( er_things_hub_id() ); // exclude My Pages (hub setting, 1a) — must match 5b
 	}
 
 	if ( $active_slug !== '' ) {
