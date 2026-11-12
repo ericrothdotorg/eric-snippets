@@ -3,45 +3,45 @@
 
 /* =============================================================================
    1. DATABASE SETUP
-   Creates wp_er_subscribers on first Run.
-   v2 Migration adds last_send Columns to existing Installs.
+   Creates wp_er_subscribers once per schema version (er_subscribers_schema),
+   then never again: no table work and no upgrade.php on every request.
+   Also adds the last_send columns to installs from before they existed.
 ============================================================================= */
 
 add_action( 'init', function () {
+    if ( get_option( 'er_subscribers_schema' ) === '2' ) return;
     global $wpdb;
-    $table   = $wpdb->prefix . 'er_subscribers';
-    $charset = $wpdb->get_charset_collate();
-    require_once ABSPATH . 'wp-admin/includes/upgrade.php';
-
-    if ( ! get_option( 'er_subscribers_table_created' ) ) {
-        $sql = "CREATE TABLE {$table} (
-            id         BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-            email      VARCHAR(191)    NOT NULL,
-            token      VARCHAR(64)     NOT NULL,
-            status     ENUM('pending','active') NOT NULL DEFAULT 'pending',
-            created_at DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            PRIMARY KEY (id),
-            UNIQUE KEY email (email)
-        ) {$charset};";
-        dbDelta( $sql );
-        update_option( 'er_subscribers_table_created', true );
-    }
-
-    if ( ! get_option( 'er_subscribers_v2_migrated' ) ) {
-        $existing_columns = $wpdb->get_col( "DESCRIBE {$table}", 0 );
-        $to_add = [
-            'last_post_title'  => "ALTER TABLE {$table} ADD COLUMN last_post_title  VARCHAR(255) NULL DEFAULT NULL",
-            'last_send_status' => "ALTER TABLE {$table} ADD COLUMN last_send_status ENUM('sent','failed') NULL DEFAULT NULL",
-            'last_send_error'  => "ALTER TABLE {$table} ADD COLUMN last_send_error  TEXT NULL DEFAULT NULL",
-            'last_send_at'     => "ALTER TABLE {$table} ADD COLUMN last_send_at     DATETIME NULL DEFAULT NULL",
-        ];
-        foreach ( $to_add as $column => $sql ) {
-            if ( ! in_array( $column, $existing_columns, true ) ) {
-                $wpdb->query( $sql );
-            }
+    $table = $wpdb->prefix . 'er_subscribers';
+    // CREATE TABLE IF NOT EXISTS never touches an existing table
+    $wpdb->query( "CREATE TABLE IF NOT EXISTS {$table} (
+        id               BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+        email            VARCHAR(191)    NOT NULL,
+        token            VARCHAR(64)     NOT NULL,
+        status           ENUM('pending','active') NOT NULL DEFAULT 'pending',
+        created_at       DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        last_post_title  VARCHAR(255)    NULL DEFAULT NULL,
+        last_send_status ENUM('sent','failed') NULL DEFAULT NULL,
+        last_send_error  TEXT            NULL DEFAULT NULL,
+        last_send_at     DATETIME        NULL DEFAULT NULL,
+        PRIMARY KEY (id),
+        UNIQUE KEY email (email)
+    ) {$wpdb->get_charset_collate()}" );
+    // Tables created before the last_send columns existed
+    $existing_columns = $wpdb->get_col( "DESCRIBE {$table}", 0 );
+    $to_add = [
+        'last_post_title'  => "ALTER TABLE {$table} ADD COLUMN last_post_title  VARCHAR(255) NULL DEFAULT NULL",
+        'last_send_status' => "ALTER TABLE {$table} ADD COLUMN last_send_status ENUM('sent','failed') NULL DEFAULT NULL",
+        'last_send_error'  => "ALTER TABLE {$table} ADD COLUMN last_send_error  TEXT NULL DEFAULT NULL",
+        'last_send_at'     => "ALTER TABLE {$table} ADD COLUMN last_send_at     DATETIME NULL DEFAULT NULL",
+    ];
+    foreach ( $to_add as $column => $sql ) {
+        if ( ! in_array( $column, $existing_columns, true ) ) {
+            $wpdb->query( $sql );
         }
-        update_option( 'er_subscribers_v2_migrated', true );
     }
+    delete_option( 'er_subscribers_table_created' );
+    delete_option( 'er_subscribers_v2_migrated' );
+    update_option( 'er_subscribers_schema', '2' );
 } );
 
 /* =============================================================================
