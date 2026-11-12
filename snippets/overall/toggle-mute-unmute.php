@@ -153,8 +153,6 @@ add_action('wp_footer', function () {
 			debounce: null,
 			watchdog: null,
 			autoTimer: null,
-			marks: [],         // where each slideshow slide starts in the text
-			lastSync: null,    // slide currently shown, to avoid redundant clicks
 			blocks: null,      // translated page: live blocks still to be read
 			waiting: false     // translated page: waiting for a block to be translated
 		};
@@ -265,24 +263,12 @@ add_action('wp_footer', function () {
 			});
 		}
 
-		// All slideshow variants (see eric-slider-init), split by behaviour.
-		// Single-item ones cycle one thing at a time and cannot be followed, so
-		// they are announced but not read.
-		var SLIDESHOW_SINGLE =
-			'.slideshow-single-item,.slideshow-single-item-fade,' +
-			'.slideshow-single-item-no-dots,.slideshow-single-item-chromeless,' +
-			'.slideshow-quotes';
-		var SLIDESHOW_MULTI =
-			'.slideshow-multiple-items,.slideshow-multiple-items-3,' +
-			'.slideshow-multiple-items-4,.slideshow-multiple-items-center-mode,' +
-			'.slideshow-multiple-items-vertical';
-		// Related posts get their own wording, because they are a slideshow above
-		// four entries and a plain grid below. Excluded here so they never collect
-		// both announcements at once.
-		var SLIDESHOW_SEL = (SLIDESHOW_SINGLE + ',' + SLIDESHOW_MULTI)
-			.split(',')
-			.map(function (sel) { return sel + ':not(.er-related-posts)'; })
-			.join(',');
+		// Every slideshow (all profile classes start with "slideshow-", see eric-slider-init):
+		// announced, never read. Related posts get their own wording, because they are a
+		// slideshow above four entries and a plain grid below - excluded here so they never
+		// collect both announcements at once.
+		var SLIDESHOW = '[class*="slideshow-"]';
+		var SLIDESHOW_SEL = SLIDESHOW + ':not(.er-related-posts)';
 
 		// In the page from load on, so a translation picks the cues up together with the
 		// page (the browser's own translation may skip nodes added after it has translated).
@@ -312,16 +298,10 @@ add_action('wp_footer', function () {
 				'.like-dislike-container,.er-social-icon-row,.er-author-links,' +
 				'.entry-meta,.er-reading-time,.post-stats,.er-breadcrumbs,.er-postnav,' +
 				'.er-related-posts,.tts-skip,' +
-				'.eric-slider-controls,.eric-slider-dots,.eric-slider-cloned'
+				// Slideshows: the cue announces them, their slides say nothing. The controls are
+				// listed too, because center-mode sliders keep them outside the slideshow element.
+				SLIDESHOW + ',.eric-slider-controls'
 			).forEach(function (el) { el.remove(); });
-
-			// Single-item slideshows: the cue announces them, the slides say nothing.
-			clone.querySelectorAll(SLIDESHOW_SINGLE).forEach(function (slider) {
-				slider.querySelectorAll('.eric-slider-slide').forEach(function (s) { s.remove(); });
-			});
-
-			// Multi-item slideshows keep every slide and are read in document order;
-			// their loop duplicates were dropped above via .eric-slider-cloned.
 
 			// Collapsed accordions: read the heading, skip the hidden content
 			clone.querySelectorAll('details:not([open])').forEach(function (d) {
@@ -336,8 +316,6 @@ add_action('wp_footer', function () {
 			// Read block by block so sentences do not run into each other
 			var parts = [];
 			var blocks = [];     // data-tts-b of each part, to find the live block again
-			var marks = [];      // { offset, slider, index } for slideshow sync
-			var spoken = 0;      // characters queued so far
 
 			clone.querySelectorAll(BLOCK_SEL).forEach(function (el) {
 				if (el.querySelector(BLOCK_SEL)) return; // container, its children are handled
@@ -345,42 +323,22 @@ add_action('wp_footer', function () {
 				var t = (el.textContent || '').replace(/\s+/g, ' ').trim();
 				if (!t) return;
 
-				// Note where each slide's text starts, so playback can move the
-				// live slideshow along with it
-				var slide = el.closest ? el.closest('.eric-slider-slide') : null;
-				if (slide) {
-					var host = slide.closest('[data-tts-slider]');
-					if (host) {
-						marks.push({
-							offset: spoken,
-							slider: host.getAttribute('data-tts-slider'),
-							index: parseInt(slide.getAttribute('data-index'), 10) || 0
-						});
-					}
-				}
-
-				var sentence = /[.!?\u2026:;]$/.test(t) ? t : t + '.';
-				parts.push(sentence);
+				parts.push(/[.!?\u2026:;]$/.test(t) ? t : t + '.');
 				blocks.push(el.getAttribute('data-tts-b'));
-				spoken += sentence.length + 1;
 			});
 
 			var text = parts.join(' ');
 			if (text.length < 10) {
 				text = (clone.textContent || '').replace(/\s+/g, ' ').trim();
 			}
-			return { text: text, marks: marks, blocks: blocks };
+			return { text: text, blocks: blocks };
 		}
 
 		function getReadableText() {
 			var main = document.querySelector('main') || document.body;
-			if (!main) return { text: '', marks: [] };
+			if (!main) return { text: '', blocks: [] };
 
-			// Tag the live sliders so the clone can point back at them
-			document.querySelectorAll(SLIDESHOW_MULTI).forEach(function (s, i) {
-				s.setAttribute('data-tts-slider', String(i));
-			});
-			// ...and every block, so a translated page can be read from the live page
+			// Tag every block, so a translated page can be read from the live page
 			var live = main.querySelectorAll(BLOCK_SEL);
 			Array.prototype.forEach.call(live, function (el, i) { el.setAttribute('data-tts-b', String(i)); });
 
@@ -397,93 +355,29 @@ add_action('wp_footer', function () {
 			return collectText(pruneClone(clone)).text;
 		}
 
-		// Returns { text, offset } per chunk. The offset says where the chunk
-		// started in the full text, which is how playback finds the matching slide.
+		// Splits the text into pieces of at most max characters, at sentence ends where possible
 		function chunkText(text, max) {
 			var sentences = text.match(/[^.!?\u2026]+[.!?\u2026]*\s*/g) || [text];
 			var chunks = [];
 			var cur = '';
-			var curStart = 0;
-			var pos = 0;
 
 			sentences.forEach(function (s) {
-				var sStart = pos;
-				pos += s.length;
-
 				if (cur && (cur + s).length > max) {
-					chunks.push({ text: cur.trim(), offset: curStart });
+					chunks.push(cur.trim());
 					cur = s;
-					curStart = sStart;
 				} else {
-					if (!cur) curStart = sStart;
 					cur += s;
 				}
-
 				while (cur.length > max) {
 					var cut = cur.lastIndexOf(' ', max);
 					if (cut < max * 0.5) cut = max;
-					chunks.push({ text: cur.slice(0, cut).trim(), offset: curStart });
-					curStart += cut;
+					chunks.push(cur.slice(0, cut).trim());
 					cur = cur.slice(cut);
 				}
 			});
 
-			if (cur.trim()) chunks.push({ text: cur.trim(), offset: curStart });
-			return chunks.filter(function (c) { return c.text.length > 0; });
-		}
-
-		// Build the playback queue. Chunks never span a slide boundary, otherwise
-		// several slide titles end up in one utterance and the slideshow can only
-		// be moved once for all of them.
-		function buildQueue(text, marks, max) {
-			var bounds = [0];
-			marks.forEach(function (m) {
-				if (m.offset > 0 && bounds[bounds.length - 1] !== m.offset) bounds.push(m.offset);
-			});
-			bounds.push(text.length);
-
-			var queue = [];
-			for (var i = 0; i < bounds.length - 1; i++) {
-				var from = bounds[i];
-				var segment = text.slice(from, bounds[i + 1]);
-				if (!segment.trim()) continue;
-				chunkText(segment, max).forEach(function (c) {
-					queue.push({ text: c.text, offset: from + c.offset });
-				});
-			}
-			return queue;
-		}
-
-		// --- Slideshow sync ---------------------------------------------
-
-		// Move the slideshow to whatever is being spoken right now
-		// Each click also resets the slider's own 2 second timer, which is what
-		// keeps it from wandering off on its own while a title is being read.
-		// Once reading moves on, that timer simply runs out and the slideshow
-		// carries on looping by itself. Nothing else is touched — in particular
-		// the pause button is left alone, so its icon never changes.
-		function syncSliders(offset) {
-			if (offset === null || offset === undefined || !state.marks.length) return;
-
-			var mark = null;
-			for (var i = 0; i < state.marks.length; i++) {
-				if (state.marks[i].offset <= offset) mark = state.marks[i];
-				else break;
-			}
-			if (mark) moveSlider(mark.slider, mark.index);
-		}
-
-		function moveSlider(slider, index) {
-			var key = slider + ':' + index;
-			if (state.lastSync === key) return;
-			state.lastSync = key;
-
-			var host = document.querySelector('[data-tts-slider="' + slider + '"]');
-			if (!host) return;
-			var dots = host.querySelectorAll('.eric-slider-dots button');
-			if (!dots.length) return; // no dots, no way to steer it — leave it alone
-			var target = dots[Math.min(index, dots.length - 1)];
-			if (target) target.click();
+			if (cur.trim()) chunks.push(cur.trim());
+			return chunks.filter(function (c) { return c.length > 0; });
 		}
 
 		// --- Playback --------------------------------------------------
@@ -508,8 +402,8 @@ add_action('wp_footer', function () {
 				return;
 			}
 
-			var item = state.queue[state.index++];
-			var u = new SpeechSynthesisUtterance(item.text);
+			var text = state.queue[state.index++];
+			var u = new SpeechSynthesisUtterance(text);
 			u.lang = lang;
 			if (voice) u.voice = voice;
 
@@ -517,7 +411,6 @@ add_action('wp_footer', function () {
 				if (session !== state.session) return;
 				state.paused = false;
 				if (state.index === 1) status('Text-to-speech started.');
-				syncSliders(item.offset);
 			};
 			u.onend = function () { speakNext(session, voice, lang); };
 			u.onerror = function (e) {
@@ -537,10 +430,6 @@ add_action('wp_footer', function () {
 		// own translation only translates what is on screen or close to it.
 		function nextBlock(session, voice, lang) {
 			var el = state.blocks.shift();
-			var slide = el.closest('.eric-slider-slide');
-			var host = slide && slide.closest('[data-tts-slider]');
-			if (host) moveSlider(host.getAttribute('data-tts-slider'), parseInt(slide.getAttribute('data-index'), 10) || 0);
-
 			var r = el.getBoundingClientRect();
 			var scrolled = r.top < 0 || r.bottom > window.innerHeight;
 			if (scrolled) {
@@ -556,7 +445,7 @@ add_action('wp_footer', function () {
 				var t = (pruneClone(el.cloneNode(true)).textContent || '').replace(/\s+/g, ' ').trim();
 				if (t) {
 					if (!/[.!?\u2026:;]$/.test(t)) t += '.';
-					chunkText(t, MAX_CHUNK).forEach(function (c) { state.queue.push({ text: c.text, offset: null }); });
+					state.queue = state.queue.concat(chunkText(t, MAX_CHUNK));
 				}
 				startWatchdog(); // it stops itself whenever nothing is speaking, e.g. while waiting
 				speakNext(session, voice, lang);
@@ -592,12 +481,10 @@ add_action('wp_footer', function () {
 
 				state.session++;
 				var translated = isTranslated();
-				state.queue = translated ? [] : buildQueue(page.text, page.marks, MAX_CHUNK);
-				state.marks = translated ? [] : page.marks;
+				state.queue = translated ? [] : chunkText(page.text, MAX_CHUNK);
 				state.blocks = translated ? page.blocks : null;
 				state.index = 0;
 				state.paused = false;
-				state.lastSync = null;
 
 				synth.cancel();
 				speakNext(state.session, voice, lang);
@@ -648,7 +535,6 @@ add_action('wp_footer', function () {
 			clearInterval(state.watchdog);
 			clearTimeout(state.autoTimer);
 			synth.cancel();
-			state.lastSync = null;
 			store.remove('ttsPlaying');
 		}
 
@@ -722,11 +608,7 @@ add_action('wp_footer', function () {
 			var text = getDetailsText(d);
 			if (!text) return;
 
-			// offset null: this text is not part of the page-wide positions,
-			// so it must not move any slideshow
-			var chunks = chunkText(text, MAX_CHUNK).map(function (ch) {
-				return { text: ch.text, offset: null };
-			});
+			var chunks = chunkText(text, MAX_CHUNK);
 			if (!chunks.length) return;
 
 			Array.prototype.splice.apply(state.queue, [state.index, 0].concat(chunks));
