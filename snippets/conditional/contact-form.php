@@ -3,44 +3,37 @@
 
 /* =============================================================================
    1. DATABASE SETUP
-   Creates wp_er_contact_messages on first Run.
-   Safe to re-run. Existing installs: Adds Status Column if missing, and drops
-   the old wp_er_contact_nonce_log once (see 2: no nonce anymore).
+   Creates wp_er_contact_messages once per schema version, on the first admin
+   request (er_contact_schema), then never again: no table check on every
+   admin / admin-ajax request. Also adds the status column to old installs and
+   drops the old wp_er_contact_nonce_log (see 2: no nonce anymore).
 ============================================================================= */
 
 if ( is_admin() ) {
     add_action( 'init', function () {
+        if ( get_option( 'er_contact_schema' ) === '1' ) return;
         global $wpdb;
-        $charset = $wpdb->get_charset_collate();
-        require_once ABSPATH . 'wp-admin/includes/upgrade.php';
-        // Main Messages Table
-        if ( ! get_option( 'er_contact_messages_table_created' ) ) {
-            $table = $wpdb->prefix . 'er_contact_messages';
-            $sql   = "CREATE TABLE {$table} (
-                id           MEDIUMINT(9)  NOT NULL AUTO_INCREMENT,
-                name         VARCHAR(100)  NOT NULL,
-                email        VARCHAR(100)  NOT NULL,
-                subject      VARCHAR(150)  NOT NULL,
-                message      TEXT          NOT NULL,
-                status       VARCHAR(20)   NOT NULL DEFAULT 'ok',
-                submitted_at DATETIME      DEFAULT CURRENT_TIMESTAMP,
-                PRIMARY KEY (id)
-            ) {$charset};";
-            dbDelta( $sql );
-            update_option( 'er_contact_messages_table_created', true );
-        } else {
-            // Existing Installs: Add Status Column if it was created before that Column existed
-            $table = $wpdb->prefix . 'er_contact_messages';
-            $col   = $wpdb->get_results( "SHOW COLUMNS FROM {$table} LIKE 'status'" );
-            if ( empty( $col ) ) {
-                $wpdb->query( "ALTER TABLE {$table} ADD COLUMN status VARCHAR(20) NOT NULL DEFAULT 'ok' AFTER message" );
-            }
+        $table = $wpdb->prefix . 'er_contact_messages';
+        // CREATE TABLE IF NOT EXISTS never touches an existing table
+        $wpdb->query( "CREATE TABLE IF NOT EXISTS {$table} (
+            id           MEDIUMINT(9)  NOT NULL AUTO_INCREMENT,
+            name         VARCHAR(100)  NOT NULL,
+            email        VARCHAR(100)  NOT NULL,
+            subject      VARCHAR(150)  NOT NULL,
+            message      TEXT          NOT NULL,
+            status       VARCHAR(20)   NOT NULL DEFAULT 'ok',
+            submitted_at DATETIME      DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id)
+        ) {$wpdb->get_charset_collate()}" );
+        // Tables created before the status column existed
+        if ( ! $wpdb->get_results( "SHOW COLUMNS FROM {$table} LIKE 'status'" ) ) {
+            $wpdb->query( "ALTER TABLE {$table} ADD COLUMN status VARCHAR(20) NOT NULL DEFAULT 'ok' AFTER message" );
         }
-        // Old Nonce Failure Log Table: no longer written by anything
-        if ( get_option( 'er_contact_nonce_log_table_created' ) ) {
-            $wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}er_contact_nonce_log" );
-            delete_option( 'er_contact_nonce_log_table_created' );
-        }
+        // Old nonce failure log: no longer written by anything
+        $wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}er_contact_nonce_log" );
+        delete_option( 'er_contact_nonce_log_table_created' );
+        delete_option( 'er_contact_messages_table_created' );
+        update_option( 'er_contact_schema', '1' );
     } );
 }
 
