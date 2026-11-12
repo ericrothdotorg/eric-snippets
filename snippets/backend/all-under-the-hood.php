@@ -54,11 +54,6 @@ add_action('template_redirect', function () {
     }
 });
 
-// Limit Post Revisions
-if (!defined('WP_POST_REVISIONS')) {
-    define('WP_POST_REVISIONS', 1);
-}
-
 // Force LiteSpeed Purge on Content Save
 add_action('save_post', function($post_id) {
     if (wp_is_post_autosave($post_id) || wp_is_post_revision($post_id)) {
