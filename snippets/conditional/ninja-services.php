@@ -204,20 +204,16 @@ add_action('wp_footer', function() {
                     if (targetContainer) {
                         const wrapper = document.createElement("div");
                         wrapper.className = "custom-ninja-wrapper";
-                        wrapper.setAttribute("role", "img");
-                        wrapper.setAttribute("aria-label", "Illustration of a Ninja Character");
 
                         const link = document.createElement("a");
                         link.href  = "/services/";
                         link.style.pointerEvents = "auto";
                         link.title = "Ninja Services";
-                        link.setAttribute("aria-label", "Visit Ninja Services Page");
-                        link.setAttribute("role", "link");
-                        link.setAttribute("tabindex", "0");
+                        link.setAttribute("aria-label", "Ninja Services");
 
                         const img = document.createElement("img");
                         img.src     = "/wp-content/uploads/2025/08/Ninja-Character-Stroke-1px.png";
-                        img.alt     = "Ninja Character Illustration";
+                        img.alt     = ""; // decorative: the link's label says where it goes
                         img.className = "custom-ninja-image daneden-slideInRight";
                         img.width   = 100;
                         img.height  = 100;
