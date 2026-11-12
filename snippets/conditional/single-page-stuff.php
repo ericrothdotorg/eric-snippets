@@ -9,7 +9,7 @@ add_action('wp_footer', function() {
 
     // === What Day Birthday (Buddha Images) ===
     
-    if (is_page(array('')) || is_single(array('134149'))) { ?>
+    if (is_single(134149)) { ?>
         <script>
             function computeBirthday() {
                 const day   = parseInt(document.getElementById('bday-day').value, 10);
@@ -32,7 +32,7 @@ add_action('wp_footer', function() {
 
     // === World Population Counter (World Population) ===
     
-    if (is_page(array('')) || is_single(array('131123'))) { ?>
+    if (is_single(131123)) { ?>
         <style>
             .world-population-design { text-align: center; color: var(--er-purple); font-size: var(--er-fs-xl); font-weight: var(--er-fw-bold); }
         </style>
@@ -54,7 +54,7 @@ add_action('wp_footer', function() {
 
     // === SBB Form & Clock (My World) ===
 
-    if (is_page(array('123')) || is_single(array(''))) {
+    if (is_page(123)) {
     ?>
     <style>
         @media screen and (max-width: 768px) {#sbb_uhr_container {width: 5rem !important; height: 5rem !important;}}
