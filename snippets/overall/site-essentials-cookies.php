@@ -707,34 +707,53 @@ add_action('wp_footer', function () {
 				window.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" });
 			});
 		
-			// Cookie Consent Banner (already shown at first paint by the inline script above)
+			// Cookie Consent Banner: shown at first paint by the inline script above while no choice is stored.
+			// Any link to #cookie-settings (footer "Cookies") opens it again to change the choice.
+			const notice    = document.getElementById("cookie-notice");
+			const acceptBtn = document.getElementById("cookie-accept");
+			const rejectBtn = document.getElementById("cookie-reject");
+			let reopened    = false;
+			const setVisible = function(show) {
+				notice.style.visibility = show ? "visible" : "hidden";
+				notice.setAttribute("aria-hidden", show ? "false" : "true");
+			};
+			// Store the Choice and hide the Banner
+			const decide = function(value) {
+				const before = (document.cookie.match(/(?:^|;\s*)cookieaccepted=(\d)/) || [])[1];
+				document.cookie = 'cookieaccepted=' + value + '; max-age=<?php echo COOKIE_MAX_AGE; ?>; path=/; SameSite=Lax' + (location.protocol === 'https:' ? '; Secure' : '');
+				setVisible(false);
+				// Pass the choice on to Clarity (consent signal, see MS Clarity Analytics below)
+				if (typeof window.clarity === "function") {
+					var c = value ? "granted" : "denied";
+					window.clarity("consentv2", {ad_Storage: c, analytics_Storage: c});
+				}
+				// A changed choice: reload, so videos, Wikipedia previews and tracking follow it at once
+				if (reopened && before !== String(value)) location.reload();
+				reopened = false;
+			};
+			// Move Focus to the Accept Button when Banner appears
 			if (document.cookie.indexOf("cookieaccepted=") < 0) {
-				const notice = document.getElementById("cookie-notice");
-				const acceptBtn = document.getElementById("cookie-accept");
-				const rejectBtn = document.getElementById("cookie-reject");
-				// Store the Choice and hide the Banner
-				const decide = function(value) {
-					document.cookie = 'cookieaccepted=' + value + '; max-age=<?php echo COOKIE_MAX_AGE; ?>; path=/; SameSite=Lax' + (location.protocol === 'https:' ? '; Secure' : '');
-					notice.style.visibility = "hidden";
-					notice.setAttribute("aria-hidden", "true");
-					// Pass the choice on to Clarity (consent signal, see MS Clarity Analytics below)
-					if (typeof window.clarity === "function") {
-						var c = value ? "granted" : "denied";
-						window.clarity("consentv2", {ad_Storage: c, analytics_Storage: c});
-					}
-				};
-				// Move Focus to the Accept Button when Banner appears
 				setTimeout(function() { acceptBtn.focus(); }, 0);
-				// Hover Labels (the aria-labels stay as set in the markup)
-				acceptBtn.addEventListener("mouseenter", function() { this.querySelector("span").textContent = "All"; });
-				acceptBtn.addEventListener("mouseleave", function() { this.querySelector("span").textContent = "Accept"; });
-				rejectBtn.addEventListener("mouseenter", function() { this.querySelector("span").textContent = "Only"; });
-				rejectBtn.addEventListener("mouseleave", function() { this.querySelector("span").textContent = "Essentials"; });
-				acceptBtn.addEventListener("click", function() { decide(1); });
-				rejectBtn.addEventListener("click", function() { decide(0); });
-				document.getElementById("cookie-close").addEventListener("click", function() { decide(0); });
 			}
-			
+			// Hover Labels (the aria-labels stay as set in the markup)
+			acceptBtn.addEventListener("mouseenter", function() { this.querySelector("span").textContent = "All"; });
+			acceptBtn.addEventListener("mouseleave", function() { this.querySelector("span").textContent = "Accept"; });
+			rejectBtn.addEventListener("mouseenter", function() { this.querySelector("span").textContent = "Only"; });
+			rejectBtn.addEventListener("mouseleave", function() { this.querySelector("span").textContent = "Essentials"; });
+			acceptBtn.addEventListener("click", function() { decide(1); });
+			rejectBtn.addEventListener("click", function() { decide(0); });
+			// × on first visit = Essentials; × after reopening = keep the current choice
+			document.getElementById("cookie-close").addEventListener("click", function() {
+				if (reopened) { reopened = false; setVisible(false); } else { decide(0); }
+			});
+			document.addEventListener("click", function(e) {
+				if (!e.target.closest('a[href="#cookie-settings"]')) return;
+				e.preventDefault();
+				reopened = true;
+				setVisible(true);
+				acceptBtn.focus();
+			});
+
 			// Auto-insert current Year
 			const yearEl = document.getElementById("current-year");
 			if (yearEl) yearEl.textContent = new Date().getFullYear();
