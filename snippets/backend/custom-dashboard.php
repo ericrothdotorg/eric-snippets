@@ -301,15 +301,33 @@ function custom_render_tools_and_actions() {
 		'MS Clarity'       => 'https://clarity.microsoft.com/projects/view/eic7b2e9o1/dashboard',
 	], 'margin-bottom: 10px;');
 	custom_yt_render();
-	custom_yt_script();
+	custom_lc_render();
+	custom_check_script();
 	echo '</div>';
 }
 
-// ---- Broken YT Links ----
-// The browser drives the run, the server checks CUSTOM_YT_BATCH videos per request. One request for
-// all ~500 videos would run for minutes and be cut off (Hostinger time limit, see PERFORMANCE below).
-// "start" collects the videos once, "batch" checks one portion (the browser runs 3 at a time),
+// ---- Broken YT Links + Broken Links: shared pattern ----
+// The browser drives a run, the server checks one portion per request. One request for everything
+// would run for minutes and be cut off (Hostinger time limit, see PERFORMANCE below).
+// "start" collects the items once (kept in a transient for the run), "batch" checks one portion,
 // "finish" stores the result. The previous result stays until a run completes.
+// Shared by both: custom_check_guard() and the runner script custom_check_script().
+
+function custom_check_guard() {
+	if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized', 403);
+	check_ajax_referer('custom_checks');
+	return sanitize_key($_POST['step'] ?? '');
+}
+
+// Items found by the browser during the run ({ key: value }), limited to the keys of this run
+function custom_check_found(array $keys) {
+	$found = json_decode(wp_unslash($_POST['found'] ?? '{}'), true);
+	return is_array($found) ? array_intersect_key($found, array_flip($keys)) : [];
+}
+
+// ---- Broken YT Links ----
+// Every embedded video is asked via YouTube's oEmbed: a removed or private video's page still
+// answers 200, oEmbed does not. 20 videos per request, 3 requests at a time.
 
 defined('CUSTOM_YT_BATCH') || define('CUSTOM_YT_BATCH', 20); // videos per request
 
@@ -332,7 +350,7 @@ function custom_yt_collect() {
 		preg_match_all('/https:\/\/(?:www\.)?youtube\.com\/(?:watch\?v=|embed\/)([a-zA-Z0-9_-]+)/', $post->post_content, $matches);
 		foreach (array_unique($matches[1]) as $video_id) {
 			if (in_array($video_id, $excluded, true)) continue;
-			$map[(string) $video_id][] = $post->ID;
+			$map['v:' . $video_id][] = $post->ID; // prefixed, so a numeric-looking ID stays a string key
 		}
 	}
 	return $map;
@@ -349,36 +367,33 @@ function custom_yt_is_ok($video_id) {
 }
 
 add_action('wp_ajax_custom_yt_check', function () {
-	if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized', 403);
-	check_ajax_referer('custom_yt_check');
-	$step = sanitize_key($_POST['step'] ?? '');
+	$step = custom_check_guard();
 
 	if ($step === 'start') {
 		$map = custom_yt_collect();
 		set_transient('custom_yt_run', $map, HOUR_IN_SECONDS);
-		wp_send_json_success(['total' => count($map)]);
+		wp_send_json_success(['total' => count($map), 'jobs' => count($map), 'batch' => CUSTOM_YT_BATCH]);
 	}
 
 	$map = get_transient('custom_yt_run');
 	if (!is_array($map)) wp_send_json_error('The run expired - please start it again.');
-	$ids = array_map('strval', array_keys($map));
+	$keys = array_keys($map);
 
 	if ($step === 'batch') {
-		$broken = [];
-		foreach (array_slice($ids, absint($_POST['offset'] ?? 0), CUSTOM_YT_BATCH) as $video_id) {
-			if (!custom_yt_is_ok($video_id)) $broken[] = $video_id;
+		$slice = array_slice($keys, absint($_POST['offset'] ?? 0), CUSTOM_YT_BATCH);
+		$found = [];
+		foreach ($slice as $key) {
+			if (!custom_yt_is_ok(substr($key, 2))) $found[$key] = 1;
 		}
-		wp_send_json_success(['broken' => $broken]);
+		wp_send_json_success(['found' => (object) $found, 'checked' => count($slice)]);
 	}
 
 	if ($step === 'finish') {
-		$sent         = (array) json_decode(wp_unslash($_POST['broken'] ?? '[]'), true);
-		$broken       = array_intersect($ids, array_map('strval', $sent)); // only videos of this run
 		$broken_posts = [];
 		$broken_links = 0;
-		foreach ($broken as $video_id) {
-			foreach ($map[$video_id] as $post_id) {
-				$broken_posts[$post_id][] = $video_id;
+		foreach (array_keys(custom_check_found($keys)) as $key) {
+			foreach ($map[$key] as $post_id) {
+				$broken_posts[$post_id][] = substr($key, 2);
 				$broken_links++;
 			}
 		}
@@ -399,13 +414,13 @@ function custom_yt_render() {
 	$last_check   = get_option('custom_last_yt_check', 0);
 	$broken_count = !empty($results['broken_count']) ? (int) $results['broken_count'] : 0;
 
-	echo '<div class="cd-yt">';
+	echo '<div class="cd-check">';
 	echo '<div class="cd-widget cd-flex" style="align-items: center; gap: 15px;">';
-	echo '<button type="button" class="button cd-yt-btn">Broken YT Links</button>';
+	echo '<button type="button" class="button" data-cd-check="custom_yt_check" data-what="videos" data-parallel="3">Broken YT Links</button>';
 	echo '<div style="display: flex; flex-direction: column; line-height: 1.4;">';
 	echo '<span>Broken YT Links: <strong class="cd-alert">' . $broken_count . '</strong></span>';
 	echo '<span>Last checked: ' . ($last_check ? custom_format_date($last_check, true) : '<em class="cd-date">Never</em>') . '</span>';
-	echo '<span class="cd-yt-error cd-alert"></span>';
+	echo '<span class="cd-check-error cd-alert"></span>';
 	echo '</div>';
 	echo '</div>';
 
@@ -423,17 +438,256 @@ function custom_yt_render() {
 	echo '</div>';
 }
 
-// Runs the check: 3 portions at a time, progress on the button, result swapped in at the end.
-function custom_yt_script() {
+// ---- Broken Links ----
+// Every link in published content (pages, posts, interests, traits, quotes, synced patterns).
+// Internal links to a post need no request. Wikipedia articles are asked via its API, 50 per
+// call. YouTube is left to Broken YT Links. All other links: HEAD, and GET once more where the
+// answer was not OK (some servers refuse HEAD) - all links of a portion at once, 2 portions at
+// a time. Broken = 404 / 410 / domain not found / no Wikipedia article. Unclear = what sites
+// often answer a checker although the link works (403, 429, 5xx, timeout): worth a manual click.
+// Links in theme files (header, footer, sidebar) are not checked.
+
+defined('CUSTOM_LC_BATCH') || define('CUSTOM_LC_BATCH', 20); // jobs per request (a job = 1 link, or up to 50 Wikipedia articles)
+
+// Never checked (part of the URL is enough)
+function custom_lc_excluded() {
+	return [
+		'/professional/support-services/projects/', // intentional 404 example on CO2 Compensation
+	];
+}
+
+// Every link => the posts it is in, plus the jobs to check them
+function custom_lc_collect() {
+	$home  = home_url('/');
+	$map   = [];
+	$query = new WP_Query([
+		'post_type'      => ['post', 'page', 'my-interests', 'my-traits', 'my-quotes', 'wp_block'],
+		'post_status'    => 'publish',
+		'posts_per_page' => -1,
+		'no_found_rows'  => true,
+	]);
+	foreach ($query->posts as $post) {
+		preg_match_all('/<a\s[^>]*href=(["\'])(.*?)\1/i', $post->post_content, $m);
+		foreach (array_unique($m[2]) as $href) {
+			$href = trim(html_entity_decode($href, ENT_QUOTES));
+			if ($href === '' || $href[0] === '#' || preg_match('/^(mailto|tel|javascript|data):/i', $href)) continue;
+			$url = strtok(WP_Http::make_absolute_url($href, $home), '#');
+			if (!$url || !preg_match('#^https?://#i', $url)) continue;
+			$host = strtolower((string) wp_parse_url($url, PHP_URL_HOST));
+			if (preg_match('/(^|\.)(youtube\.com|youtu\.be)$/', $host)) continue;
+			foreach (custom_lc_excluded() as $part) {
+				if (strpos($url, $part) !== false) continue 2;
+			}
+			$map[$url][] = $post->ID;
+		}
+	}
+	$wiki = [];
+	$jobs = [];
+	foreach ($map as $url => $ids) {
+		$map[$url] = array_values(array_unique($ids));
+		$host = strtolower((string) wp_parse_url($url, PHP_URL_HOST));
+		$path = (string) wp_parse_url($url, PHP_URL_PATH);
+		if (preg_match('/^([a-z-]+)(?:\.m)?\.wikipedia\.org$/', $host, $hm) && strpos($path, '/wiki/') === 0 && !wp_parse_url($url, PHP_URL_QUERY)) {
+			$wiki[$hm[1] . '.wikipedia.org'][] = $url;
+		} else {
+			$jobs[] = ['u', $url];
+		}
+	}
+	foreach ($wiki as $wiki_host => $urls) {
+		foreach (array_chunk($urls, 50) as $chunk) {
+			$jobs[] = ['w', $wiki_host, $chunk];
+		}
+	}
+	return ['map' => $map, 'jobs' => $jobs];
+}
+
+// Wikipedia: up to 50 articles of one language in one API call. Returns only the problems.
+function custom_lc_check_wiki($wiki_host, array $urls) {
+	$titles = [];
+	foreach ($urls as $url) {
+		$titles[$url] = str_replace('_', ' ', rawurldecode(substr((string) wp_parse_url($url, PHP_URL_PATH), 6)));
+	}
+	$api = 'https://' . $wiki_host . '/w/api.php?' . http_build_query([
+		'action' => 'query', 'format' => 'json', 'formatversion' => 2, 'redirects' => 1,
+		'titles' => implode('|', array_unique($titles)),
+	]);
+	$response = wp_remote_get($api, ['timeout' => 15, 'user-agent' => 'ericroth.org link check (https://ericroth.org/)']);
+	$data     = is_wp_error($response) ? null : json_decode(wp_remote_retrieve_body($response), true);
+	$out      = [];
+	if (empty($data['query'])) {
+		foreach ($urls as $url) $out[$url] = ['unclear', 'Wikipedia not reachable'];
+		return $out;
+	}
+	$normalized = $redirects = $pages = [];
+	foreach ($data['query']['normalized'] ?? [] as $n) $normalized[$n['from']] = $n['to'];
+	foreach ($data['query']['redirects'] ?? [] as $n) $redirects[$n['from']] = $n['to'];
+	foreach ($data['query']['pages'] ?? [] as $p) $pages[$p['title']] = $p;
+	foreach ($titles as $url => $title) {
+		$title = $normalized[$title] ?? $title;
+		$page  = $pages[$redirects[$title] ?? $title] ?? null;
+		if (!$page) {
+			$out[$url] = ['unclear', 'Wikipedia: no answer'];
+		} elseif (!empty($page['missing']) || !empty($page['invalid'])) {
+			$out[$url] = ['broken', 'No Wikipedia article'];
+		}
+	}
+	return $out;
+}
+
+// All other links of a portion, requested at once. Returns only the problems.
+function custom_lc_check_urls(array $urls) {
+	$todo = [];
+	foreach ($urls as $url) {
+		if (strpos($url, home_url()) === 0 && url_to_postid($url) > 0) continue; // internal, the post exists
+		$todo[] = $url;
+	}
+	if (!$todo) return [];
+	$result = custom_lc_request_all($todo, 'HEAD');
+	$again  = array_keys(array_filter($result, fn($r) => $r[1] !== 'Domain not found'));
+	if ($again) {
+		$result = array_merge($result, custom_lc_request_all($again, 'GET')); // the GET answer counts
+	}
+	return array_filter($result, fn($r) => $r[0] !== 'ok');
+}
+
+function custom_lc_request_all(array $urls, $method) {
+	$options = [
+		'timeout'          => 10,
+		'connect_timeout'  => 10,
+		'follow_redirects' => true,
+		'redirects'        => 5,
+		'max_bytes'        => 16384, // GET: the start of the page is enough
+		'useragent'        => 'Mozilla/5.0 (compatible; ericroth.org link check; +https://ericroth.org/)',
+		'verify'           => ABSPATH . WPINC . '/certificates/ca-bundle.crt',
+	];
+	$requests = [];
+	foreach ($urls as $i => $url) {
+		$requests[$i] = ['url' => $url, 'type' => $method, 'headers' => ['Accept' => 'text/html,*/*'], 'options' => $options];
+	}
+	$responses = \WpOrg\Requests\Requests::request_multiple($requests, $options);
+	$out = [];
+	foreach ($urls as $i => $url) {
+		$out[$url] = custom_lc_classify($responses[$i] ?? null);
+	}
+	return $out;
+}
+
+// ['ok' | 'broken' | 'unclear', label]
+function custom_lc_classify($response) {
+	if ($response instanceof \WpOrg\Requests\Response) {
+		$code = (int) $response->status_code;
+		if ($code >= 200 && $code < 400)         return ['ok', ''];
+		if ($code === 404 || $code === 410)       return ['broken', 'Not found (' . $code . ')'];
+		if ($code === 429)                        return ['unclear', 'Too many requests (429)'];
+		if (in_array($code, [401, 403, 999], true)) return ['unclear', 'Blocked (' . $code . ')'];
+		if ($code >= 500)                         return ['unclear', 'Server error (' . $code . ')'];
+		return ['unclear', 'HTTP ' . $code];
+	}
+	$message = $response instanceof \Exception ? $response->getMessage() : '';
+	if (stripos($message, 'resolve host') !== false)                                   return ['broken', 'Domain not found'];
+	if (stripos($message, 'timed out') !== false || stripos($message, 'timeout') !== false) return ['unclear', 'Timeout'];
+	if (stripos($message, 'SSL') !== false || stripos($message, 'certificate') !== false)  return ['unclear', 'SSL error'];
+	return ['unclear', 'Connection failed'];
+}
+
+add_action('wp_ajax_custom_lc_check', function () {
+	$step = custom_check_guard();
+
+	if ($step === 'start') {
+		$run = custom_lc_collect();
+		set_transient('custom_lc_run', $run, HOUR_IN_SECONDS);
+		wp_send_json_success(['total' => count($run['map']), 'jobs' => count($run['jobs']), 'batch' => CUSTOM_LC_BATCH]);
+	}
+
+	$run = get_transient('custom_lc_run');
+	if (!is_array($run)) wp_send_json_error('The run expired - please start it again.');
+
+	if ($step === 'batch') {
+		$found   = [];
+		$urls    = [];
+		$checked = 0;
+		foreach (array_slice($run['jobs'], absint($_POST['offset'] ?? 0), CUSTOM_LC_BATCH) as $job) {
+			if ($job[0] === 'w') {
+				$found   += custom_lc_check_wiki($job[1], $job[2]);
+				$checked += count($job[2]);
+			} else {
+				$urls[] = $job[1];
+				$checked++;
+			}
+		}
+		$found += custom_lc_check_urls($urls);
+		wp_send_json_success(['found' => (object) $found, 'checked' => $checked]);
+	}
+
+	if ($step === 'finish') {
+		$results = ['broken' => [], 'unclear' => []];
+		foreach (custom_check_found(array_keys($run['map'])) as $url => $r) {
+			if (!is_array($r) || !isset($results[$r[0] ?? ''])) continue;
+			$results[$r[0]][$url] = [sanitize_text_field($r[1] ?? ''), $run['map'][$url]];
+		}
+		ksort($results['broken']);
+		ksort($results['unclear']);
+		update_option('custom_lc_results', $results, false);
+		update_option('custom_lc_last', time(), false);
+		delete_transient('custom_lc_run');
+		ob_start();
+		custom_lc_render();
+		wp_send_json_success(['html' => ob_get_clean()]);
+	}
+
+	wp_send_json_error('Unknown step');
+});
+
+// Button, the two counts and the two lists. Also sent back by "finish".
+function custom_lc_render() {
+	$results = get_option('custom_lc_results', []);
+	$last    = get_option('custom_lc_last', 0);
+	$broken  = $results['broken'] ?? [];
+	$unclear = $results['unclear'] ?? [];
+
+	echo '<div class="cd-check" style="margin-top: 10px;">';
+	echo '<div class="cd-widget cd-flex" style="align-items: center; gap: 15px;">';
+	echo '<button type="button" class="button" data-cd-check="custom_lc_check" data-what="links" data-parallel="2">Broken Links</button>';
+	echo '<div style="display: flex; flex-direction: column; line-height: 1.4;">';
+	echo '<span>Broken Links: <strong class="cd-alert">' . count($broken) . '</strong>'
+	   . ' <span class="cd-muted">·</span> Unclear: <strong class="cd-warning">' . count($unclear) . '</strong></span>';
+	echo '<span>Last checked: ' . ($last ? custom_format_date($last, true) : '<em class="cd-date">Never</em>') . '</span>';
+	echo '<span class="cd-check-error cd-alert"></span>';
+	echo '</div>';
+	echo '</div>';
+	custom_lc_list('Broken Links (' . count($broken) . ')', $broken);
+	custom_lc_list('Unclear Links - check by hand (' . count($unclear) . ')', $unclear);
+	echo '</div>';
+}
+
+function custom_lc_list($title, array $items) {
+	if (!$items) return;
+	echo '<details class="cd-details" style="margin-top: 10px;">';
+	echo '<summary class="cd-summary" style="margin-bottom: 10px;">' . esc_html($title) . '</summary>';
+	echo '<ul style="margin: 0; font-size: 13px;">';
+	foreach ($items as $url => [$label, $post_ids]) {
+		$short = preg_replace('#^https?://(www\.)?#', '', $url);
+		$short = strlen($short) > 70 ? substr($short, 0, 67) . '…' : $short;
+		$where = array_map(fn($id) => '<a href="' . esc_url(get_edit_post_link($id)) . '" target="_blank">' . esc_html(get_the_title($id) ?: '#' . $id) . '</a>', $post_ids);
+		echo '<li style="margin-bottom: 8px;"><a href="' . esc_url($url) . '" target="_blank" rel="noopener">' . esc_html($short) . '</a>'
+		   . ' <span class="cd-muted">- ' . esc_html($label) . '</span><br>'
+		   . '<span class="cd-muted">in:</span> ' . implode(', ', $where) . '</li>';
+	}
+	echo '</ul>';
+	echo '</details>';
+}
+
+// Runner for both checks: portions in parallel, progress on the button, result swapped in at the end.
+function custom_check_script() {
 	?>
 	<script>
 	(function () {
-		var cfg = <?php echo wp_json_encode(['nonce' => wp_create_nonce('custom_yt_check'), 'batch' => CUSTOM_YT_BATCH, 'parallel' => 3]); ?>;
+		var NONCE = <?php echo wp_json_encode(wp_create_nonce('custom_checks')); ?>;
 
-		function post(data) {
+		function post(action, data) {
 			var body = new FormData();
-			body.append('action', 'custom_yt_check');
-			body.append('_ajax_nonce', cfg.nonce);
+			body.append('action', action);
+			body.append('_ajax_nonce', NONCE);
 			Object.keys(data).forEach(function (k) { body.append(k, data[k]); });
 			return fetch(ajaxurl, { method: 'POST', body: body, credentials: 'same-origin' })
 				.then(function (r) { if (!r.ok) throw new Error('Request failed (HTTP ' + r.status + ')'); return r.json(); })
@@ -441,36 +695,38 @@ function custom_yt_script() {
 		}
 
 		document.addEventListener('click', function (e) {
-			var btn = e.target.closest('.cd-yt-btn');
+			var btn = e.target.closest('[data-cd-check]');
 			if (!btn || btn.disabled) return;
-			var box = btn.closest('.cd-yt'), err = box.querySelector('.cd-yt-error');
-			var label = btn.textContent, broken = [], next = 0, done = 0, total = 0;
+			var action = btn.dataset.cdCheck, parallel = +btn.dataset.parallel || 1;
+			var box = btn.closest('.cd-check'), err = box.querySelector('.cd-check-error');
+			var label = btn.textContent, found = {}, next = 0, done = 0, total = 0, jobs = 0, batch = 1;
+			var n = function (x) { return x.toLocaleString('en-US'); };
 			btn.disabled = true;
-			btn.textContent = 'Collecting videos…';
+			btn.textContent = 'Collecting ' + btn.dataset.what + '…';
 			err.textContent = '';
 
 			// Each worker takes the next portion until none is left
 			function worker() {
-				if (next >= total) return Promise.resolve();
+				if (next >= jobs) return Promise.resolve();
 				var offset = next;
-				next += cfg.batch;
-				return post({ step: 'batch', offset: offset }).then(function (d) {
-					broken = broken.concat(d.broken);
-					done = Math.min(total, done + cfg.batch);
-					btn.textContent = 'Checking… ' + done + ' / ' + total;
+				next += batch;
+				return post(action, { step: 'batch', offset: offset }).then(function (d) {
+					Object.assign(found, d.found);
+					done = Math.min(total, done + d.checked);
+					btn.textContent = 'Checking… ' + n(done) + ' / ' + n(total);
 					return worker();
 				});
 			}
 
-			post({ step: 'start' })
+			post(action, { step: 'start' })
 				.then(function (d) {
-					total = d.total;
-					btn.textContent = 'Checking… 0 / ' + total;
+					total = d.total; jobs = d.jobs; batch = d.batch;
+					btn.textContent = 'Checking… 0 / ' + n(total);
 					var workers = [];
-					for (var i = 0; i < cfg.parallel; i++) workers.push(worker());
+					for (var i = 0; i < parallel; i++) workers.push(worker());
 					return Promise.all(workers);
 				})
-				.then(function () { return post({ step: 'finish', broken: JSON.stringify(broken) }); })
+				.then(function () { return post(action, { step: 'finish', found: JSON.stringify(found) }); })
 				.then(function (d) { box.outerHTML = d.html; })
 				.catch(function (ex) {
 					btn.disabled = false;
