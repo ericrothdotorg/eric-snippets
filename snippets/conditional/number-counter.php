@@ -53,6 +53,7 @@ add_action('wp_footer', function() use ($counter_pages) {
     if (!is_page($counter_pages)) return;
     ?>
 	<script>
+	(function () { // own scope: no global init()
 	function init() {
 		var counters = document.querySelectorAll('.counter-value');
 		if (!counters.length) return;
@@ -91,6 +92,7 @@ add_action('wp_footer', function() use ($counter_pages) {
 	} else {
 		init();
 	}
+	})();
 	</script>
     <?php
 });
