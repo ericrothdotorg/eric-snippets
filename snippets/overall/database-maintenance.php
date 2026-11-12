@@ -65,8 +65,10 @@ function custom_run_innodb_cleanup() {
 	];
 }
 
+// Orphaned revisions first, so the postmeta cleanup right after it also takes their meta in the same run.
 function custom_cleanup_orphaned_data($wpdb, $safe_delete) {
 	$deleted = 0;
+	$deleted += $safe_delete("DELETE r FROM {$wpdb->posts} r LEFT JOIN {$wpdb->posts} p ON p.ID = r.post_parent WHERE r.post_type = 'revision' AND p.ID IS NULL", 'Orphaned revisions cleanup');
 	$deleted += $safe_delete("DELETE pm FROM {$wpdb->postmeta} pm LEFT JOIN {$wpdb->posts} p ON p.ID = pm.post_id WHERE p.ID IS NULL", 'Orphaned postmeta cleanup');
 	$deleted += $safe_delete("DELETE tr FROM {$wpdb->term_relationships} tr LEFT JOIN {$wpdb->posts} p ON p.ID = tr.object_id WHERE p.ID IS NULL", 'Orphaned term relationships cleanup');
 	$deleted += $safe_delete("DELETE um FROM {$wpdb->usermeta} um LEFT JOIN {$wpdb->users} u ON u.ID = um.user_id WHERE u.ID IS NULL", 'Orphaned usermeta cleanup');
@@ -74,9 +76,10 @@ function custom_cleanup_orphaned_data($wpdb, $safe_delete) {
 	return $deleted;
 }
 
+// Not here on purpose: _wp_old_slug / _wp_old_date - WordPress needs them to redirect a renamed post's old URL (301).
 function custom_cleanup_postmeta($wpdb, $safe_delete) {
 	$deleted = 0;
-	$safe_keys = ['_edit_lock', '_edit_last', '_wp_old_slug', '_wp_old_date', '_last_viewed_timestamp', 'litespeed-optimize-set', 'litespeed-optimize-size'];
+	$safe_keys = ['_edit_lock', '_edit_last', '_last_viewed_timestamp', 'litespeed-optimize-set', 'litespeed-optimize-size'];
 	foreach ($safe_keys as $key) {
 		$deleted += $safe_delete($wpdb->prepare("DELETE FROM {$wpdb->postmeta} WHERE meta_key = %s", $key), "Postmeta cleanup ({$key})");
 	}
@@ -85,9 +88,10 @@ function custom_cleanup_postmeta($wpdb, $safe_delete) {
 	return $deleted;
 }
 
+// Not here on purpose: _session_tokens - the login sessions; a raw delete also bypasses the object cache.
 function custom_cleanup_usermeta($wpdb, $safe_delete) {
 	$deleted = 0;
-	$safe_keys = ['_session_tokens', '_last_activity', '_woocommerce_persistent_cart'];
+	$safe_keys = ['_last_activity', '_woocommerce_persistent_cart'];
 	foreach ($safe_keys as $key) {
 		$deleted += $safe_delete($wpdb->prepare("DELETE FROM {$wpdb->usermeta} WHERE meta_key = %s", $key), "Usermeta cleanup ({$key})");
 	}
@@ -115,6 +119,8 @@ function custom_cleanup_transients($wpdb, $safe_delete) {
 // jobs: nothing expires on its own, the limits only apply the moment this runs.
 // Not here on purpose: wp_er_post_stats (Stats Engine) and wp_er_map_views /
 // wp_er_live_visitors (Visitor Tracking) are cleaned daily by their owners.
+// Trash: emptied by WordPress itself (EMPTY_TRASH_DAYS in wp-config.php), which
+// also removes revisions and meta and runs the delete hooks.
 // The date columns compared with NOW() are all stored in UTC.
 function custom_cleanup_old_data($wpdb, $safe_delete) {
 	$deleted = 0;
@@ -122,7 +128,6 @@ function custom_cleanup_old_data($wpdb, $safe_delete) {
 		$deleted += $safe_delete("DELETE FROM {$wpdb->prefix}actionscheduler_actions WHERE status = 'complete' AND scheduled_date_gmt < NOW() - INTERVAL 30 DAY", 'ActionScheduler cleanup');
 	}
 	$deleted += $safe_delete("DELETE FROM {$wpdb->posts} WHERE post_status = 'auto-draft' AND post_content = ''", 'Auto-draft cleanup');
-	$deleted += $safe_delete("DELETE FROM {$wpdb->posts} WHERE post_status = 'trash' AND post_modified_gmt < NOW() - INTERVAL 1 DAY", 'Trash posts cleanup');
 	$deleted += $safe_delete("DELETE FROM {$wpdb->prefix}er_subscribers WHERE status = 'pending' AND created_at < NOW() - INTERVAL 7 DAY", 'Stale pending subscriber cleanup');
 	return $deleted;
 }
