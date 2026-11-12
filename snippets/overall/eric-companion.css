@@ -508,8 +508,10 @@ footer.flex-container {max-width: var(--er-wide-row); margin-inline: auto; colum
 /* ---- Footer column LEFT ---- */
 .qr-and-links-wrapper {display: flex; align-items: center;}
 .qr-links-column {display: flex; flex-direction: column; padding-left: 45px;}
-.ninja-services-link {display: flex; align-items: center; margin-bottom: 15px;}
-.ninja-services-link span {padding-left: 10px;}
+.ninja-services-link, .cookies-link {display: flex; align-items: center;}
+.ninja-services-link {margin-bottom: 15px;}
+.cookies-link {margin-top: 15px;} /* same gap as below Ninja Services; the three items stay centred on the QR code as a set */
+.ninja-services-link span, .cookies-link span {padding-left: 10px;}
 
 /* ---- Footer column MIDDLE ---- */
 .flex-item-footer-middle {margin-top: 20px;}
