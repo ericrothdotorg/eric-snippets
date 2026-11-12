@@ -835,10 +835,6 @@ function custom_perf_class($score) {
 	return 'cd-perf-bad';
 }
 
-function custom_perf_label($strategy) {
-	return $strategy === 'desktop' ? 'Desktop' : 'Mobile';
-}
-
 function custom_perf_render_item_inner($strategy) {
 	$d = get_option('custom_perf_' . $strategy);
 	$d = is_array($d) ? $d : [];
