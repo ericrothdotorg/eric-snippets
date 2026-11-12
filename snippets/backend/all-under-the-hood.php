@@ -37,6 +37,25 @@ add_filter('auth_cookie_expiration', 'er_stay_logged_in', 99, 2);
 remove_filter('user_has_cap', 'wp_maybe_grant_site_health_caps', 1, 4);
 
 // ======================================
+// EMAIL (SMTP)
+// ======================================
+
+// Single SMTP Configuration for all outgoing Mail → Reads Credentials from wp-config.php Constants
+// Here (scope everywhere) and not in Site Essentials (front-end): mail sent via admin-ajax
+// (contact form, subscription) and wp-cron (subscriber notifications) needs it too.
+add_action( 'phpmailer_init', function ( $phpmailer ) {
+    $phpmailer->isSMTP();
+    $phpmailer->Host       = defined( 'SMTP_HOST' )     ? SMTP_HOST     : '';
+    $phpmailer->SMTPAuth   = true;
+    $phpmailer->Port       = defined( 'SMTP_PORT' )     ? SMTP_PORT     : 465;
+    $phpmailer->Username   = defined( 'SMTP_USER' )     ? SMTP_USER     : '';
+    $phpmailer->Password   = defined( 'SMTP_PASS' )     ? SMTP_PASS     : '';
+    $phpmailer->SMTPSecure = 'ssl';
+    $phpmailer->From       = defined( 'SMTP_FROM' )     ? SMTP_FROM     : '';
+    $phpmailer->FromName   = defined( 'SMTP_FROMNAME' ) ? SMTP_FROMNAME : '';
+} );
+
+// ======================================
 // CACHE MANAGEMENT
 // ======================================
 
