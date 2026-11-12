@@ -264,13 +264,29 @@ function er_handle_subscribe_ajax() {
 
 /* =============================================================================
    6. UNSUBSCRIBE HANDLER
+   The link in the e-mail only shows a confirmation button (GET), so mail
+   scanners that open every link on their own unsubscribe no one. The button
+   (POST) unsubscribes, and so does the one-click unsubscribe of mail programs
+   (List-Unsubscribe-Post header, see 7).
 ============================================================================= */
 
 add_action( 'init', function () {
     if ( empty( $_GET['er_unsub'] ) ) return;
+    nocache_headers();
+    do_action( 'litespeed_control_set_nocache', 'er unsubscribe' );
     $email = sanitize_email( wp_unslash( $_GET['email'] ?? '' ) );
     $token = sanitize_text_field( wp_unslash( $_GET['token'] ?? '' ) );
     $home  = esc_url( home_url() );
+
+    if ( ( $_SERVER['REQUEST_METHOD'] ?? '' ) !== 'POST' ) {
+        wp_die(
+            '<p>Unsubscribe <strong>' . esc_html( $email ) . '</strong> from ericroth.org?</p>'
+            . '<form method="post" action="' . esc_url( er_unsub_url( $email, $token ) ) . '"><button type="submit">Unsubscribe</button></form>'
+            . '<p><a href="' . $home . '">No, back to ericroth.org</a></p>',
+            'Unsubscribe',
+            [ 'response' => 200 ]
+        );
+    }
 
     if ( er_remove_subscriber( $email, $token ) ) {
         wp_die(
@@ -290,14 +306,31 @@ add_action( 'init', function () {
     }
 } );
 
+// The personal unsubscribe address: in the e-mail, its List-Unsubscribe header and the confirmation form
+function er_unsub_url( $email, $token ) {
+    return add_query_arg(
+        [
+            'er_unsub' => 1,
+            'email'    => rawurlencode( $email ),
+            'token'    => rawurlencode( $token ),
+        ],
+        home_url( '/' )
+    );
+}
+
 /* =============================================================================
-   7. PUBLISH TRIGGER
-   Fires when a watched Post Type transitions to 'publish'.
-   Logs send Status and any Error back to the Subscriber Record.
+   7. PUBLISH TRIGGER + SENDING QUEUE
+   Publishing only queues the notification. wp-cron sends it in batches of
+   ER_SUB_BATCH subscribers, one batch a minute, so the publish request never
+   waits for the mail server. A cursor (post meta _er_sub_cursor = last
+   subscriber id done) makes an interrupted run continue where it stopped:
+   nobody gets the e-mail twice, nobody is skipped. _new_post_email_sent marks
+   the post as done. Send status and errors are logged per subscriber.
 ============================================================================= */
 
+defined( 'ER_SUB_BATCH' ) || define( 'ER_SUB_BATCH', 20 ); // e-mails per batch (one batch per minute)
+
 add_action( 'transition_post_status', function ( $new_status, $old_status, $post ) {
-    global $wpdb, $phpmailer;
     if ( $new_status !== 'publish' || $old_status === 'publish' ) {
         return;
     }
@@ -308,14 +341,44 @@ add_action( 'transition_post_status', function ( $new_status, $old_status, $post
     if ( ! in_array( $post->post_type, $watched, true ) ) {
         return;
     }
-    if ( get_post_meta( $post->ID, '_new_post_email_sent', true ) ) {
+    // Already sent, or already queued
+    if ( get_post_meta( $post->ID, '_new_post_email_sent', true ) || metadata_exists( 'post', $post->ID, '_er_sub_cursor' ) ) {
         return;
     }
-    $subscribers = er_get_subscribers( 'active' );
-    if ( empty( $subscribers ) ) {
+    add_post_meta( $post->ID, '_er_sub_cursor', 0, true );
+    wp_schedule_single_event( time(), 'er_sub_send_batch', [ $post->ID ] );
+}, 10, 3 );
+
+add_action( 'er_sub_send_batch', 'er_sub_send_batch' );
+
+function er_sub_send_batch( $post_id ) {
+    global $wpdb;
+    $post = get_post( $post_id );
+    // Unpublished or deleted in the meantime: stop, nothing more is sent
+    if ( ! $post || $post->post_status !== 'publish' ) {
+        delete_post_meta( $post_id, '_er_sub_cursor' );
         return;
     }
-    $table    = $wpdb->prefix . 'er_subscribers';
+    $cursor = (int) get_post_meta( $post_id, '_er_sub_cursor', true );
+    $subs   = $wpdb->get_results( $wpdb->prepare(
+        "SELECT * FROM {$wpdb->prefix}er_subscribers WHERE status = 'active' AND id > %d ORDER BY id ASC LIMIT %d",
+        $cursor, ER_SUB_BATCH
+    ) );
+    foreach ( $subs as $sub ) {
+        er_sub_send_one( $sub, $post );
+        update_post_meta( $post_id, '_er_sub_cursor', (int) $sub->id );
+    }
+    if ( count( $subs ) === ER_SUB_BATCH ) {
+        wp_schedule_single_event( time() + MINUTE_IN_SECONDS, 'er_sub_send_batch', [ $post_id ] );
+        return;
+    }
+    delete_post_meta( $post_id, '_er_sub_cursor' );
+    update_post_meta( $post_id, '_new_post_email_sent', true );
+}
+
+// One notification: HTML + plain-text body, one-click unsubscribe header, result logged on the subscriber
+function er_sub_send_one( $sub, $post ) {
+    global $wpdb, $phpmailer;
 	$title    = get_the_title( $post );
     $url      = get_permalink( $post );
     $excerpt  = has_excerpt( $post )
@@ -329,34 +392,25 @@ add_action( 'transition_post_status', function ( $new_status, $old_status, $post
     $sitename_html = esc_html( $sitename );
     $url_html      = esc_url( $url );
 
-    foreach ( $subscribers as $sub ) {
-        $unsub_url = add_query_arg(
-            [
-                'er_unsub' => 1,
-                'email'    => urlencode( $sub->email ),
-                'token'    => rawurlencode( $sub->token ),
-            ],
-            home_url()
-        );
+    $unsub_url = er_unsub_url( $sub->email, $sub->token );
+    $subject   = "New post: {$title} — ericroth.org";
 
-        $subject = "New post: {$title} — ericroth.org";
+    // HTML + PLAIN TEXT BODIES
 
-        // HTML + PLAIN TEXT BODIES
-        
-		$body_html = "
-        <p>Hi,</p>
-        <p>A new post has just been published on ericroth.org:</p>
-        <p><strong>• {$title_html}</strong></p>
-        <p><em>{$excerpt_html}</em></p>
-        <p><strong>Read it here:</strong><br>
-        <a href=\"{$url_html}\">{$url_html}</a></p>
-        <p>{$sitename_html}</p>
-        <p>-----</p>
-        <p><em>To unsubscribe:</em><br>
-        <a href=\"" . esc_url( $unsub_url ) . "\">" . esc_html( $unsub_url ) . "</a></p>
-        ";
+	$body_html = "
+    <p>Hi,</p>
+    <p>A new post has just been published on ericroth.org:</p>
+    <p><strong>• {$title_html}</strong></p>
+    <p><em>{$excerpt_html}</em></p>
+    <p><strong>Read it here:</strong><br>
+    <a href=\"{$url_html}\">{$url_html}</a></p>
+    <p>{$sitename_html}</p>
+    <p>-----</p>
+    <p><em>To unsubscribe:</em><br>
+    <a href=\"" . esc_url( $unsub_url ) . "\">" . esc_html( $unsub_url ) . "</a></p>
+    ";
 
-        $body_plain = "Hi,
+    $body_plain = "Hi,
 
 A new post has just been published on ericroth.org:
 
@@ -373,38 +427,40 @@ To unsubscribe:
 {$unsub_url}
 ";
 
-		// EMAIL SENDING + LOGGING
+	// EMAIL SENDING + LOGGING
 
-        // Attach the plain-text alternative for THIS send only, then detach it immediately so no other wp_mail() call on the site is affected
-        $attach_altbody = function ( $phpmailer ) use ( $body_plain ) {
-            $phpmailer->AltBody     = $body_plain;
-            $phpmailer->ContentType = 'multipart/alternative';
-        };
-        add_action( 'phpmailer_init', $attach_altbody );
+    // Attach the plain-text alternative for THIS send only, then detach it immediately so no other wp_mail() call on the site is affected
+    $attach_altbody = function ( $phpmailer ) use ( $body_plain ) {
+        $phpmailer->AltBody     = $body_plain;
+        $phpmailer->ContentType = 'multipart/alternative';
+    };
+    add_action( 'phpmailer_init', $attach_altbody );
 
-        $headers = [ 'Content-Type: text/html; charset=UTF-8' ];
-        $sent    = wp_mail( $sub->email, $subject, $body_html, $headers );
+    $headers = [
+        'Content-Type: text/html; charset=UTF-8',
+        'List-Unsubscribe: <' . esc_url_raw( $unsub_url ) . '>',  // unsubscribe button in mail programs
+        'List-Unsubscribe-Post: List-Unsubscribe=One-Click',       // ...in one click (POST to the address above)
+    ];
+    $sent = wp_mail( $sub->email, $subject, $body_html, $headers );
 
-        remove_action( 'phpmailer_init', $attach_altbody );
-        $error = null;
-        if ( ! $sent ) {
-            $error = ! empty( $phpmailer->ErrorInfo )
-                ? $phpmailer->ErrorInfo
-                : 'wp_mail() returned false';
-        }
-        $wpdb->update(
-            $table,
-            [
-                'last_post_title'  => $title,
-                'last_send_status' => $sent ? 'sent' : 'failed',
-                'last_send_error'  => $error,
-                'last_send_at'     => current_time( 'mysql' ),
-            ],
-            [ 'id' => $sub->id ]
-        );
+    remove_action( 'phpmailer_init', $attach_altbody );
+    $error = null;
+    if ( ! $sent ) {
+        $error = ! empty( $phpmailer->ErrorInfo )
+            ? $phpmailer->ErrorInfo
+            : 'wp_mail() returned false';
     }
-    update_post_meta( $post->ID, '_new_post_email_sent', true );
-}, 10, 3 );
+    $wpdb->update(
+        $wpdb->prefix . 'er_subscribers',
+        [
+            'last_post_title'  => $title,
+            'last_send_status' => $sent ? 'sent' : 'failed',
+            'last_send_error'  => $error,
+            'last_send_at'     => current_time( 'mysql' ),
+        ],
+        [ 'id' => $sub->id ]
+    );
+}
 
 /* =============================================================================
    8. ADMIN PAGE
