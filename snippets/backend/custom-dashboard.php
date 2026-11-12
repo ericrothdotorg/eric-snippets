@@ -222,20 +222,9 @@ function custom_render_activity_widget() {
 // ======================================
 
 function custom_render_analysis_toolkit() {
-	custom_handle_youtube_check_submission();
 	custom_render_external_tools_buttons();
 	custom_render_site_metrics();
 	custom_render_tools_and_actions();
-}
-
-function custom_handle_youtube_check_submission() {
-	if (!isset($_POST['check_broken_yt'])) return;
-	if (!current_user_can('manage_options')) {
-		wp_die('Unauthorized access');
-	}
-	check_admin_referer('check_broken_yt_action', 'check_broken_yt_nonce');
-	update_option('custom_broken_yt_results', custom_check_broken_yt_links());
-	update_option('custom_last_yt_check', time());
 }
 
 function custom_render_external_tools_buttons() {
@@ -311,20 +300,112 @@ function custom_render_tools_and_actions() {
 		'W3.org Dev Tools' => 'https://www.w3.org/developers/tools/',
 		'MS Clarity'       => 'https://clarity.microsoft.com/projects/view/eic7b2e9o1/dashboard',
 	], 'margin-bottom: 10px;');
+	custom_yt_render();
+	custom_yt_script();
+	echo '</div>';
+}
 
-	echo '<div class="cd-widget cd-flex" style="align-items: center; gap: 15px;">';
-	echo '<form method="post" class="cd-form">';
-	wp_nonce_field('check_broken_yt_action', 'check_broken_yt_nonce');
-	echo '<button type="submit" name="check_broken_yt" class="button">Broken YT Links</button>';
-	echo '</form>';
+// ---- Broken YT Links ----
+// The browser drives the run, the server checks CUSTOM_YT_BATCH videos per request. One request for
+// all ~500 videos would run for minutes and be cut off (Hostinger time limit, see PERFORMANCE below).
+// "start" collects the videos once, "batch" checks one portion (the browser runs 3 at a time),
+// "finish" stores the result. The previous result stays until a run completes.
 
+defined('CUSTOM_YT_BATCH') || define('CUSTOM_YT_BATCH', 20); // videos per request
+
+// Video IDs that always fail the oEmbed check but are fine in the page.
+function custom_yt_excluded_ids() {
+	return ['-cW'];
+}
+
+// Every embedded video => the posts it is in. A block embed writes the same URL twice
+// (block settings + wrapper), so each video is listed once per post.
+function custom_yt_collect() {
+	$map      = [];
+	$excluded = custom_yt_excluded_ids();
+	$query    = new WP_Query([
+		'post_type'      => ['post', 'page', 'my-interests', 'my-traits'],
+		'posts_per_page' => -1,
+		'no_found_rows'  => true,
+	]);
+	foreach ($query->posts as $post) {
+		preg_match_all('/https:\/\/(?:www\.)?youtube\.com\/(?:watch\?v=|embed\/)([a-zA-Z0-9_-]+)/', $post->post_content, $matches);
+		foreach (array_unique($matches[1]) as $video_id) {
+			if (in_array($video_id, $excluded, true)) continue;
+			$map[(string) $video_id][] = $post->ID;
+		}
+	}
+	return $map;
+}
+
+// One video: still available? (401 / 403 = exists, embedding restricted)
+function custom_yt_is_ok($video_id) {
+	$url = 'https://www.youtube.com/oembed?url=' . urlencode("https://www.youtube.com/watch?v={$video_id}") . '&format=json';
+	$response = wp_remote_get($url, [
+		'timeout'    => 10,
+		'user-agent' => 'Mozilla/5.0 (compatible; LinkChecker/1.0)',
+	]);
+	return !is_wp_error($response) && in_array(wp_remote_retrieve_response_code($response), [200, 401, 403], true);
+}
+
+add_action('wp_ajax_custom_yt_check', function () {
+	if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized', 403);
+	check_ajax_referer('custom_yt_check');
+	$step = sanitize_key($_POST['step'] ?? '');
+
+	if ($step === 'start') {
+		$map = custom_yt_collect();
+		set_transient('custom_yt_run', $map, HOUR_IN_SECONDS);
+		wp_send_json_success(['total' => count($map)]);
+	}
+
+	$map = get_transient('custom_yt_run');
+	if (!is_array($map)) wp_send_json_error('The run expired - please start it again.');
+	$ids = array_map('strval', array_keys($map));
+
+	if ($step === 'batch') {
+		$broken = [];
+		foreach (array_slice($ids, absint($_POST['offset'] ?? 0), CUSTOM_YT_BATCH) as $video_id) {
+			if (!custom_yt_is_ok($video_id)) $broken[] = $video_id;
+		}
+		wp_send_json_success(['broken' => $broken]);
+	}
+
+	if ($step === 'finish') {
+		$sent         = (array) json_decode(wp_unslash($_POST['broken'] ?? '[]'), true);
+		$broken       = array_intersect($ids, array_map('strval', $sent)); // only videos of this run
+		$broken_posts = [];
+		$broken_links = 0;
+		foreach ($broken as $video_id) {
+			foreach ($map[$video_id] as $post_id) {
+				$broken_posts[$post_id][] = $video_id;
+				$broken_links++;
+			}
+		}
+		update_option('custom_broken_yt_results', ['broken_count' => $broken_links, 'broken_posts' => $broken_posts]);
+		update_option('custom_last_yt_check', time());
+		delete_transient('custom_yt_run');
+		ob_start();
+		custom_yt_render();
+		wp_send_json_success(['html' => ob_get_clean()]);
+	}
+
+	wp_send_json_error('Unknown step');
+});
+
+// Button, last result and the list of affected posts. Also sent back by "finish".
+function custom_yt_render() {
 	$results      = get_option('custom_broken_yt_results', []);
 	$last_check   = get_option('custom_last_yt_check', 0);
 	$broken_count = !empty($results['broken_count']) ? (int) $results['broken_count'] : 0;
 
+	echo '<div class="cd-yt">';
+	echo '<div class="cd-widget cd-flex" style="align-items: center; gap: 15px;">';
+	echo '<button type="button" class="button cd-yt-btn">Broken YT Links</button>';
 	echo '<div style="display: flex; flex-direction: column; line-height: 1.4;">';
 	echo '<span>Broken YT Links: <strong class="cd-alert">' . $broken_count . '</strong></span>';
 	echo '<span>Last checked: ' . ($last_check ? custom_format_date($last_check, true) : '<em class="cd-date">Never</em>') . '</span>';
+	echo '<span class="cd-yt-error cd-alert"></span>';
 	echo '</div>';
 	echo '</div>';
 
@@ -342,53 +423,64 @@ function custom_render_tools_and_actions() {
 	echo '</div>';
 }
 
-// Video IDs that always fail the oEmbed check but are fine in the page.
-function custom_yt_excluded_ids() {
-	return ['-cW'];
-}
+// Runs the check: 3 portions at a time, progress on the button, result swapped in at the end.
+function custom_yt_script() {
+	?>
+	<script>
+	(function () {
+		var cfg = <?php echo wp_json_encode(['nonce' => wp_create_nonce('custom_yt_check'), 'batch' => CUSTOM_YT_BATCH, 'parallel' => 3]); ?>;
 
-function custom_check_broken_yt_links() {
-	$broken_links   = 0;
-	$broken_posts   = [];
-	$checked_videos = [];
-	$excluded       = custom_yt_excluded_ids();
-
-	$query = new WP_Query([
-		'post_type'      => ['post', 'page', 'my-interests', 'my-traits'],
-		'posts_per_page' => -1,
-	]);
-
-	foreach ($query->posts as $post) {
-		preg_match_all('/https:\/\/(?:www\.)?youtube\.com\/(?:watch\?v=|embed\/)([a-zA-Z0-9_-]+)/', $post->post_content, $matches);
-		if (empty($matches[1])) continue;
-		
-		// A block embed writes the same URL twice (block settings + wrapper),
-		// so each video is only counted once per post.
-		foreach (array_unique($matches[1]) as $video_id) {
-			if (in_array($video_id, $excluded, true)) continue;
-
-			// Each video is only fetched once, however many posts embed it.
-			if (!isset($checked_videos[$video_id])) {
-				$url = 'https://www.youtube.com/oembed?url=' . urlencode("https://www.youtube.com/watch?v={$video_id}") . '&format=json';
-				$response = wp_remote_get($url, [
-					'timeout'    => 10,
-					'user-agent' => 'Mozilla/5.0 (compatible; LinkChecker/1.0)',
-				]);
-				$code = wp_remote_retrieve_response_code($response);
-				$checked_videos[$video_id] = !(is_wp_error($response) || !in_array($code, [200, 401, 403], true));
-			}
-
-			if ($checked_videos[$video_id] === false) {
-				$broken_links++;
-				if (!in_array($video_id, $broken_posts[$post->ID] ?? [], true)) {
-					$broken_posts[$post->ID][] = $video_id;
-				}
-			}
+		function post(data) {
+			var body = new FormData();
+			body.append('action', 'custom_yt_check');
+			body.append('_ajax_nonce', cfg.nonce);
+			Object.keys(data).forEach(function (k) { body.append(k, data[k]); });
+			return fetch(ajaxurl, { method: 'POST', body: body, credentials: 'same-origin' })
+				.then(function (r) { if (!r.ok) throw new Error('Request failed (HTTP ' + r.status + ')'); return r.json(); })
+				.then(function (j) { if (!j.success) throw new Error(j.data || 'Request failed'); return j.data; });
 		}
-	}
-	wp_reset_postdata();
 
-	return ['broken_count' => $broken_links, 'broken_posts' => $broken_posts];
+		document.addEventListener('click', function (e) {
+			var btn = e.target.closest('.cd-yt-btn');
+			if (!btn || btn.disabled) return;
+			var box = btn.closest('.cd-yt'), err = box.querySelector('.cd-yt-error');
+			var label = btn.textContent, broken = [], next = 0, done = 0, total = 0;
+			btn.disabled = true;
+			btn.textContent = 'Collecting videos…';
+			err.textContent = '';
+
+			// Each worker takes the next portion until none is left
+			function worker() {
+				if (next >= total) return Promise.resolve();
+				var offset = next;
+				next += cfg.batch;
+				return post({ step: 'batch', offset: offset }).then(function (d) {
+					broken = broken.concat(d.broken);
+					done = Math.min(total, done + cfg.batch);
+					btn.textContent = 'Checking… ' + done + ' / ' + total;
+					return worker();
+				});
+			}
+
+			post({ step: 'start' })
+				.then(function (d) {
+					total = d.total;
+					btn.textContent = 'Checking… 0 / ' + total;
+					var workers = [];
+					for (var i = 0; i < cfg.parallel; i++) workers.push(worker());
+					return Promise.all(workers);
+				})
+				.then(function () { return post({ step: 'finish', broken: JSON.stringify(broken) }); })
+				.then(function (d) { box.outerHTML = d.html; })
+				.catch(function (ex) {
+					btn.disabled = false;
+					btn.textContent = label;
+					err.textContent = ex.message + ' - the previous result is unchanged.';
+				});
+		});
+	})();
+	</script>
+	<?php
 }
 
 // ======================================
