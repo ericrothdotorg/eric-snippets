@@ -514,8 +514,6 @@ add_action('wp_footer', function () {
 	function openPanel() {
 		panel.classList.add('visible');
 		panel.setAttribute('aria-hidden', 'false');
-		// The global ARIA fix (Site Essentials) sets tabindex="-1" while the panel is hidden — undo it
-		panel.querySelectorAll('[tabindex="-1"]').forEach(function (el) { el.removeAttribute('tabindex'); });
 		toggle.setAttribute('aria-expanded', 'true');
 		toggle.setAttribute('aria-label', 'Close language switcher');
 		announce('Language selector opened');
