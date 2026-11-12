@@ -84,6 +84,46 @@ function er_breadcrumbs() {
 
 	$crumbs = [];
 
+	// Shared pieces of the trail
+	$link = function ( $id ) {
+		return '<a href="' . esc_url( get_permalink( $id ) ) . '">' . esc_html( get_the_title( $id ) ) . '</a>';
+	};
+	// Parent pages of $id, then $id itself (unless $self is false), all linked
+	$page_trail = function ( $id, $self = true ) use ( $link ) {
+		$trail = array_map( $link, array_reverse( get_post_ancestors( $id ) ) );
+		if ( $self ) {
+			$trail[] = $link( $id );
+		}
+		return $trail;
+	};
+	// A CPT's listing Page (a real Page whose slug equals the CPT archive slug, e.g. /my-interests/)
+	// with its parents (e.g. "Personal"). Null when the post type has no archive.
+	$listing_trail = function ( $post_type ) use ( $page_trail ) {
+		$post_type_obj = get_post_type_object( $post_type );
+		if ( ! $post_type_obj || ! $post_type_obj->has_archive ) {
+			return null;
+		}
+		$archive_slug = is_string( $post_type_obj->has_archive ) ? $post_type_obj->has_archive : $post_type;
+
+		// Look the listing Page up by SLUG, not path: get_page_by_path() requires the
+		// full hierarchical path (e.g. 'personal/my-interests'), so a child page would
+		// be missed. A slug query finds it regardless of its parent.
+		$listing_pages = get_posts( array(
+			'name'        => $archive_slug,
+			'post_type'   => 'page',
+			'post_status' => 'publish',
+			'numberposts' => 1,
+		) );
+		if ( ! empty( $listing_pages ) && $listing_pages[0] instanceof WP_Post ) {
+			return $page_trail( $listing_pages[0]->ID );
+		}
+
+		// This line rarely runs. Visiting /my-interests/ (and /my-traits/, /my-quotes/) redirects to real Page instead
+		// See redirect list in Site Essentials & Cookies PHP. This is just a backup in case that ever changes.
+		$archive_link = get_post_type_archive_link( $post_type );
+		return $archive_link ? [ '<a href="' . esc_url( $archive_link ) . '">' . esc_html( $post_type_obj->labels->name ) . '</a>' ] : [];
+	};
+
 	// Home
 	$crumbs[] = '<a href="' . esc_url( home_url( '/' ) ) . '">' . $home_icon . '<span class="screen-reader-text">' . esc_html__( 'Home' ) . '</span></a>';
 
@@ -97,11 +137,7 @@ function er_breadcrumbs() {
 			// because it is an ancestor level, not the current item.
 			$posts_page_id = (int) get_option( 'page_for_posts' );
 			if ( $posts_page_id ) {
-				$posts_page_ancestors = array_reverse( get_post_ancestors( $posts_page_id ) );
-				foreach ( $posts_page_ancestors as $ancestor_id ) {
-					$crumbs[] = '<a href="' . esc_url( get_permalink( $ancestor_id ) ) . '">' . esc_html( get_the_title( $ancestor_id ) ) . '</a>';
-				}
-				$crumbs[] = '<a href="' . esc_url( get_permalink( $posts_page_id ) ) . '">' . esc_html( get_the_title( $posts_page_id ) ) . '</a>';
+				$crumbs = array_merge( $crumbs, $page_trail( $posts_page_id ) );
 			}
 
 			$categories = get_the_category();
@@ -112,39 +148,8 @@ function er_breadcrumbs() {
 
 		} elseif ( $post_type !== 'page' ) {
 			// CPT single: Home → Listing-page ancestor(s) → Listing page → Primary term → Post title
-			// Mirrors the 'post' branch. The listing pages are real Pages whose slug equals the
-			// CPT archive slug (e.g. /my-interests/), so resolve the Page first to get its
-			// ancestors (e.g. "Personal"); fall back to the bare post type archive link.
-			$post_type_obj = get_post_type_object( $post_type );
-			if ( $post_type_obj && $post_type_obj->has_archive ) {
-				$archive_slug = is_string( $post_type_obj->has_archive ) ? $post_type_obj->has_archive : $post_type;
-
-				// Look the listing Page up by SLUG, not path: get_page_by_path() requires the
-				// full hierarchical path (e.g. 'personal/my-interests'), so a child page would
-				// be missed. A slug query finds it regardless of its parent.
-				$listing_pages = get_posts( array(
-					'name'        => $archive_slug,
-					'post_type'   => 'page',
-					'post_status' => 'publish',
-					'numberposts' => 1,
-				) );
-				$listing_page  = ! empty( $listing_pages ) ? $listing_pages[0] : null;
-
-				if ( $listing_page instanceof WP_Post ) {
-					$listing_ancestors = array_reverse( get_post_ancestors( $listing_page->ID ) );
-					foreach ( $listing_ancestors as $ancestor_id ) {
-						$crumbs[] = '<a href="' . esc_url( get_permalink( $ancestor_id ) ) . '">' . esc_html( get_the_title( $ancestor_id ) ) . '</a>';
-					}
-					$crumbs[] = '<a href="' . esc_url( get_permalink( $listing_page->ID ) ) . '">' . esc_html( get_the_title( $listing_page->ID ) ) . '</a>';
-				} else {
-					// This line rarely runs. Visiting /my-interests/ (and /my-traits/, /my-quotes/) redirects to real Page instead
-					// See redirect list in Site Essentials & Cookies PHP. This is just a backup in case that ever changes.
-					$archive_link = get_post_type_archive_link( $post_type );
-					if ( $archive_link ) {
-						$crumbs[] = '<a href="' . esc_url( $archive_link ) . '">' . esc_html( $post_type_obj->labels->name ) . '</a>';
-					}
-				}
-			}
+			// Mirrors the 'post' branch; falls back to the bare post type archive link.
+			$crumbs = array_merge( $crumbs, (array) $listing_trail( $post_type ) );
 
 			// Primary term — the CPT equivalent of the post branch's primary category,
 			// resolved through er_taxonomy_map() (the single source of truth).
@@ -162,10 +167,7 @@ function er_breadcrumbs() {
 
 		} else {
 			// Static page: Home → Parent page(s) → Page title
-			$ancestors = array_reverse( get_post_ancestors( get_the_ID() ) );
-			foreach ( $ancestors as $ancestor_id ) {
-				$crumbs[] = '<a href="' . esc_url( get_permalink( $ancestor_id ) ) . '">' . esc_html( get_the_title( $ancestor_id ) ) . '</a>';
-			}
+			$crumbs = array_merge( $crumbs, $page_trail( get_the_ID(), false ) );
 
 			// Filtered listing Page (e.g. /this-site/my-pages/?things=slug or
 			// /personal/my-interests/?topics=slug): any Page hosting [er_cpt_archive]
@@ -204,52 +206,22 @@ function er_breadcrumbs() {
 		if ( is_category() || is_tag() ) {
 			$posts_page_id = (int) get_option( 'page_for_posts' );
 			if ( $posts_page_id ) {
-				$posts_page_ancestors = array_reverse( get_post_ancestors( $posts_page_id ) );
-				foreach ( $posts_page_ancestors as $ancestor_id ) {
-					$crumbs[] = '<a href="' . esc_url( get_permalink( $ancestor_id ) ) . '">' . esc_html( get_the_title( $ancestor_id ) ) . '</a>';
-				}
-				$crumbs[] = '<a href="' . esc_url( get_permalink( $posts_page_id ) ) . '">' . esc_html( get_the_title( $posts_page_id ) ) . '</a>';
+				$crumbs = array_merge( $crumbs, $page_trail( $posts_page_id ) );
 			}
 		}
 
 		if ( is_tax() ) {
-			// Taxonomy archive: Home → Listing-page ancestor(s) → Listing page → Term name.
-			// Resolve the listing PAGE (real Page whose slug equals the CPT archive slug, e.g.
-			// /my-interests/) and walk its ancestors (e.g. "Personal"), exactly like the CPT
-			// single branch — so a topics/groups/types trail matches its CPT's trail. Falls back
-			// to the bare post type archive link if no listing Page exists.
+			// Taxonomy archive: Home → Listing-page ancestor(s) → Listing page → Term name,
+			// exactly like the CPT single branch, so a topics/groups/types trail matches its CPT's trail.
 			$taxonomy   = $term->taxonomy;
 			$tax_obj    = get_taxonomy( $taxonomy );
 			$post_types = $tax_obj ? (array) $tax_obj->object_type : [];
 
 			// Use first associated CPT that has an archive
 			foreach ( $post_types as $pt ) {
-				$pt_obj = get_post_type_object( $pt );
-				if ( $pt_obj && $pt_obj->has_archive ) {
-					$archive_slug = is_string( $pt_obj->has_archive ) ? $pt_obj->has_archive : $pt;
-
-					$listing_pages = get_posts( array(
-						'name'        => $archive_slug,
-						'post_type'   => 'page',
-						'post_status' => 'publish',
-						'numberposts' => 1,
-					) );
-					$listing_page  = ! empty( $listing_pages ) ? $listing_pages[0] : null;
-
-					if ( $listing_page instanceof WP_Post ) {
-						$listing_ancestors = array_reverse( get_post_ancestors( $listing_page->ID ) );
-						foreach ( $listing_ancestors as $ancestor_id ) {
-							$crumbs[] = '<a href="' . esc_url( get_permalink( $ancestor_id ) ) . '">' . esc_html( get_the_title( $ancestor_id ) ) . '</a>';
-						}
-						$crumbs[] = '<a href="' . esc_url( get_permalink( $listing_page->ID ) ) . '">' . esc_html( get_the_title( $listing_page->ID ) ) . '</a>';
-					} else {
-						// This line rarely runs. Visiting /my-interests/ (and /my-traits/, /my-quotes/) redirects to real Page instead
-						// See redirect list in Site Essentials & Cookies PHP. This is just a backup in case that ever changes.
-						$archive_link = get_post_type_archive_link( $pt );
-						if ( $archive_link ) {
-							$crumbs[] = '<a href="' . esc_url( $archive_link ) . '">' . esc_html( $pt_obj->labels->name ) . '</a>';
-						}
-					}
+				$trail = $listing_trail( $pt );
+				if ( $trail !== null ) {
+					$crumbs = array_merge( $crumbs, $trail );
 					break;
 				}
 			}
@@ -268,11 +240,7 @@ function er_breadcrumbs() {
 		if ( $term->taxonomy === 'things' ) {
 			$hub_id = er_things_hub_id();
 			if ( $hub_id ) {
-				$hub_ancestors = array_reverse( get_post_ancestors( $hub_id ) );
-				foreach ( $hub_ancestors as $ancestor_id ) {
-					$crumbs[] = '<a href="' . esc_url( get_permalink( $ancestor_id ) ) . '">' . esc_html( get_the_title( $ancestor_id ) ) . '</a>';
-				}
-				$crumbs[] = '<a href="' . esc_url( get_permalink( $hub_id ) ) . '">' . esc_html( get_the_title( $hub_id ) ) . '</a>';
+				$crumbs = array_merge( $crumbs, $page_trail( $hub_id ) );
 			}
 		}
 		$crumbs[] = '<span aria-current="page">' . esc_html( $term->name ) . '</span>';
@@ -281,10 +249,7 @@ function er_breadcrumbs() {
 		// Blog posts index — mirror the static-page crumb trail for the assigned Posts page
 		$posts_page_id = (int) get_option( 'page_for_posts' );
 		if ( $posts_page_id ) {
-			$ancestors = array_reverse( get_post_ancestors( $posts_page_id ) );
-			foreach ( $ancestors as $ancestor_id ) {
-				$crumbs[] = '<a href="' . esc_url( get_permalink( $ancestor_id ) ) . '">' . esc_html( get_the_title( $ancestor_id ) ) . '</a>';
-			}
+			$crumbs = array_merge( $crumbs, $page_trail( $posts_page_id, false ) );
 
 			// Filtered blog listing (e.g. /personal/my-blog/?category=slug): same pattern
 			// as the CPT listing branch above. The blog's taxonomy is 'category'
