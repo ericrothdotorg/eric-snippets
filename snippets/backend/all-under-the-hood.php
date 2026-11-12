@@ -64,23 +64,20 @@ add_filter('preview_post_link', function($url){
     return add_query_arg('ts', time(), $url);
 });
 
-// Prevent cached Frontend for logged-in Editors
+// Editors always see the live page, never a cached copy
+// (LiteSpeed API hooks: do nothing when LiteSpeed is inactive)
 add_action('template_redirect', function () {
-    if (!is_user_logged_in()) return;
-    if (!current_user_can('edit_posts')) return;
-    if (function_exists('litespeed_cache_disable')) {
-        litespeed_cache_disable();
+    if (current_user_can('edit_posts')) {
+        do_action('litespeed_control_set_nocache', 'logged-in editor');
     }
 });
 
-// Force LiteSpeed Purge on Content Save
-add_action('save_post', function($post_id) {
+// Empty the whole LiteSpeed cache whenever content is saved
+add_action('save_post', function ($post_id) {
     if (wp_is_post_autosave($post_id) || wp_is_post_revision($post_id)) {
         return;
     }
-    if (function_exists('LiteSpeed_Cache_API') && method_exists('LiteSpeed_Cache_API', 'purge_all')) {
-        LiteSpeed_Cache_API::purge_all();
-    }
+    do_action('litespeed_purge_all');
 }, 999);
 
 // Force Empty Entire Cache on Core, Theme & Plugin Updates
