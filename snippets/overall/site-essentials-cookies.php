@@ -829,37 +829,6 @@ add_action('wp_footer', function () {
 		});
 	</script>
 
-	<!-- Global ARIA-Hidden Tabindex Fix (Sliders, Modals, Dynamic Content) -->
-
-	<script>
-		(function() {
-			'use strict';
-			function fixAriaHiddenFocus() {
-				document.querySelectorAll('[aria-hidden="true"]').forEach(container => {
-					// CRITICAL: Fix the Container itself if it has a tabindex
-					if (container.hasAttribute('tabindex') && container.getAttribute('tabindex') !== '-1') {
-						container.setAttribute('tabindex', '-1');
-					}
-					// Fix focusable Elements inside the Container
-					const focusable = container.querySelectorAll(
-						'a, button, input, select, textarea, [tabindex]:not([tabindex="-1"])'
-					);
-					focusable.forEach(el => el.setAttribute('tabindex', '-1'));
-				});
-			}
-			// Runs after the Slider and other Scripts have set their initial aria-hidden States
-			document.addEventListener('DOMContentLoaded', () => {
-				fixAriaHiddenFocus();
-				// attributeFilter already limits the Records to aria-hidden Changes
-				new MutationObserver(fixAriaHiddenFocus).observe(document.body, {
-					attributes: true,
-					attributeFilter: ['aria-hidden'],
-					subtree: true
-				});
-			});
-		})();
-	</script>
-
 	<!-- Tabs Styles & Script (Conditional Load) -->
 
 	<?php if (is_page(array('17552'))) { ?>
