@@ -5,14 +5,14 @@
 // PREPARE ADMIN COLUMNS
 // =======================================
 
-function initialize_custom_admin_columns() {
+function er_initialize_custom_admin_columns() {
     if (!is_admin() || !current_user_can('manage_options')) {
     return;
     }
 
     // === CUSTOM ADMIN COLUMNS ===
 
-    function define_custom_columns_clean($type) {
+    function er_define_custom_columns_clean($type) {
         $columns = [];
         $columns['cb'] = '<input type="checkbox" />';
         $columns['id'] = __('ID');
@@ -43,15 +43,15 @@ function initialize_custom_admin_columns() {
         return $columns;
     }
 
-    add_filter('manage_page_posts_columns', fn() => define_custom_columns_clean('page'));
-    add_filter('manage_post_posts_columns', fn() => define_custom_columns_clean('post'));
-    add_filter('manage_my-interests_posts_columns', fn() => define_custom_columns_clean('my-interests'));
-    add_filter('manage_my-traits_posts_columns', fn() => define_custom_columns_clean('my-traits'));
-    add_filter('manage_my-quotes_posts_columns', fn() => define_custom_columns_clean('my-quotes'));
+    add_filter('manage_page_posts_columns', fn() => er_define_custom_columns_clean('page'));
+    add_filter('manage_post_posts_columns', fn() => er_define_custom_columns_clean('post'));
+    add_filter('manage_my-interests_posts_columns', fn() => er_define_custom_columns_clean('my-interests'));
+    add_filter('manage_my-traits_posts_columns', fn() => er_define_custom_columns_clean('my-traits'));
+    add_filter('manage_my-quotes_posts_columns', fn() => er_define_custom_columns_clean('my-quotes'));
 
     // === RENDER CONTENT ===
 
-    function render_column_content($column, $post_id) {
+    function er_render_column_content($column, $post_id) {
         static $word_counts = [];
         
         switch ($column) {
@@ -135,26 +135,26 @@ function initialize_custom_admin_columns() {
         }
     }
 
-    add_action('manage_page_posts_custom_column', 'render_column_content', 10, 2);
-    add_action('manage_post_posts_custom_column', 'render_column_content', 10, 2);
-    add_action('manage_my-interests_posts_custom_column', 'render_column_content', 10, 2);
-    add_action('manage_my-traits_posts_custom_column', 'render_column_content', 10, 2);
-    add_action('manage_my-quotes_posts_custom_column', 'render_column_content', 10, 2);
+    add_action('manage_page_posts_custom_column', 'er_render_column_content', 10, 2);
+    add_action('manage_post_posts_custom_column', 'er_render_column_content', 10, 2);
+    add_action('manage_my-interests_posts_custom_column', 'er_render_column_content', 10, 2);
+    add_action('manage_my-traits_posts_custom_column', 'er_render_column_content', 10, 2);
+    add_action('manage_my-quotes_posts_custom_column', 'er_render_column_content', 10, 2);
 
     // === MAKE COLUMNS SORTABLE ===
 
-    function set_sortables($columns) {
+    function er_set_sortables($columns) {
         $columns['id'] = 'ID';
         $columns['post_categories'] = 'post_categories';
         $columns['topics'] = 'topics';
         return $columns;
     }
 
-    add_filter('manage_edit-page_sortable_columns', 'set_sortables');
-    add_filter('manage_edit-post_sortable_columns', 'set_sortables');
-    add_filter('manage_edit-my-interests_sortable_columns', 'set_sortables');
-    add_filter('manage_edit-my-traits_sortable_columns', 'set_sortables');
-    add_filter('manage_edit-my-quotes_sortable_columns', 'set_sortables');
+    add_filter('manage_edit-page_sortable_columns', 'er_set_sortables');
+    add_filter('manage_edit-post_sortable_columns', 'er_set_sortables');
+    add_filter('manage_edit-my-interests_sortable_columns', 'er_set_sortables');
+    add_filter('manage_edit-my-traits_sortable_columns', 'er_set_sortables');
+    add_filter('manage_edit-my-quotes_sortable_columns', 'er_set_sortables');
 
 	add_filter('posts_clauses', function($clauses, $query) {
 		global $wpdb;
@@ -470,4 +470,4 @@ add_filter('get_term', function($term) {
     return $term;
 }, 10, 1);
 
-add_action('admin_init', 'initialize_custom_admin_columns');
+add_action('admin_init', 'er_initialize_custom_admin_columns');
