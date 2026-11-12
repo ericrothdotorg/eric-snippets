@@ -294,7 +294,7 @@ add_filter( 'display_posts_shortcode_args', function( $args ) {
 // DPS FOR TAXONOMIES
 // =====================================
 
-function display_taxonomies_shortcode( $atts ) {
+function er_display_taxonomies_shortcode( $atts ) {
     $atts = shortcode_atts( [
         'taxonomy'      => 'category',
         'show_count'    => 'false',
@@ -365,7 +365,7 @@ function display_taxonomies_shortcode( $atts ) {
         $items
     );
 }
-add_shortcode( 'display-taxonomies', 'display_taxonomies_shortcode' );
+add_shortcode( 'display-taxonomies', 'er_display_taxonomies_shortcode' );
 
 // =====================================
 // CACHED SHORTCODE WRAPPER
