@@ -429,20 +429,22 @@ add_filter( 'render_block', function( $block_content, $block ) {
 
 // The dark-mode FOUC guard and the per-term hero background.
 
+// Dark mode, step 1 of 2 (before the page is painted): decide once and paint <html> dark.
+// An explicit choice wins, with no choice on record we follow the OS.
+// The decision is kept in data-er-dark for step 2 (wp_body_open below), so the condition exists only here.
+// data-no-optimize: LiteSpeed must not defer it, it only works when it runs right away.
 add_action( 'wp_head', function() {
 	?>
-	<!-- Dark mode flash prevention — must run before body renders -->
-	<script>
+	<script data-no-optimize="1">
 (function() {
 	try {
-		const storedPreference = localStorage.getItem('changeMode');
-		const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-		if (storedPreference === 'true' || (storedPreference === null && prefersDark)) {
+		var stored      = localStorage.getItem('changeMode');
+		var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+		if (stored === 'true' || (stored === null && prefersDark)) {
+			document.documentElement.dataset.erDark = '1';
 			document.documentElement.style.background = '#070c12';
 		}
-	} catch(e) {
-		console.warn('Dark mode initialization failed:', e);
-	}
+	} catch(e) {}
 })();
 	</script>
 
@@ -509,6 +511,14 @@ add_action( 'wp_head', function() {
 <?php
 
 }, 5 ); // Head scripts early
+
+// Dark mode, step 2 of 2 (first thing in <body>): set body.dark-mode before any content is
+// painted, so cards, text and images are dark from the first frame, not only after the footer JS.
+add_action( 'wp_body_open', function() {
+	?>
+	<script data-no-optimize="1">if (document.documentElement.dataset.erDark) document.body.classList.add('dark-mode');</script>
+	<?php
+}, 1 );
 
 // ======================================
 // 4. HERO
@@ -1352,20 +1362,9 @@ add_action( 'wp_footer', function() {
 			var visualToggle     = document.querySelector('#dark-mode-toggle-btn .toggle-visual');
 			var statusEl         = document.getElementById('dark-mode-status');
 
-			// Apply from localStorage.
-			// Condition must stay identical to the wp_head flash guard: An explicit choice wins and with no choice on record we follow the OS.
-			// When the two drift apart you get a dark backdrop with light content on first visit.
-			try {
-				var stored      = localStorage.getItem('changeMode');
-				var prefersDark = window.matchMedia
-				               && window.matchMedia('(prefers-color-scheme: dark)').matches;
-				if (stored === 'true' || (stored === null && prefersDark)) {
-					body.classList.add('dark-mode');
-				}
-			} catch(e) { console.warn('Could not load dark mode preference'); }
-
-			// Drop the wp_head flash guard's dark <html> background: body.dark-mode (set just above)
-			// paints the dark page from here on, and a later switch to light must not leave it behind.
+			// body.dark-mode is already set at the start of <body> (see 3. HEAD SCRIPTS).
+			// Drop the wp_head guard's dark <html> background: body.dark-mode paints the dark page
+			// from here on, and a later switch to light must not leave it behind.
 			document.documentElement.style.background = '';
 
 			// Sync toggle with current state
