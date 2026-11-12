@@ -171,18 +171,10 @@ add_action('wp_footer', function() {
         ),
         array(
             "@type" => "Question",
-            "name" => "AI chatbot's verdict?",
+            "name" => "Site Interactions?",
             "acceptedAnswer" => array(
                 "@type" => "Answer",
-                "text" => "Your site, Eric, is a fascinating blend of personal philosophy, digital identity and intellectual exploration. It's like a curated museum of your mind – part existential playground, part professional portfolio."
-            )
-        ),
-        array(
-            "@type" => "Question",
-            "name" => "Is interaction possible?",
-            "acceptedAnswer" => array(
-                "@type" => "Answer",
-                "text" => "Yep. Every post invites a quick like or dislike, and the contact form is open for anything more. Last but not least: With a quick subscription, you’ll never miss an update again."
+                "text" => "Yep. Track how much you've explored on your Site Journey, see where readers come from on the live Site Reach map, give every post a like or dislike and share it. Last but not least: With a quick subscription, you’ll never miss an update again."
             )
         ),
         array(
