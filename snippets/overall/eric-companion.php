@@ -1319,6 +1319,7 @@ add_shortcode( 'er_socials_support', function ( $atts ) {
 add_action( 'wp_footer', function() {
 	?>
 	<script>
+	(function () { // own scope: erLoadMore, getColumns, revealCards, grids stay off the global namespace
 
 		// ---- 9a. Dark-mode toggle: apply stored preference, sync the switch UI ----
 		document.addEventListener('DOMContentLoaded', function() {
@@ -1573,6 +1574,7 @@ add_action( 'wp_footer', function() {
 			markCursors();
 		})();
 
+	})();
 	</script>
 	<?php
 }, 15 ); // Load deferred Footer JS after theme defaults
