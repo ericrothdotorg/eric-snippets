@@ -5,7 +5,7 @@
 // REGISTER TAXONOMY: PAGES
 // =======================================
 
-function page_register_taxonomy() {
+function er_page_register_taxonomy() {
     $rewrite = array(
         'slug'         => 'things',
         'with_front'   => true,
@@ -47,7 +47,7 @@ function page_register_taxonomy() {
     );
     register_taxonomy( 'things', array( 'page' ), $args );
 }
-add_action( 'init', 'page_register_taxonomy', 0 );
+add_action( 'init', 'er_page_register_taxonomy', 0 );
 
 // =======================================
 // REGISTER TAXONOMY: MY INTERESTS
