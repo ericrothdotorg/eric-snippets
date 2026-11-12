@@ -37,6 +37,11 @@ add_action('wp_footer', function () {
         .video-placeholder img {width: 100%; height: 100%; object-fit: cover;}
         /* Before "Accept": no thumbnail (it would send the visitor's IP to YouTube / Vimeo) - dark tile, play button, title */
         .video-placeholder-title {position: absolute; left: 0; right: 0; bottom: 0; padding: 12px 16px; color: var(--color-5); font-size: var(--er-fs-sm); text-align: center;}
+        /* Before "Accept": a hint above the tile. A sibling of the tile, not inside it: a link inside a button would be a nested control.
+           The strip lets clicks through to the tile (play); only the link takes them. Link colour: the dark-background pair (4.5:1 on --color-10). */
+        .video-placeholder-hint {position: absolute; top: 0; left: 0; right: 0; z-index: 3; padding: 10px 16px; color: var(--color-5); font-size: var(--er-fs-xs); text-align: center; pointer-events: none;}
+        .video-placeholder-hint a {pointer-events: auto; color: var(--color-11);}
+        .video-placeholder-hint a:hover {color: var(--color-12);}
         .play-button-youtube,
         .play-button-vimeo {
             position: absolute;
@@ -75,6 +80,8 @@ add_action('wp_footer', function () {
                 placeholder.setAttribute('tabindex', '0');
                 placeholder.setAttribute('aria-label', 'Play video: ' + title);
                 // Thumbnail from YouTube / Vimeo only after "Accept"; otherwise the title on a dark tile
+                // and a hint whose "Cookies" link opens the cookie notice (Site Essentials & Cookies, #cookie-settings)
+                var hint = null;
                 if (/(?:^|;\s*)cookieaccepted=1(?:;|$)/.test(document.cookie)) {
                     var img = document.createElement('img');
                     img.src = platform === 'youtube'
@@ -88,11 +95,15 @@ add_action('wp_footer', function () {
                     caption.className = 'video-placeholder-title';
                     caption.textContent = title;
                     placeholder.appendChild(caption);
+                    hint = document.createElement('span');
+                    hint.className = 'video-placeholder-hint';
+                    hint.innerHTML = 'Thumbnail hidden · <a href="#cookie-settings">Cookies</a> → Accept';
                 }
                 var playButton = document.createElement('div');
                 playButton.className = platform === 'youtube' ? 'play-button-youtube' : 'play-button-vimeo';
                 placeholder.appendChild(playButton);
                 iframe.replaceWith(placeholder);
+                if (hint) placeholder.after(hint);
                 function play() {
                     var newIframe = document.createElement('iframe');
                     newIframe.setAttribute('src', platform === 'youtube'
@@ -105,6 +116,7 @@ add_action('wp_footer', function () {
                     newIframe.setAttribute('allowfullscreen', 'true');
                     newIframe.setAttribute('title', title);
                     placeholder.replaceWith(newIframe);
+                    if (hint) hint.remove();
                     newIframe.focus();
                 }
                 placeholder.addEventListener('click', play);
