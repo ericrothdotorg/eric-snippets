@@ -180,6 +180,7 @@ add_action('wp_head', function () {
 }, 10);
 
 // Lightbox Fix for Image Enlargement
+// vh first, dvh after: dvh is the visible height on phones (toolbar shown), browsers without it keep vh.
 // Only on pages with a lightbox image: core hooks its overlay into wp_footer
 // exactly when such an image was rendered.
 function fix_wp_lightbox_js() {
@@ -190,10 +191,10 @@ function fix_wp_lightbox_js() {
             var overlay = document.querySelector(".wp-lightbox-overlay");
             if (!overlay) return;
             overlay.classList.remove("zoom");
-            overlay.style.cssText += "position:fixed!important;top:0!important;left:0!important;width:100vw!important;height:100vh!important;";
+            overlay.style.cssText += "position:fixed!important;top:0!important;left:0!important;width:100vw!important;height:100vh!important;height:100dvh!important;";
             var containers = document.querySelectorAll(".lightbox-image-container");
             containers.forEach(function(container) {
-                container.style.cssText += "width:95vw!important;max-width:95vw!important;height:90vh!important;max-height:90vh!important;";
+                container.style.cssText += "width:95vw!important;max-width:95vw!important;height:90vh!important;max-height:90vh!important;height:90dvh!important;max-height:90dvh!important;";
                 var img = container.querySelector("img");
                 if (img) {
                     img.style.cssText += "object-fit:contain!important;width:100%!important;height:100%!important;";
