@@ -59,7 +59,7 @@ add_action('wp_footer', function() {
     <style>
         @media screen and (max-width: 768px) {#sbb_uhr_container {width: 5rem !important; height: 5rem !important;}}
         @media screen and (min-width: 768px) and (max-width: 1200px) {#sbb_uhr_container {width: 7.5rem !important; height: 7.5rem !important;}}
-		body.dark-mode .wp-image-122531 {content: url("/wp-content/uploads/2024/07/SBB_NEG_2F_RGB_100.svg");}
+		body.dark-mode .er-sbb-logo img {content: url("/wp-content/uploads/2024/07/SBB_NEG_2F_RGB_100.svg");}
 
         /* "Search For Connection" submit (#search--sbb): the site-wide button base
            re-applied here because companion B9's `all: revert` strips input buttons
