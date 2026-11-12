@@ -78,9 +78,8 @@ add_filter( 'template_include', function( $template ) {
     }
     if ( have_posts() ) {
         $limit = 12;
+        // Cards first, so the offset is the number actually shown (the main query holds posts_per_page, not $limit)
         ob_start();
-        echo '<div class="er-cpt-grid" data-search="' . esc_attr( get_search_query() ) . '"'
-           . ' data-limit="' . esc_attr( $limit ) . '" data-offset="' . esc_attr( $limit ) . '">';
         $shown = 0;
         while ( have_posts() && $shown < $limit ) {
             the_post();
@@ -91,12 +90,14 @@ add_filter( 'template_include', function( $template ) {
             }
             $shown++;
         }
-        echo '</div>';
+        $cards = ob_get_clean();
         global $wp_query;
-        if ( intval( $wp_query->found_posts ) > $limit ) {
-            echo '<div class="er-load-more-sentinel"></div>';
+        $loop_html = '<div class="er-cpt-grid" data-search="' . esc_attr( get_search_query() ) . '"'
+                   . ' data-limit="' . esc_attr( $limit ) . '" data-offset="' . esc_attr( $shown ) . '">'
+                   . $cards . '</div>';
+        if ( intval( $wp_query->found_posts ) > $shown ) {
+            $loop_html .= '<div class="er-load-more-sentinel"></div>';
         }
-        $loop_html = ob_get_clean();
         er_render_private_page( 'search-results', $loop_html );
     } else {
         er_render_private_page( 'search-no-results' );
