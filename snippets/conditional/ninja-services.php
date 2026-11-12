@@ -5,7 +5,7 @@
 // CONDITIONAL FLAG INJECTION BASED ON PATH
 // ================================================
 
-function should_inject_lang_script() {
+function er_should_inject_lang_script() {
     $language_pairs = array(
         '/about-me'                                         => '/ueber-mich',
         '/about-me/contact'                                 => '/ueber-mich/kontakt',
@@ -32,7 +32,7 @@ function should_inject_lang_script() {
 // ================================================
 
 add_action('wp_head', function() {
-    if (!should_inject_lang_script()) {
+    if (!er_should_inject_lang_script()) {
         return;
     }
     ?>
@@ -85,7 +85,7 @@ add_action('wp_footer', function() {
 
     // === SCRIPT + STYLE INJECTION (for flag switcher) ===
 
-    if (should_inject_lang_script()) {
+    if (er_should_inject_lang_script()) {
         ?>
         <script>
             (function() {
