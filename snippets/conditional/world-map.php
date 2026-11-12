@@ -721,7 +721,8 @@ html.erm-lock{overflow: hidden}
 .erm-stats .erm-key i{display: inline-block; width: 10px; height: 10px; border-radius: 50%}
 .erm-stats .erm-key i.is-live{background: var(--er-c-live); box-shadow: 0 0 0 2px color-mix(in srgb, var(--er-c-live) 30%, transparent)}
 .erm-stats .erm-key i.is-past{background: var(--color-1, #1e73be);}
-.erm-muted{color: #999}
+.erm-muted{color: #66717d} /* 4.8:1 on the light page */
+body.dark-mode .erm-muted{color: #999} /* 6.9:1 on the dark page */
 
 /* Tables — scoped to .lum-pages-table so nothing leaks into other tables. */
 .lum-pages-table{max-height: 350px; overflow-y: auto}
