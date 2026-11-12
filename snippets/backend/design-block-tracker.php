@@ -15,7 +15,7 @@ add_action('admin_menu', function() {
         'Design Blocks', // Menu Title
         'manage_options',
         'design-block-tracker',
-        'render_design_block_tracker'
+        'er_render_design_block_tracker'
     );
 });
 
@@ -138,7 +138,7 @@ function dbt_cache_data($data) {
 // Main Render Function
 // =======================================
 
-function render_design_block_tracker() {
+function er_render_design_block_tracker() {
     if (!current_user_can('manage_options')) {
         wp_die(__('You do not have sufficient permissions to access this page.'));
     }
