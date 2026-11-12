@@ -500,6 +500,10 @@ footer.flex-container {max-width: var(--er-wide-row); margin-inline: auto; colum
 @media (min-width: 1200px) {
 	footer.flex-container {display: grid; grid-template-columns: minmax(0, 347fr) minmax(max-content, 430fr) minmax(0, 413fr);}
 	footer.flex-container > :last-child {grid-column: 1 / -1; contain: inline-size;}
+	/* The three columns start on one line (QR code, "About Me | …", "Socials | Support"); no space above the socials line.
+	   The middle column's margin-top is reset below, after the rule that sets it. */
+	footer.flex-container {align-items: start;}
+	.flex-item-footer-right > p:first-child {margin-top: 0;}
 }
 /* Longer (translated) text: toggles stay on one line, wrapped lines stay left-aligned */
 #tts-toggle-btn, #dark-mode-toggle-btn {flex: none; flex-wrap: nowrap;}
@@ -509,14 +513,15 @@ footer.flex-container {max-width: var(--er-wide-row); margin-inline: auto; colum
 .qr-and-links-wrapper {display: flex; align-items: center;}
 .qr-links-column {display: flex; flex-direction: column; padding-left: 45px;}
 .ninja-services-link, .cookies-link {display: flex; align-items: center;}
-.ninja-services-link {margin-bottom: 15px;}
-.cookies-link {margin-top: 15px;} /* same gap as below Ninja Services; the three items stay centred on the QR code as a set */
+.ninja-services-link {margin-bottom: 10px;}
+.cookies-link {margin-top: 10px;} /* same gap as below Ninja Services; the three items stay centred on the QR code as a set */
 .ninja-services-link span, .cookies-link span {padding-left: 10px;}
 
 /* ---- Footer column MIDDLE ---- */
 .flex-item-footer-middle {margin-top: 20px;}
+@media (min-width: 1200px) {.flex-item-footer-middle {margin-top: 0;}} /* columns top-aligned, see above */
 .dropdown-separator {color: var(--color-9); padding-left: 10px; padding-right: 5px;}
-.logo-copyright-wrapper {display: flex; align-items: center; padding-top: 30px;}
+.logo-copyright-wrapper {display: flex; align-items: center; padding-top: 20px;}
 .logo-copyright-wrapper > a {position: relative; top: 2px;}
 .copyright-text {margin: 0; padding-left: 35px;}
 
@@ -539,7 +544,7 @@ footer.flex-container {max-width: var(--er-wide-row); margin-inline: auto; colum
 .dropdown:hover .dropdown-content, .dropdown:focus-within .dropdown-content {display: block;}
 
 /* ---- Footer column RIGHT ---- */
-.site-updates-wrapper {display: flex; align-items: center; padding-top: 25px;}
+.site-updates-wrapper {display: flex; align-items: center; padding-top: 10px;}
 .site-updates-text {padding-left: 35px; margin: 0;}
 /* Rotating word after "for the latest": the 11 words are real text in parts / footer.html, so the
    Language Switcher and the browser's own translation translate them. They sit on top of each other
