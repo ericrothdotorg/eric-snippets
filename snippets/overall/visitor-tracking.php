@@ -85,9 +85,9 @@ add_action('init', function() {
 // VISITOR ID
 // ======================================
 
-// Id of the current visitor: the cookie set by the beacon or, without it, a
-// hash of the anonymised IP and the user agent. World Map uses the same
-// function to recognise the viewer in its live data.
+// Id of the current visitor: the cookie set by the beacon (only after "Accept")
+// or, without it, a hash of the anonymised IP and the user agent. World Map uses
+// the same function to recognise the viewer in its live data.
 function er_trk_visitor_id() {
     if (!empty($_COOKIE['lum_visitor_id'])) {
         return substr(sanitize_text_field(wp_unslash($_COOKIE['lum_visitor_id'])), 0, 64);
@@ -142,10 +142,15 @@ function er_trk_schedule_background_tracking() {
             }
 			// Fire tracking as a non-blocking beacon, after load
             function fireTracking() {
-				// Set a persistent Visitor ID Cookie if not already set
-				if (!document.cookie.split(';').some(c => c.trim().startsWith('lum_visitor_id='))) {
+				// Visitor ID cookie only after "Accept" (cookieaccepted=1); without it, one from an earlier visit is removed.
+				// No cookie: the server recognises the visitor by a hash of the anonymised IP + browser (er_trk_visitor_id).
+				var accepted = /(?:^|;\s*)cookieaccepted=1(?:;|$)/.test(document.cookie);
+				var hasVid = document.cookie.split(';').some(c => c.trim().startsWith('lum_visitor_id='));
+				if (accepted && !hasVid) {
 					const vid = 'v_' + Math.random().toString(36).substr(2, 12) + Date.now().toString(36);
 					document.cookie = 'lum_visitor_id=' + vid + '; path=/; max-age=' + (365*24*60*60) + '; SameSite=Lax';
+				} else if (!accepted && hasVid) {
+					document.cookie = 'lum_visitor_id=; path=/; max-age=0; SameSite=Lax';
 				}
 				// Send as form-encoded so PHP populates $_POST and admin-ajax
 				// routes the action. A raw sendBeacon string would go out as
