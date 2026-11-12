@@ -6,6 +6,8 @@
 // The browser starts loading a video player as soon as it reads an
 // iframe's src, long before the placeholder script below runs. So the
 // src becomes data-src here; the player loads only on click.
+// The YouTube / Vimeo thumbnail loads only after Accept on the cookie
+// notice (cookieaccepted=1); before that, a dark tile with the title.
 // Without JavaScript, the original iframe in <noscript> shows the player.
 // Also marks the page, so style and script are only printed where a
 // video is (block themes render the page before the footer).
@@ -31,8 +33,10 @@ add_action('wp_footer', function () {
     if ( empty( $GLOBALS['er_has_video'] ) ) return;
     ?>
     <style>
-        .video-placeholder {position: absolute; top: 0; left: 0; width: 100%; height: 100%; cursor: pointer;}
+        .video-placeholder {position: absolute; top: 0; left: 0; width: 100%; height: 100%; cursor: pointer; background: var(--color-10);}
         .video-placeholder img {width: 100%; height: 100%; object-fit: cover;}
+        /* Before "Accept": no thumbnail (it would send the visitor's IP to YouTube / Vimeo) - dark tile, play button, title */
+        .video-placeholder-title {position: absolute; left: 0; right: 0; bottom: 0; padding: 12px 16px; color: var(--color-5); font-size: var(--er-fs-sm); text-align: center;}
         .play-button-youtube,
         .play-button-vimeo {
             position: absolute;
@@ -70,22 +74,30 @@ add_action('wp_footer', function () {
                 placeholder.setAttribute('role', 'button');
                 placeholder.setAttribute('tabindex', '0');
                 placeholder.setAttribute('aria-label', 'Play video: ' + title);
-                var img = document.createElement('img');
-                img.src = platform === 'youtube'
-                    ? 'https://img.youtube.com/vi/' + videoId + '/hqdefault.jpg'
-                    : 'https://vumbnail.com/' + videoId + '.jpg';
-                img.alt = ''; // the placeholder's label names the video
-                img.loading = 'lazy';
+                // Thumbnail from YouTube / Vimeo only after "Accept"; otherwise the title on a dark tile
+                if (/(?:^|;\s*)cookieaccepted=1(?:;|$)/.test(document.cookie)) {
+                    var img = document.createElement('img');
+                    img.src = platform === 'youtube'
+                        ? 'https://img.youtube.com/vi/' + videoId + '/hqdefault.jpg'
+                        : 'https://vumbnail.com/' + videoId + '.jpg';
+                    img.alt = ''; // the placeholder's label names the video
+                    img.loading = 'lazy';
+                    placeholder.appendChild(img);
+                } else {
+                    var caption = document.createElement('span');
+                    caption.className = 'video-placeholder-title';
+                    caption.textContent = title;
+                    placeholder.appendChild(caption);
+                }
                 var playButton = document.createElement('div');
                 playButton.className = platform === 'youtube' ? 'play-button-youtube' : 'play-button-vimeo';
-                placeholder.appendChild(img);
                 placeholder.appendChild(playButton);
                 iframe.replaceWith(placeholder);
                 function play() {
                     var newIframe = document.createElement('iframe');
                     newIframe.setAttribute('src', platform === 'youtube'
-                        ? 'https://www.youtube.com/embed/' + videoId + '?autoplay=1'
-                        : 'https://player.vimeo.com/video/' + videoId + '?autoplay=1');
+                        ? 'https://www.youtube-nocookie.com/embed/' + videoId + '?autoplay=1'
+                        : 'https://player.vimeo.com/video/' + videoId + '?autoplay=1&dnt=1');
                     newIframe.setAttribute('frameborder', '0');
                     newIframe.setAttribute('allow', platform === 'youtube'
                         ? 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture'
