@@ -349,65 +349,37 @@ add_action('save_post', function($post_id) {
     delete_transient('post_stats_' . $post_id);
 });
 
-// [merged_tag_cloud] - Display merged Tag Clouds
-define( 'MERGED_TAG_CLOUD_TAXONOMIES', 'things, topics, interest_tag, groups, types, category, post_tag' );
-define( 'MERGED_TAG_CLOUD_NUMBER',     45 );
-define( 'MERGED_TAG_CLOUD_SEPARATOR',  '' ); // Define in Shortcode (if none it defaults to none)
+// [merged_tag_cloud] - Terms of several taxonomies in one alphabetical cloud (footer)
+// No cache of its own: LiteSpeed caches the whole page and every save purges it,
+// so new terms and changed counts show on the next page view.
 function merged_tag_cloud_shortcode( $atts ) {
     $atts = shortcode_atts([
-        'taxonomies' => MERGED_TAG_CLOUD_TAXONOMIES,
-        'smallest'   => 14,
-        'largest'    => 14,
-        'unit'       => 'px',
-        'number'     => MERGED_TAG_CLOUD_NUMBER,
-        'orderby'    => 'name',
-        'order'      => 'ASC',
+        'taxonomies' => 'things, topics, interest_tag, groups, types, category, post_tag',
+        'number'     => 45,
+        'size'       => '14px',
         'class'      => 'is-style-default',
         'style'      => 'text-align: center;',
-        'separator'  => MERGED_TAG_CLOUD_SEPARATOR,
+        'separator'  => '',
     ], $atts );
-    $cache_key = 'merged_tag_cloud_' . md5( $atts['taxonomies'] . $atts['number'] . $atts['separator'] );
-    $output = get_transient( $cache_key );
-    if ( $output !== false ) return $output;
-    $taxonomies = array_map( 'trim', explode( ',', $atts['taxonomies'] ) );
-    $all_terms  = [];
-    foreach ( $taxonomies as $tax ) {
-        $terms = get_terms([
-            'taxonomy'   => $tax,
-            'hide_empty' => true,
-        ]);
-        if ( ! is_wp_error( $terms ) ) {
-            $all_terms = array_merge( $all_terms, $terms );
-        }
+    $terms = [];
+    foreach ( array_map( 'trim', explode( ',', $atts['taxonomies'] ) ) as $taxonomy ) {
+        $found = get_terms([ 'taxonomy' => $taxonomy, 'hide_empty' => true ]);
+        if ( ! is_wp_error( $found ) ) $terms = array_merge( $terms, $found );
     }
-    $seen = [];
-    $all_terms = array_filter( $all_terms, function( $term ) use ( &$seen ) {
-        $key = $term->taxonomy . '_' . $term->term_id;
-        if ( isset( $seen[$key] ) ) return false;
-        $seen[$key] = true;
-        return true;
-    });
-    if ( empty( $all_terms ) ) return '<p>No tags found.</p>';
-    $counts    = array_column( $all_terms, 'count' );
-    $min_count = min( $counts );
-    $max_count = max( $counts );
-    $spread    = $max_count - $min_count ?: 1;
-    $range     = $atts['largest'] - $atts['smallest'];
-    usort( $all_terms, fn( $a, $b ) => strcmp( $a->name, $b->name ) );
+    if ( empty( $terms ) ) return '<p>No tags found.</p>';
+    // Byte order (strcmp), not the database's: "Über Mich" stays at the end
+    usort( $terms, fn( $a, $b ) => strcmp( $a->name, $b->name ) );
     if ( $atts['number'] > 0 ) {
-        $all_terms = array_slice( $all_terms, 0, (int) $atts['number'] );
+        $terms = array_slice( $terms, 0, (int) $atts['number'] );
     }
     $links = [];
-    foreach ( $all_terms as $term ) {
-        $size = $atts['smallest'] + ( $range * ( $term->count - $min_count ) / $spread );
-        $size = round( $size, 1 );
+    foreach ( $terms as $term ) {
         $link = get_term_link( $term );
         if ( is_wp_error( $link ) ) continue;
         $links[] = sprintf(
-            '<a href="%s" style="font-size: %s%s;" title="%s (%d)">%s <span class="tag-count">(%d)</span></a>',
-            esc_url( $link ),           // href
-            $size,                      // font-size Value
-            esc_attr( $atts['unit'] ),  // font-size Unit
+            '<a href="%s" style="font-size: %s;" title="%s (%d)">%s <span class="tag-count">(%d)</span></a>',
+            esc_url( $link ),
+            esc_attr( $atts['size'] ),
             esc_html( $term->name ),    // Hover Tooltip - Name
             $term->count,               // Hover Tooltip - Count
             esc_html( $term->name ),    // Visible on Page - Name
@@ -417,21 +389,11 @@ function merged_tag_cloud_shortcode( $atts ) {
     $separator = $atts['separator'] !== ''
         ? ' <span class="tag-separator">' . esc_html( $atts['separator'] ) . '</span> '
         : ' ';
-    $output  = '<div class="' . esc_attr( $atts['class'] ) . '" style="' . esc_attr( $atts['style'] ) . '">';
-    $output .= implode( $separator, $links );
-    $output .= '</div>';
-    set_transient( $cache_key, $output, HOUR_IN_SECONDS * 12 );
-    return $output;
+    return '<div class="' . esc_attr( $atts['class'] ) . '" style="' . esc_attr( $atts['style'] ) . '">'
+         . implode( $separator, $links )
+         . '</div>';
 }
 add_shortcode( 'merged_tag_cloud', 'merged_tag_cloud_shortcode' );
-
-// [merged_tag_cloud] - Clear Cache when Terms are added, edited or deleted
-add_action( 'created_term', 'merged_tag_cloud_clear_cache' );
-add_action( 'edited_term',  'merged_tag_cloud_clear_cache' );
-add_action( 'deleted_term', 'merged_tag_cloud_clear_cache' );
-function merged_tag_cloud_clear_cache() {
-    delete_transient( 'merged_tag_cloud_' . md5( MERGED_TAG_CLOUD_TAXONOMIES . MERGED_TAG_CLOUD_NUMBER . MERGED_TAG_CLOUD_SEPARATOR ) );
-}
 
 // ======================================
 // SEO & ACCESSIBILITY
