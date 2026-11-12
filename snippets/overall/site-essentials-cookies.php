@@ -109,7 +109,7 @@ add_action('wp_head', function() {
     // 2. Find Images with priority-high Class in Content (recursively)
     if (has_blocks($post->post_content)) {
         $blocks = parse_blocks($post->post_content);
-        $priority_images = find_priority_high_images($blocks);
+        $priority_images = er_find_priority_high_images($blocks);
         foreach ($priority_images as $url) {
             $preload_images[] = [
                 'url' => $url,
@@ -183,7 +183,7 @@ add_action('wp_head', function () {
 // vh first, dvh after: dvh is the visible height on phones (toolbar shown), browsers without it keep vh.
 // Only on pages with a lightbox image: core hooks its overlay into wp_footer
 // exactly when such an image was rendered.
-function fix_wp_lightbox_js() {
+function er_fix_wp_lightbox_js() {
     if (!has_action('wp_footer', 'block_core_image_print_lightbox_overlay')) return;
     echo '<script>
     document.addEventListener("click", function() {
@@ -204,7 +204,7 @@ function fix_wp_lightbox_js() {
     });
     </script>';
 }
-add_action( 'wp_footer', 'fix_wp_lightbox_js' );
+add_action( 'wp_footer', 'er_fix_wp_lightbox_js' );
 
 // ======================================
 // BREADCRUMBS
@@ -243,8 +243,8 @@ add_filter('the_content', function ($content) {
 }, 20);
 
 // [reusable id="123"] - Display reusable Content Blocks
-add_shortcode('reusable', 'get_reusable_block');
-function get_reusable_block($atts) {
+add_shortcode('reusable', 'er_get_reusable_block');
+function er_get_reusable_block($atts) {
     $atts = shortcode_atts(['id' => ''], $atts);
     $id = absint($atts['id']);
     if (!$id) return '';
@@ -259,7 +259,7 @@ if (!is_admin()) {
     add_action('init', function() {
         foreach (['post', 'page', 'my-interests', 'my-quotes', 'my-traits'] as $type) {
             add_shortcode('total_' . str_replace('-', '_', $type), function() use ($type) {
-                return get_post_count_cached($type);
+                return er_get_post_count_cached($type);
             });
         }
     });
@@ -352,7 +352,7 @@ add_action('save_post', function($post_id) {
 // [merged_tag_cloud] - Terms of several taxonomies in one alphabetical cloud (footer)
 // No cache of its own: LiteSpeed caches the whole page and every save purges it,
 // so new terms and changed counts show on the next page view.
-function merged_tag_cloud_shortcode( $atts ) {
+function er_merged_tag_cloud_shortcode( $atts ) {
     $atts = shortcode_atts([
         'taxonomies' => 'things, topics, interest_tag, groups, types, category, post_tag',
         'number'     => 45,
@@ -393,7 +393,7 @@ function merged_tag_cloud_shortcode( $atts ) {
          . implode( $separator, $links )
          . '</div>';
 }
-add_shortcode( 'merged_tag_cloud', 'merged_tag_cloud_shortcode' );
+add_shortcode( 'merged_tag_cloud', 'er_merged_tag_cloud_shortcode' );
 
 // ======================================
 // SEO & ACCESSIBILITY
@@ -510,7 +510,7 @@ add_action('template_redirect', function() {
 // ======================================
 
 // Helper: Recursively find all Image Blocks with priority-high Class
-function find_priority_high_images($blocks, &$images = []) {
+function er_find_priority_high_images($blocks, &$images = []) {
     foreach ($blocks as $block) {
         // Check if this Block is an Image with priority-high
         if ($block['blockName'] === 'core/image') {
@@ -532,14 +532,14 @@ function find_priority_high_images($blocks, &$images = []) {
         }
         // Recursively search innerBlocks (for nested Blocks like Columns, Groups, etc.)
         if (!empty($block['innerBlocks'])) {
-            find_priority_high_images($block['innerBlocks'], $images);
+            er_find_priority_high_images($block['innerBlocks'], $images);
         }
     }
     return $images;
 }
 
 // Helper: Get cached Post Count for a Post Type
-function get_post_count_cached($type) {
+function er_get_post_count_cached($type) {
     $cache_key = 'post_count_' . $type;
     $count = get_transient($cache_key);
     if ($count === false) {
