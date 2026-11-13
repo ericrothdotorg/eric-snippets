@@ -306,6 +306,7 @@ add_action( 'wp_footer', function () {
 		'topic'  => $topic,
 		'places' => $places, // in site order: the next unread one comes after this page
 		'page'   => ER_SJ_PAGE === $id ? '' : wp_make_link_relative( get_permalink( ER_SJ_PAGE ) ), // no link to itself
+		'quote'  => 'my-quotes' === $self['y'], // a quote topic carries the quote ring
 		'texts'  => array_intersect_key( er_sj_texts(), array_flip( array( 'footRead', 'footAll', 'footIn', 'footNext' ) ) ),
 	);
 	?>
@@ -335,9 +336,13 @@ add_action( 'wp_footer', function () {
 		var line = document.createElement('p');
 		line.className = 'er-sj-line';
 		var done = read >= d.places.length;
+		var topic = document.createElement('span');
+		topic.textContent = d.topic;
+		if (d.quote) topic.className = 'er-quote-mark'; // the quote ring (Eric Companion CSS)
+		var parts = T.footIn.split('%s');
 		line.append(
 			link(d.page, done ? T.footAll.replace('%d', d.places.length) : T.footRead.replace('%1$d', read).replace('%2$d', d.places.length)),
-			' ' + T.footIn.replace('%s', d.topic) + (done ? ' ✓' : '')
+			' ' + parts[0], topic, (parts[1] || '') + (done ? ' ✓' : '')
 		);
 		if (next) {
 			var sep = document.createElement('span'); sep.className = 'er-sj-sep'; sep.textContent = '·'; sep.setAttribute('aria-hidden', 'true');
@@ -722,7 +727,7 @@ add_action( 'wp_footer', function () {
         items.forEach(function (it) {
             it.g.forEach(function (g) {
                 var k = it.y + '|' + g;
-                (map[k] = map[k] || { name: g, url: links[k], list: [] }).list.push(it);
+                (map[k] = map[k] || { name: g, url: links[k], quote: it.y === 'my-quotes', list: [] }).list.push(it);
             });
         });
         return Object.keys(map).map(function (k) {
@@ -733,6 +738,8 @@ add_action( 'wp_footer', function () {
             return t;
         });
     }
+    // A topic name links to the topic's own page; a quote topic carries the quote ring
+    function topicPart(t) { return { a: [t.url || '', t.name], q: t.quote }; }
     function achievements(c) {
         var lv = level(c.done), all = topics(), done = 0, fav = null, near = null;
         all.forEach(function (t) {
@@ -744,8 +751,8 @@ add_action( 'wp_footer', function () {
         return {
             level: lv[0], 'level-note': lv[1],
             completed: String(done), 'completed-note': done ? (done === 1 ? T.done1 : T.doneN) : T.done0,
-            favourite: fav ? (fav.url ? [{ a: [fav.url, fav.name] }] : fav.name) : '—', 'favourite-note': fav ? (fav.read === 1 ? T.fav1 : T.favN.replace('%d', fav.read)) : T.favNone,
-            almost: near ? (near.url ? [{ a: [near.url, near.name] }] : near.name) : '✓',
+            favourite: fav ? [topicPart(fav)] : '—', 'favourite-note': fav ? (fav.read === 1 ? T.fav1 : T.favN.replace('%d', fav.read)) : T.favNone,
+            almost: near ? [topicPart(near)] : '✓',
             'almost-note': near ? [(near.left === 1 ? T.near1 : T.nearN.replace('%d', near.left)) + ' ', { a: [next.u, next.t] }] : T.nearAll
         };
     }
@@ -766,7 +773,12 @@ add_action( 'wp_footer', function () {
             (Array.isArray(v) ? v : [v]).forEach(function (part) {
                 var node = part;
                 if (part && part.b) { node = document.createElement('b'); node.textContent = part.b; }
-                else if (part && part.a) { node = document.createElement('a'); node.href = part.a[0]; node.textContent = part.a[1]; }
+                else if (part && part.a) {
+                    node = document.createElement(part.a[0] ? 'a' : 'span');
+                    if (part.a[0]) node.href = part.a[0];
+                    node.textContent = part.a[1];
+                    if (part.q) node.className = 'er-quote-mark'; // the quote ring (Eric Companion CSS)
+                }
                 e.append(node);
             });
         });
