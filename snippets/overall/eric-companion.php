@@ -8,7 +8,8 @@
 // CONTENTS
 // 
 //   1. SHARED HELPERS          taxonomy map, breadcrumbs, reading time,
-//                              counted pages (er_uncounted_ids)
+//                              German content: counting rule, English version,
+//                              lang / hreflang (er_uncounted_ids, er_is_german …)
 //                              (defined first; called by hero, cards, footer)
 //   2. PERFORMANCE             featured-image eager + fetchpriority filter
 //   3. HEAD SCRIPTS            dark-mode FOUC guard,
@@ -331,36 +332,162 @@ function er_reading_time( $post_id = null, $echo = false ) {
 	}
 }
 
-// ---- 1d. Counted pages — er_uncounted_ids(); the site-wide counting rule ----
-// What counts on this site: every published page, post, interest, quote and
-// trait - except the pages returned here: the German pages (Über Mich,
-// Berufswelt and everything below them). Private pages never count anyway.
-// The same pages never come up at random. Used behind function_exists by
-// Site Essentials (counters), Frontpage Stuff (/surprise/), Display Posts
-// (random slider) and Site Journey.
-function er_uncounted_ids() {
-	$ids = get_transient( 'er_uncounted_ids' );
-	if ( is_array( $ids ) ) {
-		return $ids;
+// ---- 1d. German content — the site-wide counting rule ----
+// German = ticked "German" in the editor (panel "Language", taxonomy er_language,
+// registered in CPTs & Taxonomies). German pages and quotes are translations for
+// German-speaking clients, not more content, so they are a section of their own:
+//   - never counted: counters, filter pills, tag clouds, Site Journey
+//   - never in an automatic list: listings, random sliders, /surprise/, Related,
+//     quote sliders, Display Posts (except where a shortcode names them by id)
+//   - still found by the site search, Google (sitemap) and the flags
+// A German page names its English version (meta box below); the pairs drive the
+// flags and redirect (Ninja Services) and lang / hreflang in the head (1e).
+// Callers use these functions behind function_exists:
+//   er_uncounted_ids()       ids of all published German items
+//   er_is_german( $id )      one item
+//   er_counted_total( $type ) published items of a type that count
+//   er_lang_counterpart( $id ) the other language's page id, or 0
+
+// Everything above in one cached lookup; cleared whenever content, a tick or a pair changes.
+function er_german() {
+	static $building = false;
+	$g = get_transient( 'er_german' );
+	if ( is_array( $g ) ) {
+		return $g;
 	}
-	$ids = array();
-	foreach ( array( 150455, 149904 ) as $root ) { // Über Mich, Berufswelt
-		$ids[] = $root;
-		foreach ( get_pages( array( 'child_of' => $root, 'post_status' => 'publish' ) ) as $p ) {
-			$ids[] = (int) $p->ID;
+	$g = array( 'ids' => array(), 'types' => array(), 'terms' => array(), 'pairs' => array() );
+	if ( $building ) {
+		return $g; // a filter below called back while the lookup runs
+	}
+	$building = true;
+	$posts = get_posts( array(
+		'post_type'      => array_keys( er_taxonomy_map() ),
+		'post_status'    => 'publish',
+		'posts_per_page' => -1,
+		'no_found_rows'  => true,
+		'tax_query'      => array( array( 'taxonomy' => 'er_language', 'field' => 'slug', 'terms' => 'german' ) ),
+	) );
+	foreach ( $posts as $p ) {
+		$g['ids'][] = (int) $p->ID;
+		$g['types'][ $p->post_type ] = ( $g['types'][ $p->post_type ] ?? 0 ) + 1;
+		$en = (int) get_post_meta( $p->ID, 'er_en_version', true );
+		if ( 'page' === $p->post_type && $en && 'publish' === get_post_status( $en ) ) {
+			$g['pairs'][ $p->ID ] = $en; // German id => English id
 		}
 	}
-	set_transient( 'er_uncounted_ids', $ids, DAY_IN_SECONDS );
-	return $ids;
+	if ( $g['ids'] ) {
+		// How many German items each topic holds, so shown counts can leave them out
+		$taxonomies = array_values( array_diff( get_object_taxonomies( array_keys( er_taxonomy_map() ) ), array( 'er_language' ) ) );
+		foreach ( wp_get_object_terms( $g['ids'], $taxonomies, array( 'fields' => 'all_with_object_id' ) ) as $t ) {
+			$g['terms'][ $t->term_id ] = ( $g['terms'][ $t->term_id ] ?? 0 ) + 1;
+		}
+	}
+	set_transient( 'er_german', $g, DAY_IN_SECONDS );
+	$building = false;
+	return $g;
+}
+function er_german_flush() { delete_transient( 'er_german' ); }
+add_action( 'save_post', 'er_german_flush', 20 ); // after the meta box below has saved
+add_action( 'deleted_post', 'er_german_flush' );
+add_action( 'set_object_terms', 'er_german_flush' );
+
+function er_uncounted_ids() { return er_german()['ids']; }
+
+function er_is_german( $post_id ) {
+	return has_term( 'german', 'er_language', $post_id );
 }
 
-// A page saved, moved or deleted may change the list - and the page count with it
-function er_uncounted_flush() {
-	delete_transient( 'er_uncounted_ids' );
-	delete_transient( 'post_count_page' );
+function er_counted_total( $type ) {
+	$counts = wp_count_posts( $type );
+	return max( 0, (int) ( $counts->publish ?? 0 ) - ( er_german()['types'][ $type ] ?? 0 ) );
 }
-add_action( 'save_post_page', 'er_uncounted_flush' );
-add_action( 'deleted_post', 'er_uncounted_flush' );
+
+function er_lang_counterpart( $post_id ) {
+	$pairs = er_german()['pairs'];
+	if ( isset( $pairs[ $post_id ] ) ) {
+		return $pairs[ $post_id ];
+	}
+	$en = array_search( (int) $post_id, $pairs, true );
+	return false === $en ? 0 : (int) $en;
+}
+
+// Shown topic counts leave German items out, and a topic that only holds German items
+// disappears where empty topics are hidden: [merged_tag_cloud], filter pills,
+// [display-taxonomies]. Stored counts stay WordPress's own; admin and the editor see those.
+add_filter( 'get_terms', function ( $terms, $taxonomies, $args ) {
+	if ( ( is_admin() && ! wp_doing_ajax() ) || wp_is_serving_rest_request() || ! is_array( $terms ) ) {
+		return $terms;
+	}
+	$minus = er_german()['terms'];
+	if ( ! $minus ) {
+		return $terms;
+	}
+	$dropped = false;
+	foreach ( $terms as $k => $term ) {
+		if ( ! $term instanceof WP_Term || empty( $minus[ $term->term_id ] ) ) {
+			continue;
+		}
+		$term->count = max( 0, $term->count - $minus[ $term->term_id ] );
+		if ( ! $term->count && ! empty( $args['hide_empty'] ) ) {
+			unset( $terms[ $k ] );
+			$dropped = true;
+		}
+	}
+	return $dropped ? array_values( $terms ) : $terms;
+}, 10, 3 );
+
+// Meta box "English version" on pages: only filled in on German pages
+add_action( 'add_meta_boxes_page', function () {
+	add_meta_box( 'er_en_version', esc_html__( 'English version', 'textdomain' ), function ( $post ) {
+		wp_nonce_field( 'er_en_version', 'er_en_version_nonce' );
+		wp_dropdown_pages( array(
+			'name'              => 'er_en_version',
+			'selected'          => (int) get_post_meta( $post->ID, 'er_en_version', true ),
+			'show_option_none'  => '— None —',
+			'option_none_value' => '0',
+			'exclude'           => array( $post->ID ),
+		) );
+		echo '<p class="description">' . esc_html__( 'Only on German pages: the English page this one translates. Drives the flags, the language redirect and hreflang.', 'textdomain' ) . '</p>';
+	}, 'page', 'side' );
+} );
+add_action( 'save_post_page', function ( $post_id ) {
+	if ( ! isset( $_POST['er_en_version_nonce'] ) || ! wp_verify_nonce( sanitize_key( $_POST['er_en_version_nonce'] ), 'er_en_version' ) ) {
+		return;
+	}
+	if ( ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) || ! current_user_can( 'edit_post', $post_id ) ) {
+		return;
+	}
+	$en = absint( $_POST['er_en_version'] ?? 0 );
+	if ( $en ) {
+		update_post_meta( $post_id, 'er_en_version', $en );
+	} else {
+		delete_post_meta( $post_id, 'er_en_version' );
+	}
+} );
+
+// ---- 1e. Language in the head: lang="de-DE" on German pages, hreflang on paired pages ----
+add_filter( 'language_attributes', function ( $output ) {
+	if ( is_singular() && er_is_german( get_queried_object_id() ) ) {
+		$output = preg_replace( '/lang="[^"]*"/', 'lang="de-DE"', $output );
+	}
+	return $output;
+} );
+add_action( 'wp_head', function () {
+	if ( ! is_page() ) {
+		return;
+	}
+	$id    = get_queried_object_id();
+	$other = er_lang_counterpart( $id );
+	if ( ! $other ) {
+		return;
+	}
+	$de = er_is_german( $id ) ? $id : $other;
+	$en = $de === $id ? $other : $id;
+	printf( '<link rel="alternate" hreflang="en" href="%1$s">' . "\n" . '<link rel="alternate" hreflang="de" href="%2$s">' . "\n" . '<link rel="alternate" hreflang="x-default" href="%1$s">' . "\n",
+		esc_url( get_permalink( $en ) ),
+		esc_url( get_permalink( $de ) )
+	);
+}, 2 );
 
 // ======================================
 // 2. PERFORMANCE & ASSET LOADING
@@ -728,7 +855,7 @@ add_shortcode( 'er_cpt_archive', function( $atts ) {
 	ob_start();
 
 	if ( ! empty( $terms ) && ! is_wp_error( $terms ) && $show_tabs ) {
-		$total      = wp_count_posts( $post_type )->publish;
+		$total      = er_counted_total( $post_type ); // German items do not count (1d)
 		$all_active = $active_slug === '' ? ' er-active' : '';
 
 		// Pill URLs differ by mode:
@@ -788,9 +915,8 @@ add_shortcode( 'er_cpt_archive', function( $atts ) {
 		'order'          => in_array( strtoupper( $atts['order'] ), [ 'ASC', 'DESC' ] ) ? strtoupper( $atts['order'] ) : 'DESC',
 	);
 	
-	if ( $post_type === 'page' ) {
-		$query_args['post__not_in'] = array( er_things_hub_id() ); // exclude My Pages (hub setting, 1a) — must match 5c
-	}
+	// German items never in a listing (1d); pages also without My Pages itself (hub setting, 1a) — must match 5c
+	$query_args['post__not_in'] = $post_type === 'page' ? array_merge( er_uncounted_ids(), array( er_things_hub_id() ) ) : er_uncounted_ids();
 	
 	if ( $active_slug !== '' ) {
 		$term = get_term_by( 'slug', $active_slug, $taxonomy );
@@ -945,9 +1071,8 @@ function er_load_more_handler() {
 		'offset'         => $offset,
 	);
 
-	if ( $post_type === 'page' ) {
-		$query_args['post__not_in'] = array( er_things_hub_id() ); // exclude My Pages (hub setting, 1a) — must match 5b
-	}
+	// German items never in a listing (1d); pages also without My Pages itself (hub setting, 1a) — must match 5b
+	$query_args['post__not_in'] = $post_type === 'page' ? array_merge( er_uncounted_ids(), array( er_things_hub_id() ) ) : er_uncounted_ids();
 
 	if ( $active_slug !== '' ) {
 		$term = get_term_by( 'slug', $active_slug, $taxonomy );
@@ -1008,7 +1133,7 @@ add_shortcode( 'er_related_posts', function() {
 		'posts_per_page' => 12,
 		'post_status'    => 'publish',
 		'orderby'        => 'rand',
-		'post__not_in'   => array( $post->ID ),
+		'post__not_in'   => array_merge( array( $post->ID ), er_uncounted_ids() ), // German items are never related (1d)
 	);
 
 	if ( isset( $taxonomy_map[ $post_type ] ) ) {
