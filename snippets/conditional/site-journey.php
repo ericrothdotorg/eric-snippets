@@ -473,7 +473,10 @@ add_action( 'wp_ajax_nopriv_er_sj_qr', 'er_sj_qr' );
 //                                    in the list's columns; on tabs without a ranking (and
 //                                    without World Map) hidden together with the Group
 //                                    block around it, so its heading goes too
-//   [er_sj_countries]                the explorers' countries as pills, most first
+//   [er_sj_countries count="…" skip="…"]   the explorers' countries, most first, in the
+//                                    footer tag cloud's format: count = only the first n,
+//                                    skip = all after the first n (e.g. inside a Details
+//                                    block, which hides when nothing is left for it)
 //   [er_sj_stat show="…"]            one live value, usable inside any text:
 //                                    percent, explored, total - for the four
 //                                    achievement cards: level / level-note,
@@ -576,9 +579,11 @@ add_shortcode( 'er_sj_popular', function () {
 	return '<ul class="er-sj-popular" hidden></ul>';
 } );
 
-add_shortcode( 'er_sj_countries', function () {
+add_shortcode( 'er_sj_countries', function ( $atts ) {
 	er_sj_mark();
-	return '<p class="er-sj-countries"></p>';
+	$a = shortcode_atts( array( 'count' => 0, 'skip' => 0 ), $atts );
+	// The footer tag cloud's format and separator (Eric Companion CSS); left-align: not justified
+	return '<p class="er-sj-countries tag-cloud-footer left-align" data-count="' . absint( $a['count'] ) . '" data-skip="' . absint( $a['skip'] ) . '"></p>';
 } );
 
 add_shortcode( 'er_sj_stat', function ( $atts ) {
@@ -643,8 +648,6 @@ add_action( 'wp_footer', function () {
 		:is(.er-sj-listbox, .er-sj-popular) {columns: 4 180px; column-gap: 24px; font-size: var(--er-fs-sm);}
 		.er-sj-popular {margin: 0; padding-left: 1.1em;}
 		.er-sj-popular li {break-inside: avoid;}
-		.er-sj-countries span {display: inline-block; min-height: 25px; margin: 0 0 5px; padding: 3px 15px; line-height: 1.75; background: var(--color-8); border: 1px solid var(--color-1); border-radius: 100px;} /* the tag-cloud pill (Eric Companion CSS B2), as plain text */
-		body.dark-mode .er-sj-countries span {background: var(--color-10);}
 		.er-sj-group {break-inside: avoid; padding-bottom: 0.75rem;}
 		.er-sj-listbox h3 {font-size: var(--er-fs-sm); margin: 0 0 0.25rem;}
 		.er-sj-listbox ul {margin: 0; padding-left: 1.1em;}
@@ -681,7 +684,7 @@ add_action( 'wp_footer', function () {
     var L = document.querySelector('.er-sj-listbox');
     var Q = document.querySelector('.er-sj-qrcode');
     var R = document.querySelector('.er-sj-popular');
-    var C = document.querySelector('.er-sj-countries');
+    var C = document.querySelectorAll('.er-sj-countries');
     var first = document.querySelector('.er-sj-progress, .er-sj-skywrap, .er-sj-listbox, .er-sj-popular, .er-sj-countries, .er-sj-qrcode, [data-sj-stat]');
     if (!first) return;
 
@@ -949,7 +952,7 @@ add_action( 'wp_footer', function () {
         var word = (S && S.getAttribute('data-visited')) || T.visited, top = topList();
         R.textContent = '';
         var box = R.parentElement.matches('.wp-block-group') ? R.parentElement : R; // its own Group only, never an outer one
-        box.hidden = !top.length;
+        R.hidden = box.hidden = !top.length;
         top.forEach(function (it) {
             var li = document.createElement('li'), a = document.createElement('a');
             a.href = it.u; a.textContent = it.t;
@@ -962,13 +965,26 @@ add_action( 'wp_footer', function () {
             R.appendChild(li);
         });
     }
-    // [er_sj_countries]: one pill per country, most explorers first
-    function countryPills() {
-        C.textContent = '';
-        countries.forEach(function (c) {
-            var p = document.createElement('span');
-            p.textContent = country(c[0]) + ' (' + c[1] + ')';
-            C.append(p, ' ');
+    // [er_sj_countries]: "Switzerland (4) | Germany (40)", the numbers bold, most explorers first. A block holding
+    // nothing (e.g. skip="21" with 21 countries or fewer) hides, with its Details block if in one.
+    function countryList() {
+        C.forEach(function (box) {
+            var skip = +box.getAttribute('data-skip'), count = +box.getAttribute('data-count');
+            var part = countries.slice(skip, count ? skip + count : undefined);
+            box.textContent = '';
+            part.forEach(function (c, i) {
+                if (i) {
+                    var sep = document.createElement('span');
+                    sep.className = 'tag-separator';
+                    sep.textContent = '|';
+                    box.append(' ', sep, ' ');
+                }
+                var n = document.createElement('b');
+                n.textContent = '(' + c[1] + ')';
+                box.append(country(c[0]) + ' ', n);
+            });
+            box.hidden = !part.length;
+            if (box.parentElement.matches('details')) box.parentElement.hidden = !part.length;
         });
     }
 
@@ -1290,7 +1306,7 @@ add_action( 'wp_footer', function () {
         numbers();
         if (L) list();
         if (R) popularList();
-        if (C) countryPills();
+        countryList();
         document.addEventListener('er:visitor', numbers); // the own country arrives after the beacon
         if (S) {
             views(); tabs(); sky(); tips();
