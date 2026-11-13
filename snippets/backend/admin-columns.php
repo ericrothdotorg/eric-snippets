@@ -18,6 +18,7 @@ function er_initialize_custom_admin_columns() {
         $columns['id'] = __('ID');
         $columns['featured_image'] = __('Featured Image');
         $columns['title'] = __('Title');
+        $columns['er_language'] = __('Language'); // German items (Eric Companion PHP 1d)
 
         if ($type === 'page') {
             $columns['things'] = __('Things');
@@ -86,6 +87,7 @@ function er_initialize_custom_admin_columns() {
                 }
                 echo ceil($word_counts[$post_id] / 200) . ' min';
                 break;
+            case 'er_language':
             case 'things':
             case 'topics':
             case 'types':
@@ -94,6 +96,7 @@ function er_initialize_custom_admin_columns() {
 			case 'post_tags':
 			case 'interest_tags':
                 $taxonomy = match ($column) {
+                    'er_language' => 'er_language',
                     'things' => 'things',
                     'topics' => 'topics',
                     'types' => 'types',
