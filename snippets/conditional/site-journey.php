@@ -41,17 +41,33 @@ function er_sj_excluded() {
 	return function_exists( 'er_uncounted_ids' ) ? er_uncounted_ids() : array(); // owner: Eric Companion PHP
 }
 
-// Content types on the journey, in tab order: label, the taxonomy that groups
-// them (the same as the filter pills and the footer), and the overview page
-// shown as the hub star in the middle of their sky
+// Content types on the journey, in tab order: label and the taxonomy that groups
+// them (the same as the filter pills and the footer)
 function er_sj_types() {
 	return array(
-		'page'         => array( 'Pages', 'things', function_exists( 'er_things_hub_id' ) ? er_things_hub_id() : 159702 ), // My Pages (Eric Companion hub setting)
-		'post'         => array( 'Posts', 'category', 13405 ),      // My Blog
-		'my-interests' => array( 'Interests', 'topics', 13749 ),    // My Interests
-		'my-quotes'    => array( 'Quotes', 'groups', 103040 ),      // My Quotes
-		'my-traits'    => array( 'Traits', 'types', 83147 ),        // My Traits
+		'page'         => array( 'Pages', 'things' ),
+		'post'         => array( 'Posts', 'category' ),
+		'my-interests' => array( 'Interests', 'topics' ),
+		'my-quotes'    => array( 'Quotes', 'groups' ),
+		'my-traits'    => array( 'Traits', 'types' ),
 	);
+}
+
+// The overview page of a type, shown as the hub star in the middle of its sky. Found
+// the way the breadcrumbs find it (Eric Companion PHP 1b): My Pages from the hub
+// setting, My Blog from WordPress's Posts page, the others as the page whose slug is
+// the type's archive slug (my-interests, my-quotes, my-traits). No ids to maintain.
+function er_sj_hub( $type ) {
+	if ( 'page' === $type ) {
+		return function_exists( 'er_things_hub_id' ) ? er_things_hub_id() : 0;
+	}
+	if ( 'post' === $type ) {
+		return (int) get_option( 'page_for_posts' );
+	}
+	$obj  = get_post_type_object( $type );
+	$slug = ( $obj && is_string( $obj->has_archive ) ) ? $obj->has_archive : $type;
+	$hub  = get_posts( array( 'name' => $slug, 'post_type' => 'page', 'post_status' => 'publish', 'numberposts' => 1, 'fields' => 'ids' ) );
+	return $hub ? (int) $hub[0] : 0;
 }
 
 // ======================================
@@ -67,14 +83,14 @@ function er_sj_types() {
 // the hub of the Pages sky itself, sits only there.
 // Cached 12 h, cleared whenever content or topics change.
 function er_sj_items() {
-	$items = get_transient( 'er_sj_items_v3' );
+	$items = get_transient( 'er_sj_items_v4' );
 	if ( is_array( $items ) ) {
 		return $items;
 	}
 	$types = er_sj_types();
 	$hubs  = array();
 	foreach ( $types as $type => $t ) {
-		$hubs[ $t[2] ] = $type;
+		$hubs[ er_sj_hub( $type ) ] = $type;
 	}
 	$posts = get_posts( array(
 		'post_type'      => array_keys( $types ),
@@ -110,13 +126,18 @@ function er_sj_items() {
 		);
 		if ( $hub ) {
 			$item['h'] = $hub;
+			// As the hub star it links to WordPress's own list of its type (/my-quotes/ …;
+			// for posts the Posts page): with a redirect that lands on this page, without
+			// one on the list. Pages have no such list: My Pages itself.
+			$list      = 'page' === $hub ? get_permalink( $p ) : get_post_type_archive_link( $hub );
+			$item['a'] = wp_make_link_relative( $list ? $list : get_permalink( $p ) );
 		}
 		$items[] = $item;
 	}
-	set_transient( 'er_sj_items_v3', $items, 12 * HOUR_IN_SECONDS );
+	set_transient( 'er_sj_items_v4', $items, 12 * HOUR_IN_SECONDS );
 	return $items;
 }
-function er_sj_flush() { delete_transient( 'er_sj_items_v3' ); }
+function er_sj_flush() { delete_transient( 'er_sj_items_v4' ); }
 add_action( 'save_post', 'er_sj_flush' );
 add_action( 'deleted_post', 'er_sj_flush' );
 add_action( 'set_object_terms', 'er_sj_flush' );
@@ -216,14 +237,16 @@ add_action( 'wp_footer', function () {
 // FOOTER LINE (every place except the Site Journey page)
 // ======================================
 
-// On the footer's breadcrumb row, right-aligned: "Read 2 of 11 in Karma · Next: Deeds →".
-// "Read 2 of 11" opens the Site Journey page, "Deeds" the next unread place of the same
-// topic; a finished topic reads "Read all 11 in Karma ✓". The topic is the one the
-// breadcrumb shows: the first term, on pages the one named like their top-level page.
-// Pages without a topic get no line. Runs after the recording, so this page counts.
+// On the footer's breadcrumb row, right-aligned: "Read 2 of 11 in Karma · Next: Deeds".
+// "Read 2 of 11" opens the Site Journey page (plain text on that page itself), "Deeds"
+// the next unread place of the same topic: for pages in the order of the page tree, for
+// everything else in the order of publication. A finished topic reads "Read all 11 in
+// Karma ✓". The topic is the one the breadcrumb shows: the first term, on pages the one
+// named like their top-level page. Pages without a topic get no line. Runs after the
+// recording, so this page counts.
 add_action( 'wp_footer', function () {
 	$id = er_sj_place();
-	if ( ! $id || ER_SJ_PAGE === $id ) {
+	if ( ! $id ) {
 		return;
 	}
 	$items = er_sj_items();
@@ -251,11 +274,14 @@ add_action( 'wp_footer', function () {
 			$places[] = array( $it['i'], $it['u'], $it['t'] );
 		}
 	}
+	if ( 'page' === $self['y'] ) {
+		usort( $places, function ( $a, $b ) { return strcmp( $a[1], $b[1] ); } ); // by address = the page tree
+	}
 	$data = array(
 		'self'   => $id,
 		'topic'  => $topic,
 		'places' => $places, // in site order: the next unread one comes after this page
-		'page'   => wp_make_link_relative( get_permalink( ER_SJ_PAGE ) ),
+		'page'   => ER_SJ_PAGE === $id ? '' : wp_make_link_relative( get_permalink( ER_SJ_PAGE ) ), // no link to itself
 		'texts'  => array_intersect_key( er_sj_texts(), array_flip( array( 'footRead', 'footAll', 'footIn', 'footNext' ) ) ),
 	);
 	?>
@@ -281,7 +307,7 @@ add_action( 'wp_footer', function () {
 			var p = d.places[(at + k) % d.places.length];
 			if (seen.indexOf(p[0]) < 0) next = p;
 		}
-		function link(href, text) { var a = document.createElement('a'); a.href = href; a.textContent = text; return a; }
+		function link(href, text) { if (!href) return text; var a = document.createElement('a'); a.href = href; a.textContent = text; return a; }
 		var line = document.createElement('p');
 		line.className = 'er-sj-line';
 		var done = read >= d.places.length;
@@ -775,7 +801,7 @@ add_action( 'wp_footer', function () {
     }
 
     function star(svg, x, y, it, hue, big) {
-        var a = el('a', { href: it.u, tabindex: '-1', 'class': 'er-sj-star' }, svg);
+        var a = el('a', { href: (big && it.a) || it.u, tabindex: '-1', 'class': 'er-sj-star' }, svg); // hub star: its type's list
         a.__it = it;
         el('circle', { cx: x, cy: y, r: 9, fill: 'transparent' }, a); // easier to hit
         if (seen[it.i]) {
@@ -829,7 +855,7 @@ add_action( 'wp_footer', function () {
             var ul = document.createElement('ul');
             g[1].slice().sort(function (a, b) { return a.t.localeCompare(b.t); }).forEach(function (it) {
                 var li = document.createElement('li'), a = document.createElement('a');
-                a.href = it.u; a.textContent = it.t;
+                a.href = (!g[0] && it.a) || it.u; a.textContent = it.t; // hub: its type's list
                 li.appendChild(a);
                 if (seen[it.i]) {
                     li.className = 'is-seen';
