@@ -11,7 +11,6 @@ define('READING_SPEED_WPM', 200);            // Words per Minute for read Time C
 
 // Cache Durations (in Seconds)
 define('CACHE_POST_STATS', 3600);            // 1 hour - Post Statistics Cache
-define('CACHE_POST_COUNT', 3600);            // 1 hour - Post Count Cache
 
 // Cookie & Analytics
 define('COOKIE_MAX_AGE', 31536000);          // 1 year in Seconds
@@ -254,12 +253,13 @@ function er_get_reusable_block($atts) {
     return apply_filters('the_content', $post->post_content);
 }
 
-// [total_post], [total_page], etc. - Display Post Type Counts
+// [total_post], [total_page], etc. - Display Post Type Counts: what counts (German items do not)
+// comes from Eric Companion PHP 1d. LiteSpeed caches the page, so no cache of its own.
 if (!is_admin()) {
     add_action('init', function() {
         foreach (['post', 'page', 'my-interests', 'my-quotes', 'my-traits'] as $type) {
             add_shortcode('total_' . str_replace('-', '_', $type), function() use ($type) {
-                return er_get_post_count_cached($type);
+                return function_exists('er_counted_total') ? er_counted_total($type) : (int) wp_count_posts($type)->publish;
             });
         }
     });
@@ -268,13 +268,6 @@ if (!is_admin()) {
 // [total_media] - Publications: a mix of pages, posts and PDFs, so counted by hand.
 // The number lives here only: front page and number discs both show [total_media].
 add_shortcode('total_media', fn() => 38);
-
-// [total_post], [total_page], etc. - Clear Cache when published / deleted
-add_action('transition_post_status', function($new_status, $old_status, $post) {
-    if (($new_status === 'publish' || $old_status === 'publish') && $new_status !== $old_status) {
-        delete_transient('post_count_' . $post->post_type);
-    }
-}, 10, 3);
 
 // [post_stats] - Comprehensive Content Statistics
 add_shortcode('post_stats', function() {
@@ -536,20 +529,6 @@ function er_find_priority_high_images($blocks, &$images = []) {
         }
     }
     return $images;
-}
-
-// Helper: Get cached Post Count for a Post Type
-function er_get_post_count_cached($type) {
-    $cache_key = 'post_count_' . $type;
-    $count = get_transient($cache_key);
-    if ($count === false) {
-        $count = wp_count_posts($type)->publish;
-        if ($type === 'page' && function_exists('er_uncounted_ids')) {
-            $count -= count(er_uncounted_ids()); // German pages do not count (Eric Companion PHP)
-        }
-        set_transient($cache_key, $count, CACHE_POST_COUNT);
-    }
-    return $count;
 }
 
 // ======================================
