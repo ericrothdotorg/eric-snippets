@@ -222,7 +222,7 @@ function er_initialize_custom_admin_columns() {
                 .post-type-page .column-things { width: 9%; }
                 .post-type-page .column-depth { width: 3%; }
                 .post-type-page .column-parent { width: 7%; }
-                .post-type-page .column-custom_excerpt { width: 25%; }
+                .post-type-page .column-custom_excerpt { width: 19%; }
                 .post-type-page .column-word_count { width: 5%; }
                 .post-type-page .column-read_time { width: 5%; }
                 .post-type-page .column-date { width: 8%; }
@@ -233,7 +233,7 @@ function er_initialize_custom_admin_columns() {
                 .post-type-post .column-title { width: 12%; }
                 .post-type-post .column-post_categories { width: 8%; }
 				.post-type-post .column-post_tags { width: 8%; }
-                .post-type-post .column-custom_excerpt { width: 25%; }
+                .post-type-post .column-custom_excerpt { width: 19%; }
                 .post-type-post .column-word_count { width: 5%; }
                 .post-type-post .column-read_time { width: 5%; }
                 .post-type-post .column-date { width: 10%; }
@@ -244,7 +244,7 @@ function er_initialize_custom_admin_columns() {
                 .post-type-my-interests .column-title { width: 12%; }
                 .post-type-my-interests .column-topics { width: 8%; }
 				.post-type-my-interests .column-interest_tags { width: 8%; }
-                .post-type-my-interests .column-custom_excerpt { width: 25%; }
+                .post-type-my-interests .column-custom_excerpt { width: 19%; }
                 .post-type-my-interests .column-word_count { width: 5%; }
                 .post-type-my-interests .column-read_time { width: 5%; }
                 .post-type-my-interests .column-date { width: 10%; }
@@ -254,7 +254,7 @@ function er_initialize_custom_admin_columns() {
                 .post-type-my-traits .column-featured_image { width: 8%; }
                 .post-type-my-traits .column-title { width: 12%; }
                 .post-type-my-traits .column-types { width: 10%; }
-                .post-type-my-traits .column-custom_excerpt { width: 30%; }
+                .post-type-my-traits .column-custom_excerpt { width: 24%; }
                 .post-type-my-traits .column-word_count { width: 6%; }
                 .post-type-my-traits .column-read_time { width: 5%; }
                 .post-type-my-traits .column-date { width: 10%; }
@@ -265,7 +265,7 @@ function er_initialize_custom_admin_columns() {
                 .post-type-my-quotes .column-title { width: 12%; }
                 .post-type-my-quotes .column-q_related { width: 10%; }
                 .post-type-my-quotes .column-groups { width: 8%; }
-                .post-type-my-quotes .column-custom_excerpt { width: 25%; }
+                .post-type-my-quotes .column-custom_excerpt { width: 19%; }
                 .post-type-my-quotes .column-word_count { width: 5%; }
                 .post-type-my-quotes .column-read_time { width: 5%; }
                 .post-type-my-quotes .column-date { width: 10%; }
@@ -273,6 +273,7 @@ function er_initialize_custom_admin_columns() {
         ];
         echo '<style>' . ($styles[$typenow] ?? '') . '
             .wp-list-table { width: 100%; }
+            .wp-list-table .column-er_language { width: 6%; } /* all types; taken from the excerpt */
         </style>';
     });
 
