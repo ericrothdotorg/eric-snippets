@@ -140,7 +140,28 @@ function er_sj_items() {
 	set_transient( 'er_sj_items_v5', $items, 12 * HOUR_IN_SECONDS );
 	return $items;
 }
-function er_sj_flush() { delete_transient( 'er_sj_items_v5' ); }
+function er_sj_flush() { delete_transient( 'er_sj_items_v5' ); delete_transient( 'er_sj_links' ); }
+
+// Each topic's own page ("post|Karma" => /category/karma/), so the cards can link a topic.
+// Cached like the places, cleared with them.
+function er_sj_topic_links() {
+	$links = get_transient( 'er_sj_links' );
+	if ( is_array( $links ) ) {
+		return $links;
+	}
+	$links = array();
+	foreach ( er_sj_types() as $type => $t ) {
+		$terms = get_terms( array( 'taxonomy' => $t[1], 'hide_empty' => true ) );
+		foreach ( is_wp_error( $terms ) ? array() : $terms as $term ) {
+			$url = get_term_link( $term );
+			if ( ! is_wp_error( $url ) ) {
+				$links[ $type . '|' . html_entity_decode( $term->name, ENT_QUOTES, 'UTF-8' ) ] = wp_make_link_relative( $url );
+			}
+		}
+	}
+	set_transient( 'er_sj_links', $links, 12 * HOUR_IN_SECONDS );
+	return $links;
+}
 add_action( 'save_post', 'er_sj_flush' );
 add_action( 'deleted_post', 'er_sj_flush' );
 add_action( 'set_object_terms', 'er_sj_flush' );
@@ -347,7 +368,7 @@ function er_sj_data() {
 		}
 		set_transient( 'er_sj_hist', $hist, 15 * MINUTE_IN_SECONDS );
 	}
-	wp_send_json_success( array( 'items' => er_sj_items(), 'hist' => (object) $hist ) );
+	wp_send_json_success( array( 'items' => er_sj_items(), 'hist' => (object) $hist, 'links' => (object) er_sj_topic_links() ) );
 }
 add_action( 'wp_ajax_er_sj_data', 'er_sj_data' );
 add_action( 'wp_ajax_nopriv_er_sj_data', 'er_sj_data' );
@@ -377,15 +398,20 @@ add_action( 'wp_ajax_nopriv_er_sj_qr', 'er_sj_qr' );
 //   [er_sj_list]                     the places of the selected tab as a list of links
 //                                    (e.g. inside a Details block) - the way into the
 //                                    sky for keyboard and screen reader users
-//   [er_sj_stat show="…"]            one live number, usable inside any text:
-//                                    percent, explored, total, ahead, average, complete
+//   [er_sj_stat show="…"]            one live value, usable inside any text:
+//                                    percent, explored, total - and for the four
+//                                    achievement cards: level / level-note,
+//                                    completed / completed-note, favourite /
+//                                    favourite-note, almost / almost-note
 //                                    size="big": large, on its own line (e.g. in a column)
+// The achievement cards never show a number about other visitors: the level only
+// says where a visitor stands among them ("among the top 5%").
 //   [er_sj_qr_code]                  where the QR code appears (optional; without it,
 //                                    right below the QR button)
 // Button feedback (e.g. "Link copied ✓") shows on the button itself for 3 seconds.
 // Buttons: any Button block linking to #journey-new, #journey-link or #journey-qr.
 // Cards: any block with the class er-sj-card (Advanced → Additional CSS class),
-// e.g. the Columns holding the three numbers - styled as the FAQ cards.
+// e.g. the Columns holding the four achievement cards - styled as the FAQ cards.
 
 // The few words the script itself writes, all in one place.
 function er_sj_texts() {
@@ -408,6 +434,21 @@ function er_sj_texts() {
 		'restoredNone' => 'Your personal link holds nothing new for this browser.',
 		'everywhere'   => 'You\'ve read them all!',
 		'failed'       => 'Your progress could not be loaded right now. Please try again later.',
+		// Achievement cards: levels by where a visitor stands among all visitors of the last 90 days
+		'levels'       => array( 'Newcomer', 'Explorer', 'Pathfinder', 'Voyager', 'Legend' ),
+		'lvIn1'        => 'in 1 more entry',                  // after the next level, in bold: "Explorer in 1 more entry"
+		'lvInN'        => 'in %d more entries',
+		'lvTop'        => 'among the top %s of visitors',
+		'lvLegend'     => 'you\'ve read more than anyone',
+		'done0'        => 'topics completed – your first one is waiting',
+		'done1'        => 'topic completed',
+		'doneN'        => 'topics completed',
+		'fav1'         => 'your favourite topic · 1 entry',
+		'favN'         => 'your favourite topic · %d entries',
+		'favNone'      => 'your favourite topic shows up here',
+		'near1'        => 'almost there: 1 entry to go · next:',
+		'nearN'        => 'almost there: %d entries to go · next:',
+		'nearAll'      => 'you\'ve read them all!',
 		'footRead'     => 'Read %1$d of %2$d',  // footer line
 		'footAll'      => 'Read all %d',
 		'footIn'       => 'in %s',
@@ -448,6 +489,9 @@ add_shortcode( 'er_sj_stat', function ( $atts ) {
 	er_sj_mark();
 	$a = shortcode_atts( array( 'show' => 'percent', 'size' => '' ), $atts );
 	$cls = 'big' === $a['size'] ? 'er-sj-stat is-big' : 'er-sj-stat'; // size="big": a large number on its own line
+	if ( '-note' === substr( $a['show'], -5 ) ) {
+		$cls .= ' is-note'; // the line under a card's value: its own line, italic
+	}
 	return '<span class="' . $cls . '" data-sj-stat="' . esc_attr( $a['show'] ) . '">—</span>';
 } );
 
@@ -515,7 +559,8 @@ add_action( 'wp_footer', function () {
 		body.dark-mode .er-sj-card:hover {background: var(--color-6);}
 		.er-sj-card > * {margin-block: 0;}
 		.er-sj-card > * + * {margin-top: 0.25rem;}
-		.er-sj-stat.is-big {display: block; font-size: var(--er-fs-xxl); font-weight: var(--er-fw-bold); line-height: 1.2; color: var(--color-4);}
+		.er-sj-stat.is-big {display: block; font-size: var(--er-fs-xl); font-weight: var(--er-fw-bold); line-height: 1.2; color: var(--color-4);} /* xl: long topic names wrap between words */
+		.er-sj-stat.is-note {display: block; font-style: italic; text-align: left;} /* the note under a card's value: no justified gaps */
 		body.dark-mode .er-sj-stat.is-big {color: var(--color-7);}
 		.er-sj-msg {margin: 0.5rem 0 0; font-size: var(--er-fs-sm); color: var(--sj-head);}
 		.er-sj-msg:empty {display: none;}
@@ -531,7 +576,7 @@ add_action( 'wp_footer', function () {
     var HUES = ['#2283d8', '#8b7fe8', '#2bb38a', '#e0679a', '#d08a2c', '#4aa3f0', '#6fd0b0', '#c59bf2', '#f0a35c', '#5cc1d6', '#e8807a', '#9fcf5a', '#7d9cf0', '#d9b44a'];
     var NS = 'http://www.w3.org/2000/svg';
     var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    var items = [], byId = {}, seen = {}, hist = {}, current = 'page';
+    var items = [], byId = {}, seen = {}, hist = {}, links = {}, current = 'page';
 
     // The building blocks are optional: each part only runs where its block is on the page
     var P = document.querySelector('.er-sj-progress');
@@ -647,28 +692,83 @@ add_action( 'wp_footer', function () {
         return { per: c, all: all, done: done };
     }
     // Fellow explorers: real visitors of the last 90 days
-    function stats(c) {
-        var visitors = 0, below = 0, sum = 0, full = 0;
-        Object.keys(hist).forEach(function (k) {
-            var n = hist[k], e = Math.min(+k, c.all);
-            visitors += n; sum += e * n;
-            if (e < c.done) below += n;
-            if (e >= c.all) full += n;
+    // Level: where this visitor stands among the visitors of the last 90 days. Only the
+    // standing is shown ("among the top 5%"), never a number about the others.
+    function level(own) {
+        var L = T.levels, visitors = 0, max = 0;
+        Object.keys(hist).forEach(function (k) { visitors += hist[k]; max = Math.max(max, +k); });
+        function share(n) { // share of visitors who read fewer than n entries, in %
+            var below = 0;
+            Object.keys(hist).forEach(function (k) { if (+k < n) below += hist[k]; });
+            return visitors ? below / visitors * 100 : 100;
+        }
+        function rank(n) { // 0 Newcomer … 4 Legend
+            var p = share(n);
+            return p < 50 ? 0 : (p >= 99 && n >= max ? 4 : (p >= 99 ? 3 : (p >= 90 ? 2 : 1)));
+        }
+        var now = rank(own), need = own + 1;
+        while (need <= max + 1 && rank(need) <= now) need++;
+        var more = need - own, up = rank(need);
+        if (now === 4) return [L[4], T.lvLegend];
+        var next = [{ b: L[up] }, ' ' + (more === 1 ? T.lvIn1 : T.lvInN.replace('%d', more))]; // "Explorer in 1 more entry"
+        if (now === 0) return [L[0], next];
+        var top = [1, 2, 5, 10, 25, 50].filter(function (x) { return x >= 100 - share(own); })[0];
+        return [L[now], [T.lvTop.replace('%s', top + '%') + ' · '].concat(next)];
+    }
+    // Topics: one per type and topic (Personal pages and Personal quotes are two). In the
+    // same order as the footer line: pages along the page tree, the rest by publication.
+    function topics() {
+        var map = {};
+        items.forEach(function (it) {
+            it.g.forEach(function (g) {
+                var k = it.y + '|' + g;
+                (map[k] = map[k] || { name: g, url: links[k], list: [] }).list.push(it);
+            });
         });
+        return Object.keys(map).map(function (k) {
+            var t = map[k];
+            if (t.list[0].y === 'page') t.list.sort(function (a, b) { return a.u < b.u ? -1 : 1; });
+            t.read = t.list.filter(function (it) { return seen[it.i]; }).length;
+            t.left = t.list.length - t.read;
+            return t;
+        });
+    }
+    function achievements(c) {
+        var lv = level(c.done), all = topics(), done = 0, fav = null, near = null;
+        all.forEach(function (t) {
+            if (!t.left) done++;
+            if (t.read && (!fav || t.read > fav.read || (t.read === fav.read && t.left < fav.left))) fav = t;
+            if (t.left && (!near || (t.read > 0) > (near.read > 0) || ((t.read > 0) === (near.read > 0) && t.left < near.left))) near = t;
+        });
+        var next = near && near.list.filter(function (it) { return !seen[it.i]; })[0];
         return {
-            percent: pct(c.done, c.all),
-            explored: String(c.done),
-            total: String(c.all),
-            ahead: visitors ? pct(below, visitors) : '—',
-            average: visitors ? pct(sum / visitors, c.all) : '—',
-            complete: String(full)
+            level: lv[0], 'level-note': lv[1],
+            completed: String(done), 'completed-note': done ? (done === 1 ? T.done1 : T.doneN) : T.done0,
+            favourite: fav ? (fav.url ? [{ a: [fav.url, fav.name] }] : fav.name) : '—', 'favourite-note': fav ? (fav.read === 1 ? T.fav1 : T.favN.replace('%d', fav.read)) : T.favNone,
+            almost: near ? (near.url ? [{ a: [near.url, near.name] }] : near.name) : '✓',
+            'almost-note': near ? [(near.left === 1 ? T.near1 : T.nearN.replace('%d', near.left)) + ' ', { a: [next.u, next.t] }] : T.nearAll
         };
+    }
+    function stats(c) {
+        var s = achievements(c);
+        s.percent = pct(c.done, c.all);
+        s.explored = String(c.done);
+        s.total = String(c.all);
+        return s;
     }
     function numbers() {
         var c = counts(), s = stats(c);
         document.querySelectorAll('[data-sj-stat]').forEach(function (e) {
             var v = s[e.getAttribute('data-sj-stat')];
-            if (v !== undefined) e.textContent = v;
+            if (v === undefined) return;
+            e.textContent = '';
+            // A value is a text, or a list of parts: texts, { b: bold }, { a: [href, text] }
+            (Array.isArray(v) ? v : [v]).forEach(function (part) {
+                var node = part;
+                if (part && part.b) { node = document.createElement('b'); node.textContent = part.b; }
+                else if (part && part.a) { node = document.createElement('a'); node.href = part.a[0]; node.textContent = part.a[1]; }
+                e.append(node);
+            });
         });
         if (P) progress(c);
         return c;
@@ -972,6 +1072,7 @@ add_action( 'wp_footer', function () {
     function start(data) {
         items = data.items || [];
         hist = data.hist || {};
+        links = data.links || {};
         items.forEach(function (it) { byId[it.i] = it; });
         restore();
         load().forEach(function (id) { if (byId[id]) seen[id] = true; });
