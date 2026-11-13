@@ -447,7 +447,7 @@ add_action( 'add_meta_boxes_page', function () {
 			'option_none_value' => '0',
 			'exclude'           => array( $post->ID ),
 		) );
-		echo '<p class="description">' . esc_html__( 'Only on German pages: the English page this one translates. Drives the flags, the language redirect and hreflang.', 'textdomain' ) . '</p>';
+		echo '<p class="description">' . esc_html__( 'German pages only: the English original.', 'textdomain' ) . '</p>';
 	}, 'page', 'side' );
 } );
 add_action( 'save_post_page', function ( $post_id ) {
