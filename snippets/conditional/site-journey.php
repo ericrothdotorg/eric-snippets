@@ -44,7 +44,7 @@
 
 defined( 'ER_SJ_DAYS' ) || define( 'ER_SJ_DAYS', 90 ); // same window as Visitor Tracking
 defined( 'ER_SJ_PAGE' ) || define( 'ER_SJ_PAGE', 162357 ); // the Site Journey page (linked from the footer line)
-defined( 'ER_SJ_TOP' ) || define( 'ER_SJ_TOP', 8 ); // "most read" places per type: gold in the sky, listed by [er_sj_popular]
+defined( 'ER_SJ_TOP' ) || define( 'ER_SJ_TOP', 10 ); // "most read" places per type: gold in the sky, listed by [er_sj_popular]
 
 // The browser list of the current user: logged-in users keep their own, which no beacon counts
 function er_sj_key() {
@@ -470,7 +470,7 @@ add_action( 'wp_ajax_nopriv_er_sj_qr', 'er_sj_qr' );
 //                                    (e.g. inside a Details block) - the way into the
 //                                    sky for keyboard and screen reader users
 //   [er_sj_popular]                  the ER_SJ_TOP most read places of the selected tab,
-//                                    in the list's columns; on tabs without a ranking (and
+//                                    in five columns; on tabs without a ranking (and
 //                                    without World Map) hidden together with the Group
 //                                    block around it, so its heading goes too
 //   [er_sj_countries count="…" skip="…"]   the explorers' countries, most first, in the
@@ -646,7 +646,7 @@ add_action( 'wp_footer', function () {
 		.er-sj-views {display: flex; gap: 8px; margin-left: auto;}
 		:is(.er-sj-tab, .er-sj-link):focus-visible {outline: var(--a11y-focus-width) solid var(--a11y-focus-color); outline-offset: var(--a11y-focus-offset);}
 		:is(.er-sj-listbox, .er-sj-popular) {columns: 4 180px; column-gap: 24px; font-size: var(--er-fs-sm);}
-		.er-sj-popular {margin: 0; padding-left: 1.1em;}
+		.er-sj-popular {columns: 5 180px; margin: 0; padding-left: 1.1em;} /* ER_SJ_TOP 10: two per column */
 		.er-sj-popular li {break-inside: avoid;}
 		.er-sj-group {break-inside: avoid; padding-bottom: 0.75rem;}
 		.er-sj-listbox h3 {font-size: var(--er-fs-sm); margin: 0 0 0.25rem;}
@@ -977,7 +977,7 @@ add_action( 'wp_footer', function () {
                     var sep = document.createElement('span');
                     sep.className = 'tag-separator';
                     sep.textContent = '|';
-                    box.append(' ', sep, ' ');
+                    box.append('\u00a0', sep, ' '); // no break before "|": a line never starts with it
                 }
                 var n = document.createElement('b');
                 n.textContent = '(' + c[1] + ')';
