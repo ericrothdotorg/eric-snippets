@@ -291,7 +291,7 @@ add_action( 'wp_footer', function () {
 		);
 		if (next) {
 			var sep = document.createElement('span'); sep.className = 'er-sj-sep'; sep.textContent = '·'; sep.setAttribute('aria-hidden', 'true');
-			line.append(sep, T.footNext + ' ', link(next[1], next[2] + ' →'));
+			line.append(sep, T.footNext + ' ', link(next[1], next[2]));
 		}
 		var row = document.createElement('div');
 		row.className = 'er-sj-crumbrow';
