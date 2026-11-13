@@ -349,7 +349,7 @@ function er_merged_tag_cloud_shortcode( $atts ) {
     $atts = shortcode_atts([
         'taxonomies' => 'things, topics, interest_tag, groups, types, category, post_tag',
         'number'     => 45,
-        'size'       => '14px',
+        'size'       => '',        // empty: the size of where the cloud sits (footer: Eric Companion CSS)
         'class'      => 'is-style-default',
         'style'      => 'text-align: center;',
         'separator'  => '',
@@ -370,9 +370,9 @@ function er_merged_tag_cloud_shortcode( $atts ) {
         $link = get_term_link( $term );
         if ( is_wp_error( $link ) ) continue;
         $links[] = sprintf(
-            '<a href="%s" style="font-size: %s;" title="%s (%d)">%s <span class="tag-count">(%d)</span></a>',
+            '<a href="%s"%s title="%s (%d)">%s <span class="tag-count">(%d)</span></a>',
             esc_url( $link ),
-            esc_attr( $atts['size'] ),
+            $atts['size'] !== '' ? ' style="font-size: ' . esc_attr( $atts['size'] ) . ';"' : '',
             esc_html( $term->name ),    // Hover Tooltip - Name
             $term->count,               // Hover Tooltip - Count
             esc_html( $term->name ),    // Visible on Page - Name
