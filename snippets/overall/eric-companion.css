@@ -172,7 +172,6 @@ body.dark-mode .details-accordion summary:focus {background: var(--color-6);}
 .tag-cloud a:focus:not(:focus-visible),
 .er-archive-filter .er-filter-tab:focus:not(:focus-visible) {outline: none;}
 .left-align {text-align: left;}
-.tag-cloud-footer a {font-size: var(--er-fs-sm) !important;}
 .tag-cloud-footer .tag-separator {color: var(--color-9); padding-left: 5px; padding-right: 5px;}
 .tag-cloud-footer .tag-count {font-weight: var(--er-fw-normal); font-style: italic;}
 body.dark-mode .tag-cloud a,
@@ -588,7 +587,6 @@ footer.flex-container {max-width: var(--er-wide-row); margin-inline: auto; colum
 .er-breadcrumbs li {display: inline-flex; align-items: center;}
 .er-breadcrumbs a,
 .er-breadcrumbs [aria-current="page"] {
-	font-size: var(--er-fs-xs);
 	text-transform: uppercase;
 	letter-spacing: var(--er-ls-label);
 }
@@ -598,7 +596,7 @@ footer.flex-container {max-width: var(--er-wide-row); margin-inline: auto; colum
 .er-breadcrumb-separator {margin-inline: 8px; color: var(--color-9);}
 
 /* Space between the hero description (above) and the breadcrumb trail. */
-.er-hero-section .er-breadcrumbs {margin-top: 1.25rem;}
+.er-hero-section .er-breadcrumbs {margin-top: 1.25rem; font-size: var(--er-fs-xs);} /* the hero sets its breadcrumb size; the footer's comes from the footer */
 
 /* Dark contexts (hero / footer): keep blue links; current page flips light for contrast. */
 .er-hero-section.has-background-dim .er-breadcrumbs [aria-current="page"],
@@ -610,6 +608,9 @@ footer.wp-block-template-part .er-breadcrumbs {
 	margin-inline: auto;
 	margin-bottom: 25px;
 }
+
+/* Footer: one text size, set here only; everything inside inherits it (columns, breadcrumbs, tag cloud, Site Journey line) */
+footer.wp-block-template-part {font-size: var(--er-fs-sm);}
 
 /* ============================================================
    F. SIDEBAR DESIGN  (carded text sections, stats hero, author tiles)
