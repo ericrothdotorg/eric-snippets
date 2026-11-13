@@ -1018,7 +1018,9 @@ add_shortcode( 'er_cpt_archive', function( $atts ) {
 					esc_html( $er_label )
 				);
 				echo '<div style="margin-bottom: var(--wp--preset--spacing--medium)">';
-				echo do_shortcode( '[display-taxonomies taxonomy="' . $taxonomy . '" include_id="' . implode( ',', $er_other_ids ) . '" show_count="true" order="ASC" orderby="title" image_size="large" wrapper="div" wrapper_class="display-posts-listing slideshow-multiple-items-4 daneden-slideInUp"]' );
+				// As Related: 4 or fewer → a static row (a slider would only repeat them), more → the slider
+				$er_layout = count( $er_other_ids ) > 4 ? 'slideshow-multiple-items-4' : 'is-layout-grid';
+				echo do_shortcode( '[display-taxonomies taxonomy="' . $taxonomy . '" include_id="' . implode( ',', $er_other_ids ) . '" show_count="true" order="ASC" orderby="title" image_size="large" wrapper="div" wrapper_class="display-posts-listing ' . $er_layout . ' daneden-slideInUp"]' );
 				echo '</div>';
 			}
 		}
