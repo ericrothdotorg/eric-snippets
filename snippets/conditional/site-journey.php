@@ -17,7 +17,8 @@
  *   from normal blocks plus the building blocks below ([er_sj_progress],
  *   [er_sj_sky], [er_sj_list], [er_sj_stat], [er_sj_qr_code]): progress,
  *   fellow explorers, one sky per content type, and a journey link / QR code
- *   to continue on another device.
+ *   to continue on another device. On every other place, a line in the footer
+ *   shows the progress in that place's topic and links the next unread one.
  *
  * OWNS
  *   Table er_journey (visitor_id, explored, updated_at): created here if
@@ -34,6 +35,7 @@
  * ========================================================================== */
 
 defined( 'ER_SJ_DAYS' ) || define( 'ER_SJ_DAYS', 90 ); // same window as Visitor Tracking
+defined( 'ER_SJ_PAGE' ) || define( 'ER_SJ_PAGE', 162357 ); // the Site Journey page (linked from the footer line)
 
 function er_sj_excluded() {
 	return function_exists( 'er_uncounted_ids' ) ? er_uncounted_ids() : array(); // owner: Eric Companion PHP
@@ -179,23 +181,126 @@ add_action( 'er_sj_daily_cleanup', function () {
 // RECORDING (every front-end page)
 // ======================================
 
-// Only on the places themselves (the stars of the sky): pages, posts, interests,
-// quotes and traits that are not excluded. Front page, archives, search, 404
-// and logged-in users get nothing, so their own browsing never counts.
-add_action( 'wp_footer', function () {
+// The place on screen: pages, posts, interests, quotes and traits that are not
+// excluded. Archives, search, 404 and logged-in users get 0, so their own
+// browsing never counts. Cached per request (recording and footer line).
+function er_sj_place() {
+	static $id = null;
+	if ( null !== $id ) {
+		return $id;
+	}
+	$id = 0;
 	// The posts page (My Blog) is an archive for WordPress, but a place on the journey
 	$posts_page = is_home() && ! is_front_page() && get_option( 'page_for_posts' );
 	if ( is_user_logged_in() || ! ( $posts_page || is_singular( array_keys( er_sj_types() ) ) ) || ! empty( $GLOBALS['er_synthetic_page'] ) ) {
-		return;
+		return $id;
 	}
-	$id = $posts_page ? (int) get_option( 'page_for_posts' ) : (int) get_queried_object_id();
-	if ( ! $id || in_array( $id, er_sj_excluded(), true ) ) {
+	$place = $posts_page ? (int) get_option( 'page_for_posts' ) : (int) get_queried_object_id();
+	if ( $place && ! in_array( $place, er_sj_excluded(), true ) ) {
+		$id = $place;
+	}
+	return $id;
+}
+
+add_action( 'wp_footer', function () {
+	$id = er_sj_place();
+	if ( ! $id ) {
 		return;
 	}
 	echo '<script>(function(){var k="er_journey",v=[];try{v=JSON.parse(localStorage.getItem(k))||[]}catch(e){}'
 		. 'if(!Array.isArray(v))v=[];var id=' . $id . ';if(v.indexOf(id)<0){v.push(id);try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}'
 		. 'window.erJourneyCount=function(){return v.length}})();</script>' . "\n";
 }, 20 );
+
+// ======================================
+// FOOTER LINE (every place except the Site Journey page)
+// ======================================
+
+// On the footer's breadcrumb row, right-aligned: "Read 2 of 11 in Karma · Next: Deeds →".
+// "Read 2 of 11" opens the Site Journey page, "Deeds" the next unread place of the same
+// topic; a finished topic reads "Read all 11 in Karma ✓". The topic is the one the
+// breadcrumb shows: the first term, on pages the one named like their top-level page.
+// Pages without a topic get no line. Runs after the recording, so this page counts.
+add_action( 'wp_footer', function () {
+	$id = er_sj_place();
+	if ( ! $id || ER_SJ_PAGE === $id ) {
+		return;
+	}
+	$items = er_sj_items();
+	$self  = null;
+	foreach ( $items as $it ) {
+		if ( $it['i'] === $id ) {
+			$self = $it;
+			break;
+		}
+	}
+	if ( ! $self || ! $self['g'] ) {
+		return;
+	}
+	$topic = $self['g'][0];
+	if ( 'page' === $self['y'] ) {
+		$anc = get_post_ancestors( $id );
+		$top = html_entity_decode( get_the_title( $anc ? end( $anc ) : $id ), ENT_QUOTES, 'UTF-8' );
+		if ( in_array( $top, $self['g'], true ) ) {
+			$topic = $top;
+		}
+	}
+	$places = array();
+	foreach ( $items as $it ) {
+		if ( $it['y'] === $self['y'] && in_array( $topic, $it['g'], true ) ) {
+			$places[] = array( $it['i'], $it['u'], $it['t'] );
+		}
+	}
+	$data = array(
+		'self'   => $id,
+		'topic'  => $topic,
+		'places' => $places, // in site order: the next unread one comes after this page
+		'page'   => wp_make_link_relative( get_permalink( ER_SJ_PAGE ) ),
+		'texts'  => array_intersect_key( er_sj_texts(), array_flip( array( 'footRead', 'footAll', 'footIn', 'footNext' ) ) ),
+	);
+	?>
+	<style>
+		.er-sj-crumbrow {display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 6px 24px; max-width: var(--er-wide-row); margin: 0 auto 25px;}
+		footer.wp-block-template-part .er-sj-crumbrow > .er-breadcrumbs {max-width: none; margin: 0;} /* the row takes over width and spacing */
+		.er-sj-line {margin: 0; color: var(--color-8);} /* size: the footer's own (Eric Companion CSS) */
+		.er-sj-line .er-sj-sep {margin-inline: 6px; color: var(--color-9);}
+	</style>
+	<script>
+	(function () {
+		var d = <?php echo wp_json_encode( $data, JSON_HEX_TAG | JSON_UNESCAPED_UNICODE ); ?>, T = d.texts;
+		var crumbs = document.querySelector('footer.wp-block-template-part .er-breadcrumbs');
+		if (!crumbs) return;
+		var seen = [];
+		try { seen = JSON.parse(localStorage.getItem('er_journey')) || []; } catch (e) {}
+		if (!Array.isArray(seen)) seen = [];
+		var read = d.places.filter(function (p) { return seen.indexOf(p[0]) >= 0; }).length;
+		var at = 0;
+		d.places.forEach(function (p, i) { if (p[0] === d.self) at = i; });
+		var next = null;
+		for (var k = 1; k < d.places.length && !next; k++) {
+			var p = d.places[(at + k) % d.places.length];
+			if (seen.indexOf(p[0]) < 0) next = p;
+		}
+		function link(href, text) { var a = document.createElement('a'); a.href = href; a.textContent = text; return a; }
+		var line = document.createElement('p');
+		line.className = 'er-sj-line';
+		var done = read >= d.places.length;
+		line.append(
+			link(d.page, done ? T.footAll.replace('%d', d.places.length) : T.footRead.replace('%1$d', read).replace('%2$d', d.places.length)),
+			' ' + T.footIn.replace('%s', d.topic) + (done ? ' ✓' : '')
+		);
+		if (next) {
+			var sep = document.createElement('span'); sep.className = 'er-sj-sep'; sep.textContent = '·'; sep.setAttribute('aria-hidden', 'true');
+			line.append(sep, T.footNext + ' ', link(next[1], next[2] + ' →'));
+		}
+		var row = document.createElement('div');
+		row.className = 'er-sj-crumbrow';
+		crumbs.before(row);
+		row.append(crumbs, line);
+	})();
+	</script>
+	<?php
+}, 22 );
 
 // ======================================
 // DATA FOR THE PAGE (admin-ajax, GET, read-only)
@@ -264,16 +369,20 @@ function er_sj_texts() {
 		'of'           => '%1$d of %2$d',
 		'copied'       => 'Link copied ✓',
 		'selectCopy'   => 'Copy the link below',
-		'linkLabel'    => 'Your journey link',
-		'visited'      => 'visited',
+		'linkLabel'    => 'Your personal link',
+		'visited'      => 'read',
 		'hideQr'       => 'Hide QR Code',
-		'scan'         => 'Scan with your other device to continue your journey there.',
-		'qrAlt'        => 'QR code of your journey link',
+		'scan'         => 'Scan with your other device to continue there.',
+		'qrAlt'        => 'QR code of your personal link',
 		'qrFailed'     => 'QR code not available',
-		'restored'     => 'Welcome back! %d places from your journey link were added here.',
-		'restoredNone' => 'Your journey link holds nothing new for this browser.',
-		'everywhere'   => 'You\'ve seen it all!',
-		'failed'       => 'The journey could not be loaded right now. Please try again later.',
+		'restored'     => 'Welcome back! %d pages from your personal link were added here.',
+		'restoredNone' => 'Your personal link holds nothing new for this browser.',
+		'everywhere'   => 'You\'ve read them all!',
+		'failed'       => 'Your progress could not be loaded right now. Please try again later.',
+		'footRead'     => 'Read %1$d of %2$d',  // footer line
+		'footAll'      => 'Read all %d',
+		'footIn'       => 'in %s',
+		'footNext'     => 'Next:',
 	);
 }
 
@@ -291,7 +400,7 @@ add_shortcode( 'er_sj_progress', function () {
 
 add_shortcode( 'er_sj_sky', function ( $atts ) {
 	er_sj_mark();
-	$a = shortcode_atts( array( 'label' => 'Choose a sky:', 'visited' => 'visited', 'notyet' => 'not yet' ), $atts );
+	$a = shortcode_atts( array( 'label' => 'Choose a type:', 'visited' => 'read', 'notyet' => 'unread' ), $atts );
 	return '<div class="er-sj-skywrap" data-visited="' . esc_attr( $a['visited'] ) . '" data-notyet="' . esc_attr( $a['notyet'] ) . '">'
 		. '<div class="er-sj-skybox">'
 		. '<div class="er-sj-tabbar"><span class="er-sj-tablabel" id="er-sj-tablabel">' . esc_html( $a['label'] ) . '</span>'
