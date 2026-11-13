@@ -510,7 +510,7 @@ add_action( 'wp_footer', function () {
 	if ( empty( $GLOBALS['er_sj_page'] ) ) {
 		return;
 	}
-	$cfg = array( 'ajax' => admin_url( 'admin-ajax.php' ), 'texts' => er_sj_texts() );
+	$cfg = array( 'ajax' => admin_url( 'admin-ajax.php' ), 'self' => er_sj_place(), 'texts' => er_sj_texts() ); // self: this page, if it is a place
 	?>
 	<style>
 		:is(.er-sj-progress, .er-sj-skywrap, .er-sj-msg) {--sj-card: var(--color-8); --sj-line: var(--color-5); --sj-head: var(--color-4);}
@@ -741,7 +741,16 @@ add_action( 'wp_footer', function () {
             if (t.read && (!fav || t.read > fav.read || (t.read === fav.read && t.left < fav.left))) fav = t;
             if (t.left && (!near || (t.read > 0) > (near.read > 0) || ((t.read > 0) === (near.read > 0) && t.left < near.left))) near = t;
         });
-        var next = near && near.list.filter(function (it) { return !seen[it.i]; })[0];
+        // The next unread entry by the footer line's rule: after this page if it belongs to the
+        // topic, else from the topic's start - so card and footer always name the same entry
+        var next = null;
+        if (near) {
+            var at = near.list.map(function (it) { return it.i; }).indexOf(CFG.self);
+            for (var k = 1; k <= near.list.length && !next; k++) {
+                var cand = near.list[(at + k + near.list.length) % near.list.length];
+                if (!seen[cand.i]) next = cand;
+            }
+        }
         return {
             level: lv[0], 'level-note': lv[1],
             completed: String(done), 'completed-note': done ? (done === 1 ? T.done1 : T.doneN) : T.done0,
