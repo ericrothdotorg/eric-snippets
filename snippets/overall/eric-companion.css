@@ -149,9 +149,10 @@ body.dark-mode .details-accordion summary {background: var(--color-10); border-c
 body.dark-mode .details-accordion summary:hover,
 body.dark-mode .details-accordion summary:focus {background: var(--color-6);}
 
-/* ---- B2. Tag-cloud pills (shared with the archive filter tabs in section E) ---- */
+/* ---- B2. Tag-cloud pills (shared with the archive filter tabs in section E and Site Journey's country pills) ---- */
 .tag-cloud a,
-.er-archive-filter .er-filter-tab {
+.er-archive-filter .er-filter-tab,
+.er-sj-countries span {
 	background: var(--color-8);
 	font-weight: var(--er-fw-normal);
 	line-height: 1.75;
@@ -175,7 +176,8 @@ body.dark-mode .details-accordion summary:focus {background: var(--color-6);}
 .tag-cloud-footer .tag-separator {color: var(--color-9); padding-left: 5px; padding-right: 5px;}
 .tag-cloud-footer .tag-count {font-weight: var(--er-fw-normal); font-style: italic;}
 body.dark-mode .tag-cloud a,
-body.dark-mode .er-archive-filter .er-filter-tab {background: var(--color-10);}
+body.dark-mode .er-archive-filter .er-filter-tab,
+body.dark-mode .er-sj-countries span {background: var(--color-10);}
 body.dark-mode .tag-cloud a:hover,
 body.dark-mode .er-archive-filter .er-filter-tab:hover {background: none;}
 
