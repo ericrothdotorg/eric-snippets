@@ -50,6 +50,41 @@ function er_page_register_taxonomy() {
 add_action( 'init', 'er_page_register_taxonomy', 0 );
 
 // =======================================
+// REGISTER TAXONOMY: LANGUAGE (all content types)
+// =======================================
+
+// One checkbox "German" in the editor (panel "Language"), in Quick Edit and in Bulk
+// Edit. Not a topic: no archive, no URL, no tag cloud. What a tick means is defined
+// in one place, Eric Companion PHP 1d (German content). The term is created once.
+function er_language_register_taxonomy() {
+    register_taxonomy( 'er_language', array( 'page', 'post', 'my-interests', 'my-quotes', 'my-traits' ), array(
+        'labels'             => array(
+            'name'          => esc_html__( 'Language', 'textdomain' ),
+            'singular_name' => esc_html__( 'Language', 'textdomain' ),
+            'menu_name'     => esc_html__( 'Language', 'textdomain' ),
+        ),
+        'hierarchical'       => true,  // checkboxes, not a tag field
+        'public'             => false,
+        'publicly_queryable' => false,
+        'rewrite'            => false,
+        'query_var'          => false,
+        'show_ui'            => true,
+        'show_in_menu'       => false, // the one term is created here; nothing to manage
+        'show_in_rest'       => true,  // needed for the panel in the block editor
+        'show_admin_column'  => false, // Admin Columns shows it
+        'show_in_nav_menus'  => false,
+        'show_tagcloud'      => false,
+    ) );
+    if ( get_option( 'er_language_schema' ) !== '1' ) {
+        if ( ! term_exists( 'german', 'er_language' ) ) {
+            wp_insert_term( 'German', 'er_language', array( 'slug' => 'german' ) );
+        }
+        update_option( 'er_language_schema', '1' );
+    }
+}
+add_action( 'init', 'er_language_register_taxonomy', 0 );
+
+// =======================================
 // REGISTER TAXONOMY: MY INTERESTS
 // =======================================
 
