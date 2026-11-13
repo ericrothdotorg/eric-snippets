@@ -576,6 +576,7 @@ footer.flex-container {max-width: var(--er-wide-row); margin-inline: auto; colum
 .er-archive-filter .er-filter-tab.er-active {background: none; color: var(--er-link-hover);}
 
 /* ---- Breadcrumbs (inline trail: home icon, chevrons, links). One wrapped row, uppercase, small, muted chevrons; dark + light contexts. ---- */
+.er-breadcrumbs {font-size: var(--er-fs-xs);} /* the same small size in the hero and the footer */
 .er-breadcrumbs ol {
 	list-style: none;
 	display: flex;
@@ -596,7 +597,7 @@ footer.flex-container {max-width: var(--er-wide-row); margin-inline: auto; colum
 .er-breadcrumb-separator {margin-inline: 8px; color: var(--color-9);}
 
 /* Space between the hero description (above) and the breadcrumb trail. */
-.er-hero-section .er-breadcrumbs {margin-top: 1.25rem; font-size: var(--er-fs-xs);} /* the hero sets its breadcrumb size; the footer's comes from the footer */
+.er-hero-section .er-breadcrumbs {margin-top: 1.25rem;}
 
 /* Dark contexts (hero / footer): keep blue links; current page flips light for contrast. */
 .er-hero-section.has-background-dim .er-breadcrumbs [aria-current="page"],
@@ -609,7 +610,7 @@ footer.wp-block-template-part .er-breadcrumbs {
 	margin-bottom: 25px;
 }
 
-/* Footer: one text size, set here only; everything inside inherits it (columns, breadcrumbs, tag cloud, Site Journey line) */
+/* Footer: one text size, set here only; everything inside inherits it (columns, tag cloud, Site Journey line). Only the breadcrumbs keep their own small size. */
 footer.wp-block-template-part {font-size: var(--er-fs-sm);}
 
 /* ============================================================
