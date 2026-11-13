@@ -97,16 +97,6 @@ function dps_get_page_menu_groups( $menu_location = 'menu_1' ) {
 }
 
 // =====================================
-// GERMAN PAGE DETECTOR
-// =====================================
-
-/* German pages = the pages that do not count (Eric Companion PHP 1d: er_uncounted_ids):
-   Über Mich, Berufswelt and everything below them - one rule, no title list to keep. */
-function dps_is_german_page( int $post_id ): bool {
-    return function_exists( 'er_uncounted_ids' ) && in_array( $post_id, er_uncounted_ids(), true );
-}
-
-// =====================================
 // GROUPED COLLECTOR CLASS
 // =====================================
 
@@ -139,16 +129,10 @@ class DPS_Grouped_Collector {
                 $label      = $group_info['label'];
                 $order      = $group_info['order'];
 			} else {
-				// Page exists but isn't in the Menu — Split into In German and Others
-				if ( dps_is_german_page( $post->ID ) ) {
-					$term_id = 'menu_unlisted_de';
-					$label   = 'In German';
-					$order   = 9998;
-				} else {
-					$term_id = 'menu_unlisted';
-					$label   = 'Others';
-					$order   = 9999;
-				}
+				// Page exists but isn't in the Menu
+				$term_id = 'menu_unlisted';
+				$label   = 'Others';
+				$order   = 9999;
 			}
         }
         // Handle manual Grouping (traits)
@@ -277,14 +261,14 @@ add_filter( 'display_posts_shortcode_output', function( $output, $atts ) {
 }, 10, 2 );
 
 // =====================================
-// RANDOM LISTINGS
+// GERMAN CONTENT
 // =====================================
 
-/* Random listings (orderby="rand", e.g. the random slider) never show the pages that
-   do not count - the site-wide rule from Eric Companion PHP 1d (er_uncounted_ids).
-   So no exclude="..." list is needed in the shortcode itself. */
+/* German items are never in an automatic listing (random slider, dropdown, by type
+   or topic) - the site-wide rule from Eric Companion PHP 1d (er_uncounted_ids).
+   A shortcode that names items by id="..." shows exactly what it names. */
 add_filter( 'display_posts_shortcode_args', function( $args ) {
-    if ( isset( $args['orderby'] ) && 'rand' === $args['orderby'] && function_exists( 'er_uncounted_ids' ) ) {
+    if ( empty( $args['post__in'] ) && function_exists( 'er_uncounted_ids' ) ) {
         $args['post__not_in'] = array_merge( (array) ( $args['post__not_in'] ?? [] ), er_uncounted_ids() );
     }
     return $args;
