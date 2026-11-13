@@ -987,7 +987,7 @@ add_shortcode( 'er_cpt_archive', function( $atts ) {
 
 	wp_reset_postdata();
 	
-	// Other terms of the same taxonomy below the grid: category, topics and things,
+	// Other terms of the same taxonomy below the grid: category, topics, things, groups and types,
 	// on the term archive (/topics/x/) and on the filtered listing page (?topics=x).
 	// Placed after the sentinel: the infinite-scroll JS expects the sentinel as the grid's next sibling.
 	$er_current_term = $is_term_archive
@@ -998,6 +998,8 @@ add_shortcode( 'er_cpt_archive', function( $atts ) {
 			'category' => array( 'My-Blog', 'My Blog', '/personal/my-blog/' ),
 			'topics'   => array( 'My-Interests', 'My Interests', '/personal/my-interests/' ),
 			'things'   => array( 'My-Pages', 'My Pages', '/my-pages/' ),
+			'groups'   => array( 'My-Quotes', 'My Quotes', '/about-me/my-quotes/' ),
+			'types'    => array( 'My-Traits', 'My Traits', '/professional/my-background/my-traits/' ),
 		);
 		if ( isset( $er_other_terms[ $taxonomy ] ) ) {
 			// IDs of all terms except the current one → passed as include_id
