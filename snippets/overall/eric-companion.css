@@ -70,27 +70,27 @@ body.dark-mode .two-columns-text, .three-columns-text, .four-columns-text {
 .font-design-orange {color: var(--er-orange);}
 .font-design-purple, .font-design-red {color: var(--er-purple);}
 
-/* ---- Higlighted columns & paragraphs ---- */
-.column-highlight {
+/* ---- Highlighted columns, paragraphs & cards (Advanced → Additional CSS class) ----
+   One look for all three; each only sets its own padding. card-highlight is for small
+   boxes holding a value and a note (Site Journey's achievement cards), as the FAQ cards. */
+.column-highlight,
+.paragraph-highlight,
+.card-highlight {
 	background: var(--color-8);
-    border: 1px solid var(--color-5);
+	border: 1px solid var(--color-5);
 	border-radius: 25px;
-	padding: var(--wp--preset--spacing--10);
 }
-body.dark-mode .column-highlight {
-    background: var(--color-10);
-    border-color: var(--color-4);
+body.dark-mode :is(.column-highlight, .paragraph-highlight, .card-highlight) {
+	background: var(--color-10);
+	border-color: var(--color-4);
 }
-.paragraph-highlight {
-	background: var(--color-8);
-    border: 1px solid var(--color-5);
-	border-radius: 25px;
-	padding: var(--wp--preset--spacing--60);
-}
-body.dark-mode .paragraph-highlight {
-    background: var(--color-10);
-    border-color: var(--color-4);
-}
+.column-highlight {padding: var(--wp--preset--spacing--10);}
+.paragraph-highlight {padding: var(--wp--preset--spacing--60);}
+.card-highlight {padding: 20px 24px; transition: background 0.2s;}
+.card-highlight:hover {background: var(--color-7);}
+body.dark-mode .card-highlight:hover {background: var(--color-6);}
+.card-highlight > * {margin-block: 0;}
+.card-highlight > * + * {margin-top: 0.25rem;}
 
 /* ---- Tabs (page 17552 — custom-HTML .tabs/.tab-content; JS = setupTabs() in Site Essentials & Cookies PHP ---- */
 body.page-id-17552 .tabs {overflow: hidden;}
@@ -410,36 +410,37 @@ body.dark-mode article > .er-related-posts {border-top: 1px solid var(--color-3)
 @media (max-width: 992px) {.er-related-posts.is-layout-slider {--grid-columns-width: 33.333%;}}
 @media (max-width: 768px) {.er-related-posts.is-layout-slider {--grid-columns-width: 50%;}}
 
-/* Static related layout — used when there are 4 or fewer related posts.
+/* Static layout — used when there are 4 or fewer cards: Related, and the other-topics row
+   below a topic's list (Eric Companion PHP 5b). A slider would only repeat them.
    Uses the same gap / width values as the slider layout above; keep them the same so both stay in sync if the gap ever changes. */
-.er-related-posts.is-layout-grid {
+:is(.er-related-posts, .display-posts-listing).is-layout-grid {
 	--grid-columns-gap: 30px;
 	--grid-columns-width: 25%;
 	display: flex;
 	flex-wrap: wrap;
 	gap: var(--grid-columns-gap);
 }
-.er-related-posts.is-layout-grid > * {
+:is(.er-related-posts, .display-posts-listing).is-layout-grid > * {
 	flex: 0 0 calc(var(--grid-columns-width) - (var(--grid-columns-gap) * 3 / 4));
 	max-width: calc(var(--grid-columns-width) - (var(--grid-columns-gap) * 3 / 4));
 }
 @media (max-width: 992px) {
-	.er-related-posts.is-layout-grid { --grid-columns-width: 33.333%; }
-	.er-related-posts.is-layout-grid > * {
+	:is(.er-related-posts, .display-posts-listing).is-layout-grid { --grid-columns-width: 33.333%; }
+	:is(.er-related-posts, .display-posts-listing).is-layout-grid > * {
 		flex-basis: calc(var(--grid-columns-width) - (var(--grid-columns-gap) * 2 / 3));
 		max-width:  calc(var(--grid-columns-width) - (var(--grid-columns-gap) * 2 / 3));
 	}
 }
 @media (max-width: 768px) {
-	.er-related-posts.is-layout-grid { --grid-columns-width: 50%; }
-	.er-related-posts.is-layout-grid > * {
+	:is(.er-related-posts, .display-posts-listing).is-layout-grid { --grid-columns-width: 50%; }
+	:is(.er-related-posts, .display-posts-listing).is-layout-grid > * {
 		flex-basis: calc(var(--grid-columns-width) - (var(--grid-columns-gap) / 2));
 		max-width:  calc(var(--grid-columns-width) - (var(--grid-columns-gap) / 2));
 	}
 }
 @media (max-width: 350px) {
-	.er-related-posts.is-layout-grid { --grid-columns-width: 100%; }
-	.er-related-posts.is-layout-grid > * { flex-basis: 100%; max-width: 100%; }
+	:is(.er-related-posts, .display-posts-listing).is-layout-grid { --grid-columns-width: 100%; }
+	:is(.er-related-posts, .display-posts-listing).is-layout-grid > * { flex-basis: 100%; max-width: 100%; }
 }
 
 /* Gap between cards and slider dots — related slider only. */
