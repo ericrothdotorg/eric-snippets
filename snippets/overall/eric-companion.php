@@ -436,6 +436,15 @@ add_filter( 'get_terms', function ( $terms, $taxonomies, $args ) {
 	return $dropped ? array_values( $terms ) : $terms;
 }, 10, 3 );
 
+// Page lists WordPress builds itself (the Page List block on Site Overview) leave German pages out too
+add_filter( 'get_pages', function ( $pages ) {
+	if ( ( is_admin() && ! wp_doing_ajax() ) || wp_is_serving_rest_request() || ! $pages ) {
+		return $pages;
+	}
+	$german = er_uncounted_ids();
+	return $german ? array_values( array_filter( $pages, fn( $p ) => ! in_array( (int) $p->ID, $german, true ) ) ) : $pages;
+} );
+
 // Meta box "English version" on pages: only filled in on German pages
 add_action( 'add_meta_boxes_page', function () {
 	add_meta_box( 'er_en_version', esc_html__( 'English version', 'textdomain' ), function ( $post ) {
@@ -837,6 +846,19 @@ add_shortcode( 'er_cpt_archive', function( $atts ) {
 
 		$taxonomy    = $taxonomy_map[ $post_type ];
 		$show_tabs   = ( $atts['filtering'] !== 'no' );
+		$active_slug = isset( $_GET[ $taxonomy ] ) ? sanitize_key( $_GET[ $taxonomy ] ) : '';
+
+	} elseif ( is_post_type_archive( array_keys( $taxonomy_map ) ) ) {
+		// A type's own archive (/my-interests/, /my-quotes/, /my-traits/): all its items with the
+		// filter pills, like its overview page - so the address works with or without a redirect.
+		$post_type = get_queried_object()->name;
+		$taxonomy  = $taxonomy_map[ $post_type ];
+		$atts      = shortcode_atts( array(
+			'limit'   => 12,
+			'orderby' => 'date',
+			'order'   => 'DESC',
+		), $atts, 'er_cpt_archive' );
+		$show_tabs   = true;
 		$active_slug = isset( $_GET[ $taxonomy ] ) ? sanitize_key( $_GET[ $taxonomy ] ) : '';
 
 	} else {
