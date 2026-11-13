@@ -83,7 +83,7 @@ function er_sj_hub( $type ) {
 // the hub of the Pages sky itself, sits only there.
 // Cached 12 h, cleared whenever content or topics change.
 function er_sj_items() {
-	$items = get_transient( 'er_sj_items_v4' );
+	$items = get_transient( 'er_sj_items_v5' );
 	if ( is_array( $items ) ) {
 		return $items;
 	}
@@ -124,6 +124,9 @@ function er_sj_items() {
 			'y' => $type,
 			'g' => $groups,
 		);
+		if ( 'page' === $type && 'page' === get_option( 'show_on_front' ) && (int) get_option( 'page_on_front' ) === $p->ID ) {
+			$item['r'] = 1; // the front page: drawn above every sky, everything sits under it
+		}
 		if ( $hub ) {
 			$item['h'] = $hub;
 			// As the hub star it links to WordPress's own list of its type (/my-quotes/ …;
@@ -134,10 +137,10 @@ function er_sj_items() {
 		}
 		$items[] = $item;
 	}
-	set_transient( 'er_sj_items_v4', $items, 12 * HOUR_IN_SECONDS );
+	set_transient( 'er_sj_items_v5', $items, 12 * HOUR_IN_SECONDS );
 	return $items;
 }
-function er_sj_flush() { delete_transient( 'er_sj_items_v4' ); }
+function er_sj_flush() { delete_transient( 'er_sj_items_v5' ); }
 add_action( 'save_post', 'er_sj_flush' );
 add_action( 'deleted_post', 'er_sj_flush' );
 add_action( 'set_object_terms', 'er_sj_flush' );
@@ -699,6 +702,7 @@ add_action( 'wp_footer', function () {
     function clusters(type) {
         var map = {}, order = [], hub = [];
         items.forEach(function (it) {
+            if (it.r) return;                                                            // the front page: above every sky
             if (it.h === type || (it.y === type && !it.g.length && !it.h)) hub.push(it); // the middle
             if (it.y !== type) return;
             it.g.forEach(function (g) {                                                  // a star in each of its constellations
@@ -734,12 +738,16 @@ add_action( 'wp_footer', function () {
         var svg = S.querySelector('.er-sj-svg'), wide = S.clientWidth >= 600;
         var cl = clusters(current), n = cl.list.length, hub = cl.hub.length > 0;
         var vw = wide ? 1000 : 420;
-        var cols = wide ? (n > 8 ? (hub ? 4 : 5) : (n > 4 ? (hub ? 3 : 4) : Math.min(n, hub ? 2 : 4))) : Math.min(n, 2);
+        // The front page sits above everything, in every sky, in a band of its own at the top.
+        // Its line runs straight down to the middle, so no constellation may sit in the centre
+        // column above it: an even number of columns, and a lone constellation goes below.
+        var root = items.filter(function (it) { return it.r; })[0], top = root ? (wide ? 70 : 84) : 0;
+        var cols = wide ? (n > 8 ? (hub ? 4 : 5) : (n > 4 ? (hub && !root ? 3 : 4) : Math.min(n, hub ? 2 : 4))) : Math.min(n, 2);
         cols = Math.max(1, cols);
         var rows = Math.max(1, Math.ceil(n / cols));
         // With a hub the clusters sit above and below a free band in the middle
-        var topRows = hub ? Math.ceil(rows / 2) : rows, band = hub ? 90 : 0;
-        var ch = wide ? 210 : 190, cw = vw / cols, vh = rows * ch + band + 26; // 26: room for the key
+        var topRows = hub ? (root && n === 1 ? 0 : Math.ceil(rows / 2)) : rows, band = hub ? 90 : 0;
+        var ch = wide ? 210 : 190, cw = vw / cols, vh = top + rows * ch + band + 26; // 26: room for the key
         svg.textContent = '';
         svg.setAttribute('viewBox', '0 0 ' + vw + ' ' + vh);
         var r = rng(4242);
@@ -747,7 +755,7 @@ add_action( 'wp_footer', function () {
         var centers = cl.list.map(function (c, i) {
             var col = i % cols, row = Math.floor(i / cols), inLast = n - (rows - 1) * cols;
             var off = (row === rows - 1) ? (cols - inLast) * cw / 2 : 0;
-            var y = ch * row + ch / 2 - 8 + (row >= topRows ? band : 0);
+            var y = top + ch * row + ch / 2 - 8 + (row >= topRows ? band : 0);
             return [off + cw * col + cw / 2 + (r() - 0.5) * 24, y + (r() - 0.5) * 14, Math.min(cw, ch) * 0.34];
         });
         centers.forEach(function (c, i) {
@@ -761,12 +769,14 @@ add_action( 'wp_footer', function () {
             el('circle', { cx: r() * vw, cy: r() * vh, r: big ? 1.1 : 0.6, fill: big ? '#8da6b9' : '#3a4f66', opacity: 0.4 + r() * 0.6 }, svg);
         }
         // Hub stars in the middle: side by side if there is more than one
-        var hubY = topRows * ch + band / 2 - 6, step = wide ? 150 : 110;
+        var hubY = top + topRows * ch + band / 2 - 6, step = wide ? 150 : 110;
         var hubs = cl.hub.map(function (it, k) { return [vw / 2 + (k - (cl.hub.length - 1) / 2) * step, hubY, it]; });
+        var rx = vw / 2, ry = top - (wide ? 24 : 28); // the front page's spot (drawn last)
         hubs.forEach(function (hb) {
             centers.forEach(function (c) {
                 el('line', { x1: hb[0], y1: hb[1], x2: c[0], y2: c[1], stroke: '#8da6b9', 'stroke-opacity': 0.25, 'stroke-dasharray': '2 5', 'stroke-width': 1 }, svg);
             });
+            if (root) el('line', { x1: rx, y1: ry, x2: hb[0], y2: hb[1], stroke: '#e7f0f8', 'stroke-opacity': 0.35, 'stroke-dasharray': '2 5', 'stroke-width': 1 }, svg);
         });
         cl.list.forEach(function (c, i) {
             var cx = centers[i][0], cy = centers[i][1], rad = centers[i][2], h = HUES[i % HUES.length];
@@ -798,6 +808,12 @@ add_action( 'wp_footer', function () {
             var t = el('text', { x: hb[0], y: hb[1] + 26, 'text-anchor': 'middle', 'class': 'er-sj-label', 'font-size': wide ? 13 : 16 }, svg);
             t.textContent = hb[2].t;
         });
+        // The front page on top, in gold (its line down to the overview is drawn with the others)
+        if (root) {
+            star(svg, rx, ry, root, '#ffd700', true);
+            var rt = el('text', { x: rx, y: ry - 16, 'text-anchor': 'middle', 'class': 'er-sj-label', 'font-size': wide ? 13 : 16 }, svg);
+            rt.textContent = root.t;
+        }
     }
 
     function star(svg, x, y, it, hue, big) {
@@ -841,7 +857,8 @@ add_action( 'wp_footer', function () {
     // sky - for keyboards, screen readers and anyone who prefers text
     function list() {
         var cl = clusters(current), word = (S && S.getAttribute('data-visited')) || T.visited;
-        var groups = (cl.hub.length ? [['', cl.hub]] : []).concat(cl.list);
+        var middle = items.filter(function (it) { return it.r; }).concat(cl.hub); // the front page first, as on top of the sky
+        var groups = (middle.length ? [['', middle]] : []).concat(cl.list);
         L.textContent = '';
         groups.forEach(function (g) {
             var box = document.createElement('div');
