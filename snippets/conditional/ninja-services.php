@@ -2,75 +2,51 @@
 // NOTE: When in mu-plugins, add: defined('ABSPATH') || exit;
 
 // ================================================
-// CONDITIONAL FLAG INJECTION BASED ON PATH
+// LANGUAGE PAIRS
 // ================================================
 
-function er_should_inject_lang_script() {
-    $language_pairs = array(
-        '/about-me'                                         => '/ueber-mich',
-        '/about-me/contact'                                 => '/ueber-mich/kontakt',
-        '/professional'                                     => '/berufswelt',
-        '/professional/my-background'                       => '/berufswelt/mein-hintergrund',
-        '/professional/my-background/my-competencies'       => '/berufswelt/mein-hintergrund/meine-kompetenzen',
-        '/professional/my-background/my-traits'             => '/berufswelt/mein-hintergrund/meine-eigenschaften',
-        '/professional/my-compass'                          => '/berufswelt/mein-kompass',
-        '/professional/my-publications'                     => '/berufswelt/meine-publikationen',
-        '/professional/my-availability'                     => '/berufswelt/meine-verfuegbarkeit'
-    );
-    $all_valid_paths = array_merge(array_keys($language_pairs), array_values($language_pairs));
-    $all_valid_paths = array_map(function($p) {
-        return rtrim($p, '/');
-    }, $all_valid_paths);
-    $request_uri = isset($_SERVER['REQUEST_URI']) ? wp_unslash($_SERVER['REQUEST_URI']) : '';
-    $current_path = parse_url($request_uri, PHP_URL_PATH);
-    $current_path = rtrim($current_path, '/');
-    return in_array($current_path, $all_valid_paths, true);
+// A German page and its English version (set on the German page, Eric Companion PHP 1d)
+// form a pair. On both pages: the browser-language redirect and the flag switcher.
+// Returns the other page's path and this page's language, or null on every other page.
+function er_ninja_pair() {
+    static $pair = false;
+    if ( false !== $pair ) {
+        return $pair;
+    }
+    $pair = null;
+    if ( is_page() && function_exists( 'er_lang_counterpart' ) ) {
+        $id    = get_queried_object_id();
+        $other = er_lang_counterpart( $id );
+        if ( $other ) {
+            $pair = array(
+                'other' => wp_make_link_relative( get_permalink( $other ) ),
+                'lang'  => er_is_german( $id ) ? 'de' : 'en',
+            );
+        }
+    }
+    return $pair;
 }
 
 // ================================================
 // EARLY AUTO-DETECTION (runs before Page renders)
 // ================================================
 
+// No choice made yet (flag click): German browsers go to the German page, all
+// others to the English one.
 add_action('wp_head', function() {
-    if (!er_should_inject_lang_script()) {
+    $pair = er_ninja_pair();
+    if (!$pair) {
         return;
     }
     ?>
     <script>
         (function() {
             'use strict';
-            const storedLanguage = localStorage.getItem('userLanguageChoice');
-            if (storedLanguage) return;
-            const browserLang = navigator.language || navigator.languages?.[0] || '';
-            const langCode = browserLang.toLowerCase().split('-')[0];
-            const currentPath = window.location.pathname.replace(/\/$/, '');
-            const languagePairs = {
-                '/about-me':                                        '/ueber-mich',
-                '/about-me/contact':                                '/ueber-mich/kontakt',
-                '/professional':                                    '/berufswelt',
-                '/professional/my-background':                      '/berufswelt/mein-hintergrund',
-                '/professional/my-background/my-competencies':      '/berufswelt/mein-hintergrund/meine-kompetenzen',
-                '/professional/my-background/my-traits':            '/berufswelt/mein-hintergrund/meine-eigenschaften',
-                '/professional/my-compass':                         '/berufswelt/mein-kompass',
-                '/professional/my-publications':                    '/berufswelt/meine-publikationen',
-                '/professional/my-availability':                    '/berufswelt/meine-verfuegbarkeit'
-            };
-            const reversePairs = {};
-            Object.entries(languagePairs).forEach(([en, de]) => {
-                reversePairs[de] = en;
-            });
-            const isOnEnglishPage = languagePairs.hasOwnProperty(currentPath);
-            const isOnGermanPage  = reversePairs.hasOwnProperty(currentPath);
-            if (langCode === 'de' && isOnEnglishPage) {
-                const germanPath = languagePairs[currentPath];
-                if (germanPath) { window.location.replace(germanPath); return; }
-            } else if (langCode === 'en' && isOnGermanPage) {
-                const englishPath = reversePairs[currentPath];
-                if (englishPath) { window.location.replace(englishPath); return; }
-            }
-            if (!['de', 'en'].includes(langCode) && isOnGermanPage) {
-                const englishPath = reversePairs[currentPath];
-                if (englishPath) { window.location.replace(englishPath); }
+            var pair = <?php echo wp_json_encode($pair); ?>;
+            try { if (localStorage.getItem('userLanguageChoice')) return; } catch (e) {}
+            var browser = (navigator.language || (navigator.languages || [])[0] || '').toLowerCase().split('-')[0];
+            if ((pair.lang === 'en') === (browser === 'de')) {
+                window.location.replace(pair.other);
             }
         })();
     </script>
@@ -85,7 +61,8 @@ add_action('wp_footer', function() {
 
     // === SCRIPT + STYLE INJECTION (for flag switcher) ===
 
-    if (er_should_inject_lang_script()) {
+    $pair = er_ninja_pair();
+    if ($pair) {
         ?>
         <script>
             (function() {
@@ -124,10 +101,8 @@ add_action('wp_footer', function() {
                                 if (target) {
                                     isProcessing = true;
                                     try {
-                                        const germanPaths = ['/ueber-mich', '/berufswelt'];
-                                        const isGermanTarget = germanPaths.some(path => target.includes(path));
-                                        const targetLang = isGermanTarget ? 'de' : 'en';
-                                        localStorage.setItem('userLanguageChoice', targetLang);
+                                        // The flag always leads to the other language of the pair
+                                        localStorage.setItem('userLanguageChoice', <?php echo wp_json_encode($pair['lang'] === 'de' ? 'en' : 'de'); ?>);
                                     } catch (error) {
                                         console.warn('Could not store language preference:', error);
                                     }
@@ -184,16 +159,14 @@ add_action('wp_footer', function() {
     if (
         is_page(array(
             // English Pages
-            '179','87873','59078','55867','138768','113713','123635','65752','8977','100674','83147','55706','65756','87873','151412','51969',
-            // German Pages
-            '150455','150449','149904','149998','150034','150120','150200','150223','150233','151417')) ||
+            '179','87873','59078','55867','138768','113713','123635','65752','8977','100674','83147','55706','65756','87873','151412','51969')) ||
+        // German Pages (Eric Companion PHP 1d)
+        (is_page() && function_exists('er_is_german') && er_is_german(get_queried_object_id())) ||
         is_single(array(
             // English Singles
-            '140909','127567','127484','121987','121984','141168','121985','135495','121986','121983','150592',
-            // German Singles
-            '150592')) ||
+            '140909','127567','127484','121987','121984','141168','121985','135495','121986','121983','150592')) ||
         is_tax('topics', 124) ||
-        is_tax('things', array(137, 258)) ||
+        is_tax('things', 137) ||
 		is_tax('types', 182)
     ) {
         ?>
