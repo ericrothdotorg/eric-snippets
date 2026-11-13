@@ -641,6 +641,8 @@ add_action( 'wp_footer', function () {
 		:is(.er-sj-listbox, .er-sj-popular) {columns: 4 180px; column-gap: 24px; font-size: var(--er-fs-sm);}
 		.er-sj-popular {margin: 0; padding-left: 1.1em;}
 		.er-sj-popular li {break-inside: avoid;}
+		.er-sj-countries span {display: inline-block; min-height: 25px; margin: 0 0 5px; padding: 3px 15px; line-height: 1.75; background: var(--color-8); border: 1px solid var(--color-1); border-radius: 100px;} /* the tag-cloud pill (Eric Companion CSS B2), as plain text */
+		body.dark-mode .er-sj-countries span {background: var(--color-10);}
 		.er-sj-popular:empty {display: none;}
 		.er-sj-group {break-inside: avoid; padding-bottom: 0.75rem;}
 		.er-sj-listbox h3 {font-size: var(--er-fs-sm); margin: 0 0 0.25rem;}
