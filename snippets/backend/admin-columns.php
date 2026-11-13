@@ -18,7 +18,7 @@ function er_initialize_custom_admin_columns() {
         $columns['id'] = __('ID');
         $columns['featured_image'] = __('Featured Image');
         $columns['title'] = __('Title');
-        $columns['er_language'] = __('Language'); // German items (Eric Companion PHP 1d)
+        $columns['er_language'] = __('LANG'); // German items (Eric Companion PHP 1d)
 
         if ($type === 'page') {
             $columns['things'] = __('Things');
@@ -212,69 +212,51 @@ function er_initialize_custom_admin_columns() {
 
     // === SET COLUMNS WIDTHS ===
 
+    // Widths shared by all five lists first; each type below only sets its own
+    // columns and its exceptions (printed later, so they win at equal specificity).
     add_action('admin_head-edit.php', function () {
         global $typenow;
+        $shared = '
+            .wp-list-table { width: 100%; }
+            .wp-list-table .column-id { width: 5%; }
+            .wp-list-table .column-featured_image { width: 8%; }
+            .wp-list-table .column-title { width: 12%; }
+            .wp-list-table .column-er_language { width: 4%; }
+            .wp-list-table .column-custom_excerpt { width: 21%; }
+            .wp-list-table .column-word_count { width: 5%; }
+            .wp-list-table .column-read_time { width: 5%; }
+            .wp-list-table .column-date { width: 10%; }
+        ';
         $styles = [
             'page' => '
-                .post-type-page .column-id { width: 5%; }
                 .post-type-page .column-featured_image { width: 7%; }
-                .post-type-page .column-title { width: 12%; }
                 .post-type-page .column-things { width: 9%; }
                 .post-type-page .column-depth { width: 3%; }
                 .post-type-page .column-parent { width: 7%; }
-                .post-type-page .column-custom_excerpt { width: 19%; }
-                .post-type-page .column-word_count { width: 5%; }
-                .post-type-page .column-read_time { width: 5%; }
                 .post-type-page .column-date { width: 8%; }
             ',
             'post' => '
-                .post-type-post .column-id { width: 5%; }
-                .post-type-post .column-featured_image { width: 8%; }
-                .post-type-post .column-title { width: 12%; }
                 .post-type-post .column-post_categories { width: 8%; }
-				.post-type-post .column-post_tags { width: 8%; }
-                .post-type-post .column-custom_excerpt { width: 19%; }
-                .post-type-post .column-word_count { width: 5%; }
-                .post-type-post .column-read_time { width: 5%; }
-                .post-type-post .column-date { width: 10%; }
+                .post-type-post .column-post_tags { width: 8%; }
             ',
             'my-interests' => '
-                .post-type-my-interests .column-id { width: 5%; }
-                .post-type-my-interests .column-featured_image { width: 8%; }
-                .post-type-my-interests .column-title { width: 12%; }
                 .post-type-my-interests .column-topics { width: 8%; }
-				.post-type-my-interests .column-interest_tags { width: 8%; }
-                .post-type-my-interests .column-custom_excerpt { width: 19%; }
-                .post-type-my-interests .column-word_count { width: 5%; }
-                .post-type-my-interests .column-read_time { width: 5%; }
-                .post-type-my-interests .column-date { width: 10%; }
+                .post-type-my-interests .column-interest_tags { width: 8%; }
             ',
             'my-traits' => '
-                .post-type-my-traits .column-id { width: 5%; }
-                .post-type-my-traits .column-featured_image { width: 8%; }
-                .post-type-my-traits .column-title { width: 12%; }
                 .post-type-my-traits .column-types { width: 10%; }
-                .post-type-my-traits .column-custom_excerpt { width: 24%; }
+                .post-type-my-traits .column-custom_excerpt { width: 26%; }
                 .post-type-my-traits .column-word_count { width: 6%; }
-                .post-type-my-traits .column-read_time { width: 5%; }
-                .post-type-my-traits .column-date { width: 10%; }
             ',
             'my-quotes' => '
-                .post-type-my-quotes .column-id { width: 5%; }
-                .post-type-my-quotes .column-featured_image { width: 8%; }
-                .post-type-my-quotes .column-title { width: 12%; }
                 .post-type-my-quotes .column-q_related { width: 10%; }
                 .post-type-my-quotes .column-groups { width: 8%; }
-                .post-type-my-quotes .column-custom_excerpt { width: 19%; }
-                .post-type-my-quotes .column-word_count { width: 5%; }
-                .post-type-my-quotes .column-read_time { width: 5%; }
-                .post-type-my-quotes .column-date { width: 10%; }
-            '
+            ',
         ];
-        echo '<style>' . ($styles[$typenow] ?? '') . '
-            .wp-list-table { width: 100%; }
-            .wp-list-table .column-er_language { width: 6%; } /* all types; taken from the excerpt */
-        </style>';
+        if (!isset($styles[$typenow])) {
+            return; // only the five content lists
+        }
+        echo '<style>' . $shared . $styles[$typenow] . '</style>';
     });
 
 	// =======================================
