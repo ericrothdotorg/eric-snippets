@@ -359,11 +359,14 @@ body.dark-mode .er-related-posts .entry-meta .meta-categories svg {fill: var(--c
    Grey (not the accent colour) so it looks like a label, not a button. Sits at the right
    of the title and stays centred even if the title wraps to two lines.
    DO NOT "clean up" the icon code below: the %3C %22 etc. are encoded on purpose. If you
-   swap them back to normal <, >, " characters, the marker disappears. ---- */
+   swap them back to normal <, >, " characters, the marker disappears.
+   The glyph is defined once for the whole site (Site Journey marks quote topics with it). ---- */
+:root {
+	--er-quote-glyph: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22%3E%3Cpath d=%22M7 7h4v4c0 3-1.5 4.5-4 5v-2c1.3-.4 2-1.2 2-2H7V7zm8 0h4v4c0 3-1.5 4.5-4 5v-2c1.3-.4 2-1.2 2-2h-2V7z%22 fill=%22black%22/%3E%3C/svg%3E");
+}
 .entry-card.type-my-quotes .entry-title {
 	position: relative;
 	padding-right: 38px; /* reserve space so a long title doesn't run under the ring */
-	--er-quote-glyph: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22%3E%3Cpath d=%22M7 7h4v4c0 3-1.5 4.5-4 5v-2c1.3-.4 2-1.2 2-2H7V7zm8 0h4v4c0 3-1.5 4.5-4 5v-2c1.3-.4 2-1.2 2-2h-2V7z%22 fill=%22black%22/%3E%3C/svg%3E");
 }
 .entry-card.type-my-quotes .entry-title::before,
 .entry-card.type-my-quotes .entry-title::after {
@@ -385,6 +388,18 @@ body.dark-mode .er-related-posts .entry-meta .meta-categories svg {fill: var(--c
 	background-color: var(--color-9);
 	-webkit-mask: var(--er-quote-glyph) center / 18px 18px no-repeat;
 	        mask: var(--er-quote-glyph) center / 18px 18px no-repeat;
+}
+/* The same ring inline, after a word (Site Journey: quote topics in the cards and the footer
+   line, so "About Me" the quote group and "About Me" the page topic can be told apart).
+   Sized to the text it follows. */
+.er-quote-mark {position: relative; padding-right: 1.25em;}
+.er-quote-mark::before,
+.er-quote-mark::after {content: ""; position: absolute; top: 50%; right: 0; width: 0.95em; height: 0.95em; transform: translateY(-50%); box-sizing: border-box;}
+.er-quote-mark::before {border: 1.5px solid var(--color-9); border-radius: 50%;}
+.er-quote-mark::after {
+	background-color: var(--color-9);
+	-webkit-mask: var(--er-quote-glyph) center / 68% 68% no-repeat;
+	        mask: var(--er-quote-glyph) center / 68% 68% no-repeat;
 }
 
 /* ---- Related content container ---- */
