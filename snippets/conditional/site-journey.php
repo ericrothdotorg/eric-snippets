@@ -13,12 +13,13 @@
  *   in the visitor's browser (localStorage "er_journey"). Nothing about which
  *   pages were opened ever leaves the browser. Only the number of explored
  *   places travels with Visitor Tracking's beacon and is kept per visitor for
- *   the comparison on the Site Journey page. The page is built in the editor
+ *   the level on the Site Journey page. The page is built in the editor
  *   from normal blocks plus the building blocks below ([er_sj_progress],
  *   [er_sj_sky], [er_sj_list], [er_sj_stat], [er_sj_qr_code]): progress,
- *   fellow explorers, one sky per content type, and a journey link / QR code
- *   to continue on another device. On every other place, a line in the footer
- *   shows the progress in that place's topic and links the next unread one.
+ *   four achievement cards, one sky per content type (the front page above
+ *   each), and a journey link / QR code to continue on another device. On every
+ *   place, a line in the footer shows the progress in that place's topic and
+ *   links the next unread one.
  *
  * OWNS
  *   Table er_journey (visitor_id, explored, updated_at): created here if
@@ -690,7 +691,6 @@ add_action( 'wp_footer', function () {
         items.forEach(function (it) { c[it.y][1]++; all++; if (seen[it.i]) { c[it.y][0]++; done++; } });
         return { per: c, all: all, done: done };
     }
-    // Fellow explorers: real visitors of the last 90 days
     // Level: where this visitor stands among the visitors of the last 90 days. Only the
     // standing is shown ("among the top 5%"), never a number about the others.
     function level(own) {
