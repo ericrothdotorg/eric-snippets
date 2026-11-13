@@ -28,9 +28,9 @@
  *   In the browser: window.erJourneyCount() — number of places in the list
  *
  * COUNTED
- *   Every published page, post, interest, quote and trait, except the pages
- *   er_uncounted_ids() returns (Eric Companion PHP: the German pages). The same
- *   rule as every counter on the site; private pages never count.
+ *   Every published page, post, interest, quote and trait, except the German
+ *   items er_uncounted_ids() returns (Eric Companion PHP 1d). The same rule as
+ *   every counter on the site; private pages never count.
  * ========================================================================== */
 
 defined( 'ER_SJ_DAYS' ) || define( 'ER_SJ_DAYS', 90 ); // same window as Visitor Tracking
@@ -40,10 +40,11 @@ function er_sj_excluded() {
 }
 
 // Content types on the journey, in tab order: label, the taxonomy that groups
-// them, and the overview page shown as the hub star in the middle of their sky
+// them (the same as the filter pills and the footer), and the overview page
+// shown as the hub star in the middle of their sky
 function er_sj_types() {
 	return array(
-		'page'         => array( 'Pages', '', function_exists( 'er_things_hub_id' ) ? er_things_hub_id() : 159702 ), // My Pages (Eric Companion hub setting)
+		'page'         => array( 'Pages', 'things', function_exists( 'er_things_hub_id' ) ? er_things_hub_id() : 159702 ), // My Pages (Eric Companion hub setting)
 		'post'         => array( 'Posts', 'category', 13405 ),      // My Blog
 		'my-interests' => array( 'Interests', 'topics', 13749 ),    // My Interests
 		'my-quotes'    => array( 'Quotes', 'groups', 103040 ),      // My Quotes
@@ -55,15 +56,16 @@ function er_sj_types() {
 // THE PLACES
 // ======================================
 
-// All places: id, title, relative url, type, group (h: the sky it is the hub of).
-// Pages are grouped by their top-level section; a top-level page without
-// subpages (the front page) has none and sits in the middle of the Pages sky. Every place is counted once, as
-// its own type, so the numbers match the site's real counts. An overview page
+// All places: id, title, relative url, type, groups (g: one constellation per
+// topic, as on the filter pills; h: the sky it is the hub of). A place with
+// several topics shines in each of their constellations but is counted once, as
+// its own type, so the numbers match the site's real counts. A page without a
+// topic (the front page) sits in the middle of the Pages sky. An overview page
 // (er_sj_types()) is also drawn as the hub in the middle of its sky; My Pages,
 // the hub of the Pages sky itself, sits only there.
-// Cached 12 h, cleared whenever content changes.
+// Cached 12 h, cleared whenever content or topics change.
 function er_sj_items() {
-	$items = get_transient( 'er_sj_items_v2' );
+	$items = get_transient( 'er_sj_items_v3' );
 	if ( is_array( $items ) ) {
 		return $items;
 	}
@@ -82,45 +84,42 @@ function er_sj_items() {
 		'order'          => 'ASC',
 		'no_found_rows'  => true,
 	) );
-	$parents = array();
-	foreach ( $posts as $p ) {
-		if ( 'page' === $p->post_type && $p->post_parent ) {
-			$parents[ $p->post_parent ] = true;
-		}
-	}
 	$items = array();
 	foreach ( $posts as $p ) {
-		$type = $p->post_type;
-		$hub  = isset( $hubs[ $p->ID ] ) ? $hubs[ $p->ID ] : '';
-		if ( $hub === $type ) {
-			$group = '';
-		} elseif ( 'page' === $type ) {
-			$anc   = get_post_ancestors( $p );
-			// a top-level page without subpages (the front page) has no section: it sits in the middle
-			$group = ( ! $anc && empty( $parents[ $p->ID ] ) ) ? '' : get_the_title( $anc ? end( $anc ) : $p->ID );
-		} else {
+		$type   = $p->post_type;
+		$hub    = isset( $hubs[ $p->ID ] ) ? $hubs[ $p->ID ] : '';
+		$groups = array();
+		if ( $hub !== $type ) {
 			$terms = get_the_terms( $p, $types[ $type ][1] );
-			$group = ( $terms && ! is_wp_error( $terms ) ) ? $terms[0]->name : ( 'my-traits' === $type ? 'My Traits' : $types[ $type ][0] );
+			if ( $terms && ! is_wp_error( $terms ) ) {
+				foreach ( $terms as $term ) {
+					$groups[] = html_entity_decode( $term->name, ENT_QUOTES, 'UTF-8' );
+				}
+			} elseif ( 'page' !== $type ) {
+				$groups[] = 'my-traits' === $type ? 'My Traits' : $types[ $type ][0];
+			}
 		}
 		$item = array(
 			'i' => $p->ID,
 			't' => html_entity_decode( get_the_title( $p ), ENT_QUOTES, 'UTF-8' ),
 			'u' => wp_make_link_relative( get_permalink( $p ) ),
 			'y' => $type,
-			'g' => html_entity_decode( $group, ENT_QUOTES, 'UTF-8' ),
+			'g' => $groups,
 		);
 		if ( $hub ) {
 			$item['h'] = $hub;
 		}
 		$items[] = $item;
 	}
-	set_transient( 'er_sj_items_v2', $items, 12 * HOUR_IN_SECONDS );
+	set_transient( 'er_sj_items_v3', $items, 12 * HOUR_IN_SECONDS );
 	return $items;
 }
-function er_sj_flush() { delete_transient( 'er_sj_items_v2' ); }
+function er_sj_flush() { delete_transient( 'er_sj_items_v3' ); }
 add_action( 'save_post', 'er_sj_flush' );
 add_action( 'deleted_post', 'er_sj_flush' );
+add_action( 'set_object_terms', 'er_sj_flush' );
 add_action( 'edited_term', 'er_sj_flush' );
+add_action( 'delete_term', 'er_sj_flush' );
 
 // ======================================
 // TABLE & PROGRESS NUMBERS
@@ -565,10 +564,12 @@ add_action( 'wp_footer', function () {
     function clusters(type) {
         var map = {}, order = [], hub = [];
         items.forEach(function (it) {
-            if (it.h === type || (it.y === type && it.g === '' && !it.h)) hub.push(it); // the middle
-            if (it.y !== type || it.g === '') return;                                  // a cluster star
-            if (!map[it.g]) { map[it.g] = []; order.push(it.g); }
-            map[it.g].push(it);
+            if (it.h === type || (it.y === type && !it.g.length && !it.h)) hub.push(it); // the middle
+            if (it.y !== type) return;
+            it.g.forEach(function (g) {                                                  // a star in each of its constellations
+                if (!map[g]) { map[g] = []; order.push(g); }
+                map[g].push(it);
+            });
         });
         order.sort(function (a, b) { return a.localeCompare(b); });
         hub.sort(function (a, b) { return (b.h === type) - (a.h === type); });
@@ -687,7 +688,7 @@ add_action( 'wp_footer', function () {
             var it = a.__it, r = a.getBoundingClientRect(), b = box.getBoundingClientRect();
             tip.textContent = '';
             var t = document.createElement('b'); t.textContent = it.t;
-            var s = document.createElement('span'); s.textContent = (it.g ? it.g + ' · ' : '') + (seen[it.i] ? visited : notyet);
+            var s = document.createElement('span'); s.textContent = (it.g.length ? it.g.join(', ') + ' · ' : '') + (seen[it.i] ? visited : notyet);
             tip.append(t, s);
             tip.hidden = false;
             var left = Math.min(Math.max(4, r.left - b.left + r.width / 2 - tip.offsetWidth / 2), b.width - tip.offsetWidth - 4);
