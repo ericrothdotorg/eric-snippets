@@ -470,7 +470,9 @@ add_action( 'wp_ajax_nopriv_er_sj_qr', 'er_sj_qr' );
 //                                    (e.g. inside a Details block) - the way into the
 //                                    sky for keyboard and screen reader users
 //   [er_sj_popular]                  the ER_SJ_TOP most read places of the selected tab,
-//                                    in the list's columns (empty without World Map)
+//                                    in the list's columns; on tabs without a ranking (and
+//                                    without World Map) hidden together with the Group
+//                                    block around it, so its heading goes too
 //   [er_sj_countries]                the explorers' countries as pills, most first
 //   [er_sj_stat show="…"]            one live value, usable inside any text:
 //                                    percent, explored, total - for the four
@@ -571,7 +573,7 @@ add_shortcode( 'er_sj_list', function () {
 
 add_shortcode( 'er_sj_popular', function () {
 	er_sj_mark();
-	return '<ul class="er-sj-popular"></ul>';
+	return '<ul class="er-sj-popular" hidden></ul>';
 } );
 
 add_shortcode( 'er_sj_countries', function () {
@@ -643,7 +645,6 @@ add_action( 'wp_footer', function () {
 		.er-sj-popular li {break-inside: avoid;}
 		.er-sj-countries span {display: inline-block; min-height: 25px; margin: 0 0 5px; padding: 3px 15px; line-height: 1.75; background: var(--color-8); border: 1px solid var(--color-1); border-radius: 100px;} /* the tag-cloud pill (Eric Companion CSS B2), as plain text */
 		body.dark-mode .er-sj-countries span {background: var(--color-10);}
-		.er-sj-popular:empty {display: none;}
 		.er-sj-group {break-inside: avoid; padding-bottom: 0.75rem;}
 		.er-sj-listbox h3 {font-size: var(--er-fs-sm); margin: 0 0 0.25rem;}
 		.er-sj-listbox ul {margin: 0; padding-left: 1.1em;}
@@ -945,9 +946,11 @@ add_action( 'wp_footer', function () {
     }
     // [er_sj_popular]: the same places as links, in the list's columns
     function popularList() {
-        var word = (S && S.getAttribute('data-visited')) || T.visited;
+        var word = (S && S.getAttribute('data-visited')) || T.visited, top = topList();
         R.textContent = '';
-        topList().forEach(function (it) {
+        var box = R.parentElement.matches('.wp-block-group') ? R.parentElement : R; // its own Group only, never an outer one
+        box.hidden = !top.length;
+        top.forEach(function (it) {
             var li = document.createElement('li'), a = document.createElement('a');
             a.href = it.u; a.textContent = it.t;
             li.appendChild(a);
@@ -1000,7 +1003,7 @@ add_action( 'wp_footer', function () {
             n.className = 'er-sj-tabnum';
             n.textContent = c.per[t[0]][0] + '/' + c.per[t[0]][1];
             b.append(t[1] + ' ', n);
-            b.addEventListener('click', function () { current = t[0]; tabs(); sky(); if (L) list(); if (R) popularList(); });
+            b.addEventListener('click', function () { current = t[0]; ranked(); tabs(); sky(); if (L) list(); if (R) popularList(); });
             box.appendChild(b);
         });
     }
@@ -1104,23 +1107,34 @@ add_action( 'wp_footer', function () {
     }
 
     // The switch between the own view and the most read view (only with mine + popular, and
-    // only when World Map's ranking is there). The key below the sky follows the view.
+    // only on tabs with a ranking: elsewhere it hides and the own view returns). The key
+    // below the sky follows the view.
+    var switcher = null;
+    function setView(v) {
+        view = v;
+        switcher.box.querySelectorAll('[data-view]').forEach(function (x) { x.setAttribute('aria-pressed', String(x.getAttribute('data-view') === v)); });
+        switcher.key.replaceChildren.apply(switcher.key, v === 'popular' ? [switcher.top] : switcher.mine);
+    }
     function views() {
         var box = S.querySelector('.er-sj-views'), key = S.querySelector('.er-sj-key');
-        if (!box || !popular.length) return;
-        var mine = Array.prototype.slice.call(key.childNodes);
+        if (!box) return;
         var top = document.createElement('span'), dot = document.createElement('i');
         dot.className = 'is-top';
         top.append(dot, S.getAttribute('data-popular'));
-        box.hidden = false;
+        switcher = { box: box, key: key, top: top, mine: Array.prototype.slice.call(key.childNodes) };
         box.addEventListener('click', function (e) {
             var b = e.target.closest('[data-view]');
             if (!b || b.getAttribute('data-view') === view) return;
-            view = b.getAttribute('data-view');
-            box.querySelectorAll('[data-view]').forEach(function (x) { x.setAttribute('aria-pressed', String(x === b)); });
-            key.replaceChildren.apply(key, view === 'popular' ? [top] : mine);
+            setView(b.getAttribute('data-view'));
             sky();
         });
+        ranked();
+    }
+    function ranked() {
+        if (!switcher) return;
+        var has = topList().length > 0;
+        switcher.box.hidden = !has;
+        if (!has && view === 'popular') setView('mine');
     }
 
     // Tooltip for the star under the pointer
@@ -1279,7 +1293,7 @@ add_action( 'wp_footer', function () {
         if (C) countryPills();
         document.addEventListener('er:visitor', numbers); // the own country arrives after the beacon
         if (S) {
-            tabs(); sky(); tips(); views();
+            views(); tabs(); sky(); tips();
             var w = S.clientWidth;
             window.addEventListener('resize', function () {
                 if ((S.clientWidth >= 600) !== (w >= 600)) { w = S.clientWidth; sky(); }
