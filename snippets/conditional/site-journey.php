@@ -415,8 +415,8 @@ add_action( 'wp_ajax_nopriv_er_sj_qr', 'er_sj_qr' );
 //                                    right below the QR button)
 // Button feedback (e.g. "Link copied ✓") shows on the button itself for 3 seconds.
 // Buttons: any Button block linking to #journey-new, #journey-link or #journey-qr.
-// Cards: any block with the class er-sj-card (Advanced → Additional CSS class),
-// e.g. the Columns holding the four achievement cards - styled as the FAQ cards.
+// Cards: the columns holding the four achievement cards carry the class card-highlight
+// (Advanced → Additional CSS class), styled in Eric Companion CSS.
 
 // The few words the script itself writes, all in one place.
 function er_sj_texts() {
@@ -558,12 +558,6 @@ add_action( 'wp_footer', function () {
 		.er-sj-qrcode svg {display: block; width: 100%; height: auto;}
 		.er-sj-qrcap {margin: 6px 0 0; font-size: var(--er-fs-xs); line-height: 1.4; text-align: center; color: var(--color-3);}
 		.er-sj-qrcode .er-sj-link {margin-top: 16px;}
-		.er-sj-card {padding: 20px 24px; background: var(--color-8); border: 1px solid var(--color-5); border-radius: 25px; transition: background 0.2s;} /* as the FAQ cards */
-		.er-sj-card:hover {background: var(--color-7);}
-		body.dark-mode .er-sj-card {background: var(--color-10); border-color: var(--color-4);}
-		body.dark-mode .er-sj-card:hover {background: var(--color-6);}
-		.er-sj-card > * {margin-block: 0;}
-		.er-sj-card > * + * {margin-top: 0.25rem;}
 		.er-sj-stat.is-big {display: block; font-size: var(--er-fs-xl); font-weight: var(--er-fw-bold); line-height: 1.2; color: var(--color-4);} /* xl: long topic names wrap between words */
 		.er-sj-stat.is-note {display: block; font-style: italic; text-align: left;} /* the note under a card's value: no justified gaps */
 		body.dark-mode .er-sj-stat.is-big {color: var(--color-7);}
