@@ -220,9 +220,10 @@ add_action('wp_footer', function () {
 		function browserTranslated() { return /translated-/.test(document.documentElement.className); }
 		function isTranslated() { return !!ownLang() || browserTranslated(); }
 
-		// Browser translation: best effort from <html lang>, which not every browser updates
+		// Not translated: the page's own <html lang> (German on German pages). Browser
+		// translation: best effort from <html lang>, which not every browser updates
 		function targetLang() {
-			var raw = ownLang() || (browserTranslated() ? document.documentElement.lang : '') || 'en';
+			var raw = ownLang() || document.documentElement.lang || 'en';
 			return LANG_MAP[raw] || LANG_MAP[raw.split('-')[0]] || raw;
 		}
 
