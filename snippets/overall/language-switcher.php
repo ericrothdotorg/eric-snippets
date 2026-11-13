@@ -139,7 +139,6 @@ add_action('wp_footer', function () {
 	'use strict';
 
 	var LANGS    = '<?php echo esc_js($er_langs); ?>'.split(',');
-	var SOURCE   = 'en';
 	var KEY      = 'erLang';               // chosen language, remembered across pages (this browser only)
 	var API_CODE = { 'zh-CN': 'zh' };      // site code -> Translator API code, where they differ
 
@@ -151,6 +150,8 @@ add_action('wp_footer', function () {
 
 	var hasEngine = typeof self.Translator !== 'undefined';
 	var ORIG_LANG = document.documentElement.getAttribute('lang') || 'en';
+	var SOURCE    = ORIG_LANG.split('-')[0];          // the page's own language: English, German on German pages
+	if (LANGS.indexOf(SOURCE) >= 0) LANGS[LANGS.indexOf(SOURCE)] = 'en'; // on a German page: English instead of German
 
 	var panel, toggle, announcer, loadingText, select, hint;
 	var listPromise = null;
@@ -204,10 +205,10 @@ add_action('wp_footer', function () {
 
 	// --- Translation engine (desktop Chrome / Edge) ----------------
 	// Translates text nodes and a few attributes in place, visible part first,
-	// and keeps every original so "English (original)" restores the page without a reload.
+	// and keeps every original so "English (original)" (or "Deutsch (original)") restores the page without a reload.
 
 	var engine = {
-		lang: null,          // language shown now (site code), null = original English
+		lang: null,          // language shown now (site code), null = the original
 		pending: null,       // language being prepared, so read-aloud already knows it
 		translator: null,
 		items: [],           // { node | el+attr, orig, applied, done, waiters }
@@ -326,7 +327,7 @@ add_action('wp_footer', function () {
 		engine.observer.observe(document.body, { childList: true, subtree: true });
 	}
 
-	// Back to the original English, without a reload
+	// Back to the original, without a reload
 	function restore() {
 		engine.run++;
 		if (engine.observer) { engine.observer.disconnect(); engine.observer = null; }
@@ -465,7 +466,7 @@ add_action('wp_footer', function () {
 		})).then(function (codes) {
 			codes = codes.filter(Boolean);
 			if (!codes.length) { showHint(); return; }
-			select.add(new Option('English (original)', ''));
+			select.add(new Option(langName(SOURCE) + ' (original)', ''));
 			codes.forEach(function (code) { select.add(new Option(langName(code), code)); });
 			syncSelect();
 			setLoading(null);
@@ -576,6 +577,7 @@ add_action('wp_footer', function () {
 		// Next page / next visit: same language again, but only if its pack is already
 		// installed (no download without a click). Otherwise forget the choice.
 		var saved = store.get();
+		if (saved === SOURCE) saved = null; // the page is already in that language; the choice stays for other pages
 		if (saved && LANGS.indexOf(saved) < 0) { store.del(); saved = null; }
 		if (saved && !hasEngine) store.del();
 		if (saved && hasEngine) {
