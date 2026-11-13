@@ -9,21 +9,28 @@
  * both contexts a front-end-only snippet would never register its hooks.
  *
  * WHAT IT DOES
- *   Every place on the journey (logged-out visitors only) adds its own id to a list
- *   in the visitor's browser (localStorage "er_journey"). Nothing about which
- *   pages were opened ever leaves the browser. Only the number of explored
- *   places travels with Visitor Tracking's beacon and is kept per visitor for
- *   the level on the Site Journey page. The page is built in the editor
- *   from normal blocks plus the building blocks below ([er_sj_progress],
- *   [er_sj_sky], [er_sj_list], [er_sj_stat], [er_sj_qr_code]): progress,
- *   four achievement cards, one sky per content type (the front page above
- *   each), and a journey link / QR code to continue on another device. On every
- *   place, a line in the footer shows the progress in that place's topic and
- *   links the next unread one.
+ *   Every place on the journey adds its own id to a list in the visitor's
+ *   browser (localStorage "er_journey"; logged-in users "er_journey_admin", so
+ *   their own reading never mixes with a visitor list in the same browser).
+ *   Nothing about which pages were opened ever leaves the browser. Only the
+ *   number of explored places travels with Visitor Tracking's beacon and is
+ *   kept per visitor (logged-out only) for the level and the explorer figures
+ *   on the Site Journey page. The page is built in the editor from normal
+ *   blocks plus the building blocks below ([er_sj_progress], [er_sj_sky],
+ *   [er_sj_list], [er_sj_popular], [er_sj_countries], [er_sj_stat],
+ *   [er_sj_qr_code]): progress, achievement and explorer cards, one sky per
+ *   content type (the front page above each) with a "most read" view, the
+ *   explorers' countries, and a journey link / QR code to continue on another
+ *   device. On every place, a line in the footer shows the progress in that
+ *   place's topic and links the next unread one.
  *
  * OWNS
  *   Table er_journey (visitor_id, explored, updated_at): created here if
  *   missing, cleaned here (ER_SJ_DAYS, daily cron er_sj_daily_cleanup).
+ *
+ * READS (behind function_exists, never writes)
+ *   er_live_visitors (Visitor Tracking): the explorers' countries
+ *   er_map_cached() (World Map): its cached top pages, for "most read"
  *
  * PROVIDES (used by Visitor Tracking, behind function_exists)
  *   er_sj_store( $visitor_id, $count )  stores a visitor's progress number
@@ -37,6 +44,12 @@
 
 defined( 'ER_SJ_DAYS' ) || define( 'ER_SJ_DAYS', 90 ); // same window as Visitor Tracking
 defined( 'ER_SJ_PAGE' ) || define( 'ER_SJ_PAGE', 162357 ); // the Site Journey page (linked from the footer line)
+defined( 'ER_SJ_TOP' ) || define( 'ER_SJ_TOP', 8 ); // "most read" places per type: gold in the sky, listed by [er_sj_popular]
+
+// The browser list of the current user: logged-in users keep their own, which no beacon counts
+function er_sj_key() {
+	return is_user_logged_in() ? 'er_journey_admin' : 'er_journey';
+}
 
 function er_sj_excluded() {
 	return function_exists( 'er_uncounted_ids' ) ? er_uncounted_ids() : array(); // owner: Eric Companion PHP
@@ -228,8 +241,9 @@ add_action( 'er_sj_daily_cleanup', function () {
 // ======================================
 
 // The place on screen: pages, posts, interests, quotes and traits that are not
-// excluded. Archives, search, 404 and logged-in users get 0, so their own
-// browsing never counts. Cached per request (recording and footer line).
+// excluded. Archives, search and 404 get 0. Logged-in users are recorded in their
+// own list (er_sj_key()); er_sj_store() never counts them. Cached per request
+// (recording and footer line).
 function er_sj_place() {
 	static $id = null;
 	if ( null !== $id ) {
@@ -238,7 +252,7 @@ function er_sj_place() {
 	$id = 0;
 	// The posts page (My Blog) is an archive for WordPress, but a place on the journey
 	$posts_page = is_home() && ! is_front_page() && get_option( 'page_for_posts' );
-	if ( is_user_logged_in() || ! ( $posts_page || is_singular( array_keys( er_sj_types() ) ) ) || ! empty( $GLOBALS['er_synthetic_page'] ) ) {
+	if ( ! ( $posts_page || is_singular( array_keys( er_sj_types() ) ) ) || ! empty( $GLOBALS['er_synthetic_page'] ) ) {
 		return $id;
 	}
 	$place = $posts_page ? (int) get_option( 'page_for_posts' ) : (int) get_queried_object_id();
@@ -253,7 +267,7 @@ add_action( 'wp_footer', function () {
 	if ( ! $id ) {
 		return;
 	}
-	echo '<script>(function(){var k="er_journey",v=[];try{v=JSON.parse(localStorage.getItem(k))||[]}catch(e){}'
+	echo '<script>(function(){var k="' . er_sj_key() . '",v=[];try{v=JSON.parse(localStorage.getItem(k))||[]}catch(e){}'
 		. 'if(!Array.isArray(v))v=[];var id=' . $id . ';if(v.indexOf(id)<0){v.push(id);try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}'
 		. 'window.erJourneyCount=function(){return v.length}})();</script>' . "\n";
 }, 20 );
@@ -308,6 +322,7 @@ add_action( 'wp_footer', function () {
 		'places' => $places, // in site order: the next unread one comes after this page
 		'page'   => ER_SJ_PAGE === $id ? '' : wp_make_link_relative( get_permalink( ER_SJ_PAGE ) ), // no link to itself
 		'quote'  => 'my-quotes' === $self['y'], // a quote topic carries the quote ring
+		'key'    => er_sj_key(),
 		'texts'  => array_intersect_key( er_sj_texts(), array_flip( array( 'footRead', 'footAll', 'footIn', 'footNext' ) ) ),
 	);
 	?>
@@ -323,7 +338,7 @@ add_action( 'wp_footer', function () {
 		var crumbs = document.querySelector('footer.wp-block-template-part .er-breadcrumbs');
 		if (!crumbs) return;
 		var seen = [];
-		try { seen = JSON.parse(localStorage.getItem('er_journey')) || []; } catch (e) {}
+		try { seen = JSON.parse(localStorage.getItem(d.key)) || []; } catch (e) {}
 		if (!Array.isArray(seen)) seen = [];
 		var read = d.places.filter(function (p) { return seen.indexOf(p[0]) >= 0; }).length;
 		var at = 0;
@@ -362,19 +377,66 @@ add_action( 'wp_footer', function () {
 // DATA FOR THE PAGE (admin-ajax, GET, read-only)
 // ======================================
 
-// Places plus the progress numbers of the last 90 days as { explored: visitors }.
-function er_sj_data() {
-	$hist = get_transient( 'er_sj_hist' );
-	if ( ! is_array( $hist ) ) {
-		global $wpdb;
-		$hist = array();
-		$rows = $wpdb->get_results( "SELECT explored, COUNT(*) AS n FROM {$wpdb->prefix}er_journey GROUP BY explored", ARRAY_A );
-		foreach ( (array) $rows as $r ) {
-			$hist[ (int) $r['explored'] ] = (int) $r['n'];
-		}
-		set_transient( 'er_sj_hist', $hist, 15 * MINUTE_IN_SECONDS );
+// What all explorers of the last 90 days add up to, cached for 15 minutes:
+//   hist      { explored: visitors } - levels and the explorer figures
+//   week      explorers whose progress changed in the last 7 days
+//   countries [[country code, explorers], …], most first (Visitor Tracking's table)
+//   popular   place ids, most read first (World Map's cached top pages)
+// Rows are stored in site time, so the cutoff is computed in site time too.
+function er_sj_crowd() {
+	$crowd = get_transient( 'er_sj_crowd' );
+	if ( is_array( $crowd ) ) {
+		return $crowd;
 	}
-	wp_send_json_success( array( 'items' => er_sj_items(), 'hist' => (object) $hist, 'links' => (object) er_sj_topic_links() ) );
+	global $wpdb;
+	$crowd = array( 'hist' => array(), 'week' => 0, 'countries' => array(), 'popular' => array() );
+	$rows  = $wpdb->get_results( $wpdb->prepare(
+		"SELECT explored, COUNT(*) AS n, SUM(updated_at >= %s) AS week FROM {$wpdb->prefix}er_journey GROUP BY explored",
+		wp_date( 'Y-m-d H:i:s', time() - WEEK_IN_SECONDS )
+	), ARRAY_A );
+	foreach ( (array) $rows as $r ) {
+		$crowd['hist'][ (int) $r['explored'] ] = (int) $r['n'];
+		$crowd['week'] += (int) $r['week'];
+	}
+	if ( function_exists( 'er_trk_visitor_id' ) ) { // owner of er_live_visitors: Visitor Tracking
+		$rows = $wpdb->get_results(
+			"SELECT l.country_code AS cc, COUNT(*) AS n FROM {$wpdb->prefix}er_journey j
+			JOIN {$wpdb->prefix}er_live_visitors l ON l.visitor_id = j.visitor_id
+			WHERE l.country_code <> '' GROUP BY l.country_code ORDER BY n DESC",
+			ARRAY_A
+		);
+		foreach ( (array) $rows as $r ) {
+			$crowd['countries'][] = array( strtoupper( $r['cc'] ), (int) $r['n'] );
+		}
+	}
+	if ( function_exists( 'er_map_cached' ) && function_exists( 'er_map_build_history' ) && defined( 'ER_MAP_CACHE_HISTORY' ) ) {
+		$history = er_map_cached( 'er_map_history', 'er_map_build_history', ER_MAP_CACHE_HISTORY );
+		$ids     = array();
+		foreach ( er_sj_items() as $it ) {
+			$ids[ trailingslashit( $it['u'] ) ] = $it['i'];
+		}
+		foreach ( (array) ( $history['pages'] ?? array() ) as $p ) {
+			$path = trailingslashit( (string) $p['url'] );
+			if ( isset( $ids[ $path ] ) ) {
+				$crowd['popular'][] = $ids[ $path ];
+			}
+		}
+	}
+	set_transient( 'er_sj_crowd', $crowd, 15 * MINUTE_IN_SECONDS );
+	return $crowd;
+}
+
+// Places, topic links and what all explorers add up to.
+function er_sj_data() {
+	$crowd = er_sj_crowd();
+	wp_send_json_success( array(
+		'items'     => er_sj_items(),
+		'links'     => (object) er_sj_topic_links(),
+		'hist'      => (object) $crowd['hist'],
+		'week'      => $crowd['week'],
+		'countries' => $crowd['countries'],
+		'popular'   => $crowd['popular'],
+	) );
 }
 add_action( 'wp_ajax_er_sj_data', 'er_sj_data' );
 add_action( 'wp_ajax_nopriv_er_sj_data', 'er_sj_data' );
@@ -400,18 +462,28 @@ add_action( 'wp_ajax_nopriv_er_sj_qr', 'er_sj_qr' );
 // Headings, texts and buttons are normal blocks in the editor. The snippet
 // only provides the live parts:
 //   [er_sj_progress]                 ring and bars
-//   [er_sj_sky label="…" visited="…" notyet="…"]   tab bar, sky and key
+//   [er_sj_sky label="…" visited="…" notyet="…" mine="…" popular="…"]
+//                                    tab bar, sky and key; mine + popular add a switch
+//                                    to a view where the ER_SJ_TOP most read places of
+//                                    the tab shine gold (rank only, never a count)
 //   [er_sj_list]                     the places of the selected tab as a list of links
 //                                    (e.g. inside a Details block) - the way into the
 //                                    sky for keyboard and screen reader users
+//   [er_sj_popular]                  the ER_SJ_TOP most read places of the selected tab,
+//                                    in the list's columns (empty without World Map)
+//   [er_sj_countries]                the explorers' countries as pills, most first
 //   [er_sj_stat show="…"]            one live value, usable inside any text:
-//                                    percent, explored, total - and for the four
+//                                    percent, explored, total - for the four
 //                                    achievement cards: level / level-note,
 //                                    completed / completed-note, favourite /
-//                                    favourite-note, almost / almost-note
+//                                    favourite-note, almost / almost-note - for the
+//                                    explorer cards: explorers, active-week, countries,
+//                                    my-country, my-country-n (explorers there, the
+//                                    visitor included)
 //                                    size="big": large, on its own line (e.g. in a column)
-// The achievement cards never show a number about other visitors: the level only
-// says where a visitor stands among them ("among the top 5%").
+// No value about other visitors shows how little they read: the level only says where
+// a visitor stands among them ("among the top 5%"), the explorer values count people,
+// never what they read, "most read" is a rank.
 //   [er_sj_qr_code]                  where the QR code appears (optional; without it,
 //                                    right below the QR button)
 // Button feedback (e.g. "Link copied ✓") shows on the button itself for 3 seconds.
@@ -476,11 +548,17 @@ add_shortcode( 'er_sj_progress', function () {
 
 add_shortcode( 'er_sj_sky', function ( $atts ) {
 	er_sj_mark();
-	$a = shortcode_atts( array( 'label' => 'Choose a type:', 'visited' => 'read', 'notyet' => 'unread' ), $atts );
-	return '<div class="er-sj-skywrap" data-visited="' . esc_attr( $a['visited'] ) . '" data-notyet="' . esc_attr( $a['notyet'] ) . '">'
+	$a = shortcode_atts( array( 'label' => 'Choose a type:', 'visited' => 'read', 'notyet' => 'unread', 'mine' => '', 'popular' => '' ), $atts );
+	// mine + popular: a switch between the visitor's own reading and the most read places
+	$views = '' !== $a['mine'] && '' !== $a['popular']
+		? '<div class="er-sj-views" role="group" hidden>'
+			. '<button type="button" class="er-sj-tab" aria-pressed="true" data-view="mine">' . esc_html( $a['mine'] ) . '</button>'
+			. '<button type="button" class="er-sj-tab" aria-pressed="false" data-view="popular">' . esc_html( $a['popular'] ) . '</button></div>'
+		: '';
+	return '<div class="er-sj-skywrap" data-visited="' . esc_attr( $a['visited'] ) . '" data-notyet="' . esc_attr( $a['notyet'] ) . '" data-popular="' . esc_attr( $a['popular'] ) . '">'
 		. '<div class="er-sj-skybox">'
 		. '<div class="er-sj-tabbar"><span class="er-sj-tablabel" id="er-sj-tablabel">' . esc_html( $a['label'] ) . '</span>'
-		. '<div class="er-sj-tabs" role="tablist" aria-labelledby="er-sj-tablabel"></div></div>'
+		. '<div class="er-sj-tabs" role="tablist" aria-labelledby="er-sj-tablabel"></div>' . $views . '</div>'
 		. '<div id="er-sj-sky" role="tabpanel"><svg class="er-sj-svg" viewBox="0 0 1000 420" aria-hidden="true"></svg></div>'
 		. '<div class="er-sj-tip" hidden></div>'
 		. '<div class="er-sj-key" aria-hidden="true"><span><i class="is-seen"></i>' . esc_html( $a['visited'] ) . '</span><span><i></i>' . esc_html( $a['notyet'] ) . '</span></div></div></div>';
@@ -489,6 +567,16 @@ add_shortcode( 'er_sj_sky', function ( $atts ) {
 add_shortcode( 'er_sj_list', function () {
 	er_sj_mark();
 	return '<div class="er-sj-listbox"></div>';
+} );
+
+add_shortcode( 'er_sj_popular', function () {
+	er_sj_mark();
+	return '<ul class="er-sj-popular"></ul>';
+} );
+
+add_shortcode( 'er_sj_countries', function () {
+	er_sj_mark();
+	return '<p class="er-sj-countries"></p>';
 } );
 
 add_shortcode( 'er_sj_stat', function ( $atts ) {
@@ -510,7 +598,7 @@ add_action( 'wp_footer', function () {
 	if ( empty( $GLOBALS['er_sj_page'] ) ) {
 		return;
 	}
-	$cfg = array( 'ajax' => admin_url( 'admin-ajax.php' ), 'self' => er_sj_place(), 'texts' => er_sj_texts() ); // self: this page, if it is a place
+	$cfg = array( 'ajax' => admin_url( 'admin-ajax.php' ), 'self' => er_sj_place(), 'key' => er_sj_key(), 'top' => ER_SJ_TOP, 'texts' => er_sj_texts() ); // self: this page, if it is a place
 	?>
 	<style>
 		:is(.er-sj-progress, .er-sj-skywrap, .er-sj-msg) {--sj-card: var(--color-8); --sj-line: var(--color-5); --sj-head: var(--color-4);}
@@ -532,7 +620,7 @@ add_action( 'wp_footer', function () {
 		.er-sj-tabs {display: flex; flex-wrap: wrap; gap: 8px;}
 		.er-sj-tab {font: inherit; font-size: var(--er-fs-sm); padding: 7px 16px; border-radius: 20px; border: 1px solid var(--color-1); background: var(--color-10); color: var(--color-5); cursor: pointer; transition: border-color 0.2s, background 0.2s;}
 		.er-sj-tab:hover {background: var(--color-6); border-color: var(--color-2);}
-		.er-sj-tab[aria-selected="true"] {background: var(--color-1); border-color: var(--color-1); color: var(--color-8);}
+		.er-sj-tab:is([aria-selected="true"], [aria-pressed="true"]) {background: var(--color-1); border-color: var(--color-1); color: var(--color-8);}
 		.er-sj-tabnum {margin-left: 4px; font-size: var(--er-fs-xs); font-weight: var(--er-fw-bold); color: #ffd700;} /* gold, as the front-page stat numbers */
 		.er-sj-tab[aria-selected="true"] .er-sj-tabnum {color: var(--color-8);}
 		.er-sj-skybox {position: relative; background: var(--color-6); border-radius: 12px; overflow: hidden;}
@@ -547,12 +635,17 @@ add_action( 'wp_footer', function () {
 		.er-sj-key {position: absolute; left: 12px; bottom: 10px; display: flex; gap: 16px; font-size: var(--er-fs-xs); color: var(--color-5); pointer-events: none;}
 		.er-sj-key i {display: inline-block; width: 9px; height: 9px; margin-right: 6px; border-radius: 50%; border: 1.5px solid #8b7fe8; vertical-align: -1px;}
 		.er-sj-key i.is-seen {background: #fff; border-color: #fff; box-shadow: 0 0 0 3px rgba(231, 240, 248, 0.15);}
+		.er-sj-key i.is-top {background: #ffd700; border-color: #ffd700; box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.15);}
+		.er-sj-views {display: flex; gap: 8px; margin-left: auto;}
 		:is(.er-sj-tab, .er-sj-link):focus-visible {outline: var(--a11y-focus-width) solid var(--a11y-focus-color); outline-offset: var(--a11y-focus-offset);}
-		.er-sj-listbox {columns: 4 180px; column-gap: 24px; font-size: var(--er-fs-sm);}
+		:is(.er-sj-listbox, .er-sj-popular) {columns: 4 180px; column-gap: 24px; font-size: var(--er-fs-sm);}
+		.er-sj-popular {margin: 0; padding-left: 1.1em;}
+		.er-sj-popular li {break-inside: avoid;}
+		.er-sj-popular:empty {display: none;}
 		.er-sj-group {break-inside: avoid; padding-bottom: 0.75rem;}
 		.er-sj-listbox h3 {font-size: var(--er-fs-sm); margin: 0 0 0.25rem;}
 		.er-sj-listbox ul {margin: 0; padding-left: 1.1em;}
-		.er-sj-listbox li.is-seen::marker {content: "✓ "; color: var(--color-1);}
+		:is(.er-sj-listbox, .er-sj-popular) li.is-seen::marker {content: "✓ "; color: var(--color-1);}
 		.er-sj-sr {position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;}
 		.er-sj-link {display: block; width: 100%; font-size: var(--er-fs-xs);}
 		.er-sj-qrcode:has(svg) {margin-top: 16px; width: 220px; padding: 10px 10px 8px; background: #fff; border-radius: 10px;}
@@ -571,19 +664,22 @@ add_action( 'wp_footer', function () {
 (function () {
     var CFG = window.erSJ || {};
     var T = CFG.texts || {};
-    var KEY = 'er_journey';
+    var KEY = CFG.key;
     var TYPES = [['page', T.pages], ['post', T.posts], ['my-interests', T.interests], ['my-quotes', T.quotes], ['my-traits', T.traits]];
     var HUES = ['#2283d8', '#8b7fe8', '#2bb38a', '#e0679a', '#d08a2c', '#4aa3f0', '#6fd0b0', '#c59bf2', '#f0a35c', '#5cc1d6', '#e8807a', '#9fcf5a', '#7d9cf0', '#d9b44a'];
     var NS = 'http://www.w3.org/2000/svg';
     var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     var items = [], byId = {}, seen = {}, hist = {}, links = {}, current = 'page';
+    var week = 0, countries = [], popular = [], view = 'mine';
 
     // The building blocks are optional: each part only runs where its block is on the page
     var P = document.querySelector('.er-sj-progress');
     var S = document.querySelector('.er-sj-skywrap');
     var L = document.querySelector('.er-sj-listbox');
     var Q = document.querySelector('.er-sj-qrcode');
-    var first = document.querySelector('.er-sj-progress, .er-sj-skywrap, .er-sj-listbox, .er-sj-qrcode, [data-sj-stat]');
+    var R = document.querySelector('.er-sj-popular');
+    var C = document.querySelector('.er-sj-countries');
+    var first = document.querySelector('.er-sj-progress, .er-sj-skywrap, .er-sj-listbox, .er-sj-popular, .er-sj-countries, .er-sj-qrcode, [data-sj-stat]');
     if (!first) return;
 
     function el(tag, attrs, parent) {
@@ -759,11 +855,35 @@ add_action( 'wp_footer', function () {
             'almost-note': near ? [(near.left === 1 ? T.near1 : T.nearN.replace('%d', near.left)) + ' ', { a: [next.u, next.t] }] : T.nearAll
         };
     }
+    // Country names in English, from the codes (as World Map does)
+    var regions = (function () { try { return new Intl.DisplayNames(['en'], { type: 'region' }); } catch (e) { return null; } })();
+    function country(cc) { try { return regions ? regions.of(cc) : cc; } catch (e) { return cc; } }
+    // The visitor's own country: Visitor Tracking's answer on this page, or the last one this session
+    function myCountry() {
+        var v = window.ERVisitor;
+        if (!v) { try { v = JSON.parse(sessionStorage.getItem('er_visitor')); } catch (e) {} }
+        return v && v.cc ? String(v.cc).toUpperCase() : '';
+    }
+    // All explorers: how many and where from, never how much they read
+    function crowd(s, own) {
+        var n = 0;
+        Object.keys(hist).forEach(function (k) { n += hist[k]; });
+        s.explorers = n.toLocaleString('en');
+        s['active-week'] = week.toLocaleString('en');
+        s.countries = String(countries.length);
+        var cc = myCountry();
+        if (cc) {
+            var here = countries.filter(function (c) { return c[0] === cc; })[0];
+            s['my-country'] = country(cc);
+            s['my-country-n'] = String(Math.max(here ? here[1] : 0, own ? 1 : 0)); // the visitor counts too
+        }
+    }
     function stats(c) {
         var s = achievements(c);
         s.percent = pct(c.done, c.all);
         s.explored = String(c.done);
         s.total = String(c.all);
+        crowd(s, c.done);
         return s;
     }
     function numbers() {
@@ -813,6 +933,40 @@ add_action( 'wp_footer', function () {
         });
     }
 
+    // ---- Most read: the ER_SJ_TOP places of the selected tab, by World Map's ranking ----
+    var tops = {};
+    function topList() {
+        var out = popular.map(function (id) { return byId[id]; }).filter(function (it) { return it && it.y === current; }).slice(0, CFG.top);
+        tops = {};
+        out.forEach(function (it) { tops[it.i] = true; });
+        return out;
+    }
+    // [er_sj_popular]: the same places as links, in the list's columns
+    function popularList() {
+        var word = (S && S.getAttribute('data-visited')) || T.visited;
+        R.textContent = '';
+        topList().forEach(function (it) {
+            var li = document.createElement('li'), a = document.createElement('a');
+            a.href = it.u; a.textContent = it.t;
+            li.appendChild(a);
+            if (seen[it.i]) {
+                li.className = 'is-seen';
+                var v = document.createElement('span'); v.className = 'er-sj-sr'; v.textContent = ' (' + word + ')';
+                li.appendChild(v);
+            }
+            R.appendChild(li);
+        });
+    }
+    // [er_sj_countries]: one pill per country, most explorers first
+    function countryPills() {
+        C.textContent = '';
+        countries.forEach(function (c) {
+            var p = document.createElement('span');
+            p.textContent = country(c[0]) + ' (' + c[1] + ')';
+            C.append(p, ' ');
+        });
+    }
+
     // ---- [er_sj_sky] ----
     function clusters(type) {
         var map = {}, order = [], hub = [];
@@ -844,13 +998,14 @@ add_action( 'wp_footer', function () {
             n.className = 'er-sj-tabnum';
             n.textContent = c.per[t[0]][0] + '/' + c.per[t[0]][1];
             b.append(t[1] + ' ', n);
-            b.addEventListener('click', function () { current = t[0]; tabs(); sky(); if (L) list(); });
+            b.addEventListener('click', function () { current = t[0]; tabs(); sky(); if (L) list(); if (R) popularList(); });
             box.appendChild(b);
         });
     }
 
     function sky() {
         var svg = S.querySelector('.er-sj-svg'), wide = S.clientWidth >= 600;
+        topList();
         var cl = clusters(current), n = cl.list.length, hub = cl.hub.length > 0;
         var vw = wide ? 1000 : 420;
         // The front page sits above everything, in every sky, in a band of its own at the top.
@@ -935,13 +1090,35 @@ add_action( 'wp_footer', function () {
         var a = el('a', { href: (big && it.a) || it.u, tabindex: '-1', 'class': 'er-sj-star' }, svg); // hub star: its type's list
         a.__it = it;
         el('circle', { cx: x, cy: y, r: 9, fill: 'transparent' }, a); // easier to hit
-        if (seen[it.i]) {
-            el('circle', { cx: x, cy: y, r: big ? 11 : 7.5, fill: '#e7f0f8', opacity: 0.13 }, a);
-            var c = el('circle', { cx: x, cy: y, r: big ? 5.5 : 3.6, fill: '#ffffff', 'class': reduce ? '' : 'er-sj-tw' }, a);
+        // Own view: read stars shine white. Most read view: the top places shine gold.
+        var lit = view === 'popular' ? tops[it.i] : seen[it.i], glow = view === 'popular' ? '#ffd700' : '#ffffff';
+        if (lit) {
+            el('circle', { cx: x, cy: y, r: big ? 11 : 7.5, fill: view === 'popular' ? glow : '#e7f0f8', opacity: 0.13 }, a);
+            var c = el('circle', { cx: x, cy: y, r: big ? 5.5 : 3.6, fill: glow, 'class': reduce ? '' : 'er-sj-tw' }, a);
             if (!reduce) c.style.animationDelay = (it.i % 37) / 10 + 's';
         } else {
             el('circle', { cx: x, cy: y, r: big ? 4.6 : 2.9, fill: '#070c12', stroke: hue, 'stroke-width': big ? 1.6 : 1.2 }, a);
         }
+    }
+
+    // The switch between the own view and the most read view (only with mine + popular, and
+    // only when World Map's ranking is there). The key below the sky follows the view.
+    function views() {
+        var box = S.querySelector('.er-sj-views'), key = S.querySelector('.er-sj-key');
+        if (!box || !popular.length) return;
+        var mine = Array.prototype.slice.call(key.childNodes);
+        var top = document.createElement('span'), dot = document.createElement('i');
+        dot.className = 'is-top';
+        top.append(dot, S.getAttribute('data-popular'));
+        box.hidden = false;
+        box.addEventListener('click', function (e) {
+            var b = e.target.closest('[data-view]');
+            if (!b || b.getAttribute('data-view') === view) return;
+            view = b.getAttribute('data-view');
+            box.querySelectorAll('[data-view]').forEach(function (x) { x.setAttribute('aria-pressed', String(x === b)); });
+            key.replaceChildren.apply(key, view === 'popular' ? [top] : mine);
+            sky();
+        });
     }
 
     // Tooltip for the star under the pointer
@@ -1088,13 +1265,19 @@ add_action( 'wp_footer', function () {
         items = data.items || [];
         hist = data.hist || {};
         links = data.links || {};
+        week = data.week || 0;
+        countries = data.countries || [];
+        popular = data.popular || [];
         items.forEach(function (it) { byId[it.i] = it; });
         restore();
         load().forEach(function (id) { if (byId[id]) seen[id] = true; });
         numbers();
         if (L) list();
+        if (R) popularList();
+        if (C) countryPills();
+        document.addEventListener('er:visitor', numbers); // the own country arrives after the beacon
         if (S) {
-            tabs(); sky(); tips();
+            tabs(); sky(); tips(); views();
             var w = S.clientWidth;
             window.addEventListener('resize', function () {
                 if ((S.clientWidth >= 600) !== (w >= 600)) { w = S.clientWidth; sky(); }
