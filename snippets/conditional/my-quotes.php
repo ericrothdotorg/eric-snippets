@@ -131,6 +131,7 @@ function q_render_content( $post_obj ) {
 
 // Returns all published Quotes, newest first. Optionally filtered by Category Slug
 // Used by the [quotes_slider] Shortcode. No pagination — fine unless Quote Count grows large
+// German quotes are never in a slider (Eric Companion PHP 1d)
 function q_get_quotes_for_slider( $category = '' ) {
     $args = array(
         'post_type'      => 'my-quotes',
@@ -138,6 +139,7 @@ function q_get_quotes_for_slider( $category = '' ) {
         'posts_per_page' => -1,
         'orderby'        => 'date',
         'order'          => 'DESC',
+        'post__not_in'   => function_exists( 'er_uncounted_ids' ) ? er_uncounted_ids() : array(),
     );
     if ( $category ) {
         // Split comma-separated Slugs into an Array
