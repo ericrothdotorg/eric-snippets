@@ -338,7 +338,8 @@ function er_reading_time( $post_id = null, $echo = false ) {
 // German-speaking clients, not more content, so they are a section of their own:
 //   - never counted: counters, filter pills, tag clouds, Site Journey
 //   - never in an automatic list: listings, random sliders, /surprise/, Related,
-//     quote sliders, Display Posts (except where a shortcode names them by id)
+//     quote sliders, the Page List block, Display Posts (except where a shortcode
+//     names them by id)
 //   - still found by the site search, Google (sitemap) and the flags
 // A German page names its English version (meta box below); the pairs drive the
 // flags and redirect (Ninja Services) and lang / hreflang in the head (1e).
