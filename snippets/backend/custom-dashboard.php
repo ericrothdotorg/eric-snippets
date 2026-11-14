@@ -1,6 +1,116 @@
 <?php
 // NOTE: When in mu-plugins, add: defined('ABSPATH') || exit;
 
+/* ============================================================================
+ * CUSTOM DASHBOARD — the admin dashboard's own widgets (admin only)
+ * ----------------------------------------------------------------------------
+ * SECTIONS
+ *   Settings ............ numbers, widgets, links, feeds, thresholds, exceptions:
+ *                         change things here (styles: search "CUSTOM DASHBOARD STYLES")
+ *   Shared helpers ...... button row, date format
+ *   At a Glance, Theme Snapshot, Editing Rules, Hosting & Code Repos, Quick Links,
+ *   Recent Site Activity, Analysis Toolkit (incl. YouTube + link checks),
+ *   Performance (PageSpeed), Optimize & Clean-Up, RSS Feed, Styling, Hook registration
+ * ========================================================================== */
+
+// ======================================
+// SETTINGS: CHANGE THINGS HERE
+// ======================================
+
+defined('CUSTOM_YT_BATCH') || define('CUSTOM_YT_BATCH', 20);   // YouTube check: videos per request
+defined('CUSTOM_LC_BATCH') || define('CUSTOM_LC_BATCH', 20);   // link check: jobs per request (a job = 1 link, or up to 50 Wikipedia articles)
+defined('CUSTOM_RSS_ITEMS') || define('CUSTOM_RSS_ITEMS', 10); // RSS Feed: items per feed
+
+// The widgets: id => [title, render function]. The order is the first arrangement only:
+// WordPress remembers where you dragged them (per user).
+function custom_widgets() {
+	return [
+		'custom_theme_snapshot'       => ['🎨 Theme Snapshot',        'custom_render_theme_snapshot_widget'],
+		'custom_editing_rules'        => ['📌 Editing Rules',         'custom_render_editing_rules_widget'],
+		'hosting_code_repo'           => ['🌀 Hosting & Code Repos',  'custom_render_hosting_repo_widget'],
+		'quick_links'                 => ['🔗 Quick Links',           'custom_render_quick_links_widget'],
+		'custom_activity_alerts'      => ['🗓️ Recent Site Activity',  'custom_render_activity_widget'],
+		'custom_analysis_toolkit'     => ['📊 Analysis Toolkit',      'custom_render_analysis_toolkit'],
+		'custom_performance'          => ['🚀 Performance',           'custom_perf_render_widget'],
+		'custom_optimize_and_cleanup' => ['🧹 Optimize & Clean-Up',   'custom_render_innodb_cleanup'],
+		'custom_rss_feeds_widget'     => ['📰 RSS Feed',              'custom_render_rss_feeds_widget'],
+	];
+}
+
+// Button rows and feeds: label => address. A row label groups a row ("Hostinger").
+// {site} = the home page address, filled in for the online checkers.
+function custom_links() {
+	return [
+		// 🌀 Hosting & Code Repos
+		'hosting' => [
+			'Hostinger' => [
+				'Login'   => 'https://auth.hostinger.com/login',
+				'Webmail' => 'https://mail.hostinger.com/',
+				'AI'      => admin_url('admin.php?page=hostinger-ai-assistant'),
+			],
+			'Codes' => [
+				'GitHub'        => 'https://github.com/ericrothdotorg',
+				'Design Blocks' => admin_url('themes.php?page=design-block-tracker'),
+				'Snippets'      => admin_url('admin.php?page=snippets'),
+			],
+		],
+		// 🔗 Quick Links
+		'quick' => [
+			'Chatbots' => [
+				'Copilot'  => 'https://m365.cloud.microsoft/chat',
+				'Frontier' => 'https://stride.microsoft.com/',
+				'Claude'   => 'https://claude.ai/',
+				'DS'       => 'https://chat.deepseek.com/',
+			],
+			'Sponsors' => [
+				'GitHub'  => 'https://github.com/ericrothdotorg',
+				'Patreon' => 'https://www.patreon.com/cw/ericrothdotorg',
+				'PayPal'  => 'https://www.paypal.com/paypalme/ericrothdotorg',
+				'BMC'     => 'https://buymeacoffee.com/ericrothdotorg',
+			],
+		],
+		// 📊 Analysis Toolkit: online checkers of the home page, then tools
+		'checkers' => [
+			'Google Rich'   => 'https://search.google.com/test/rich-results?url={site}',
+			'schema.org'    => 'https://validator.schema.org/?url={site}',
+			'Accessibility' => 'https://wave.webaim.org/report#/{site}',
+		],
+		'tools' => [
+			'W3.org Dev Tools' => 'https://www.w3.org/developers/tools/',
+			'MS Clarity'       => 'https://clarity.microsoft.com/projects/view/eic7b2e9o1/dashboard',
+		],
+		// 📰 RSS Feed: one section per feed, in this order
+		'feeds' => [
+			'My Blog'      => home_url('/feed/'),
+			'My Interests' => home_url('/my-interests/feed/'),
+		],
+	];
+}
+
+// 🧹 Health status of the database rows: [orange from, red from] per profile.
+// At or below orange = green. Above orange = orange. Above red = red.
+//   'meta'      → postmeta, usermeta, termmeta, er_post_stats.
+//   'map_views' → er_map_views. Sits at ~11,500 rows normally (~128 visits/day
+//                 over 90 days), so its cutoffs are set above that.
+function custom_health_cutoffs() {
+	return [
+		'meta'      => [10000, 50000],
+		'map_views' => [15000, 30000],
+	];
+}
+
+// Video IDs that always fail the oEmbed check but are fine in the page.
+function custom_yt_excluded_ids() {
+	return ['-cW'];
+}
+
+// Never checked (part of the URL is enough)
+function custom_lc_excluded() {
+	return [
+		'/professional/support-services/projects/', // intentional 404 example on CO2 Compensation
+	];
+}
+
 // ======================================
 // SHARED HELPERS
 // ======================================
@@ -88,16 +198,11 @@ function custom_render_editing_rules_widget() {
 // ======================================
 
 function custom_render_hosting_repo_widget() {
-	custom_render_button_row([
-		'Login'   => 'https://auth.hostinger.com/login',
-		'Webmail' => 'https://mail.hostinger.com/',
-		'AI'      => admin_url('admin.php?page=hostinger-ai-assistant'),
-	], '', 'Hostinger');
-	custom_render_button_row([
-		'GitHub'        => 'https://github.com/ericrothdotorg',
-		'Design Blocks' => admin_url('themes.php?page=design-block-tracker'),
-		'Snippets'      => admin_url('admin.php?page=snippets'),
-	], 'margin-top: 6px;', 'Codes');
+	$first = true;
+	foreach (custom_links()['hosting'] as $row_label => $links) { // SETTINGS
+		custom_render_button_row($links, $first ? '' : 'margin-top: 6px;', $row_label);
+		$first = false;
+	}
 }
 
 // ======================================
@@ -105,20 +210,7 @@ function custom_render_hosting_repo_widget() {
 // ======================================
 
 function custom_render_quick_links_widget() {
-	$groups = [
-		'Chatbots' => [
-			'Copilot'  => 'https://m365.cloud.microsoft/chat',
-			'Frontier' => 'https://stride.microsoft.com/',
-			'Claude'   => 'https://claude.ai/',
-			'DS'       => 'https://chat.deepseek.com/',
-		],
-		'Sponsors' => [
-			'GitHub'  => 'https://github.com/ericrothdotorg',
-			'Patreon' => 'https://www.patreon.com/cw/ericrothdotorg',
-			'PayPal'  => 'https://www.paypal.com/paypalme/ericrothdotorg',
-			'BMC'     => 'https://buymeacoffee.com/ericrothdotorg',
-		],
-	];
+	$groups = custom_links()['quick']; // SETTINGS
 	$first = true;
 	foreach ($groups as $row_label => $links) {
 		custom_render_button_row($links, $first ? '' : 'margin-top: 6px;', $row_label);
@@ -229,11 +321,11 @@ function custom_render_analysis_toolkit() {
 
 function custom_render_external_tools_buttons() {
 	$site = urlencode(home_url('/'));
-	custom_render_button_row([
-		'Google Rich'   => 'https://search.google.com/test/rich-results?url=' . $site,
-		'schema.org'    => 'https://validator.schema.org/?url=' . $site,
-		'Accessibility' => 'https://wave.webaim.org/report#/' . $site,
-	]);
+	$links = [];
+	foreach (custom_links()['checkers'] as $label => $url) { // SETTINGS: {site} filled in here
+		$links[$label] = str_replace('{site}', $site, $url);
+	}
+	custom_render_button_row($links);
 }
 
 function custom_render_site_metrics() {
@@ -296,10 +388,7 @@ function custom_render_site_metrics() {
 
 function custom_render_tools_and_actions() {
 	echo '<div class="cd-gap">';
-	custom_render_button_row([
-		'W3.org Dev Tools' => 'https://www.w3.org/developers/tools/',
-		'MS Clarity'       => 'https://clarity.microsoft.com/projects/view/eic7b2e9o1/dashboard',
-	], 'margin-bottom: 10px;');
+	custom_render_button_row(custom_links()['tools'], 'margin-bottom: 10px;'); // SETTINGS
 	custom_yt_render();
 	custom_lc_render();
 	custom_check_script();
@@ -329,12 +418,7 @@ function custom_check_found(array $keys) {
 // Every embedded video is asked via YouTube's oEmbed: a removed or private video's page still
 // answers 200, oEmbed does not. 20 videos per request, 3 requests at a time.
 
-defined('CUSTOM_YT_BATCH') || define('CUSTOM_YT_BATCH', 20); // videos per request
 
-// Video IDs that always fail the oEmbed check but are fine in the page.
-function custom_yt_excluded_ids() {
-	return ['-cW'];
-}
 
 // Every embedded video => the posts it is in. A block embed writes the same URL twice
 // (block settings + wrapper), so each video is listed once per post.
@@ -447,14 +531,7 @@ function custom_yt_render() {
 // often answer a checker although the link works (403, 429, 5xx, timeout): worth a manual click.
 // Links in theme files (header, footer, sidebar) are not checked.
 
-defined('CUSTOM_LC_BATCH') || define('CUSTOM_LC_BATCH', 20); // jobs per request (a job = 1 link, or up to 50 Wikipedia articles)
 
-// Never checked (part of the URL is enough)
-function custom_lc_excluded() {
-	return [
-		'/professional/support-services/projects/', // intentional 404 example on CO2 Compensation
-	];
-}
 
 // Every link => the posts it is in, plus the jobs to check them
 function custom_lc_collect() {
@@ -926,6 +1003,7 @@ function custom_perf_render_widget() {
 		<p class="cd-muted cd-perf-status"></p>
 	</div>
 	<style>
+		/* CUSTOM DASHBOARD STYLES (1/2): the Performance widget */
 		/* Tabs */
 		.cd-perf-tabs { display: flex; justify-content: center; gap: 4px; margin-bottom: 12px; }
 		.cd-perf-tab { padding: 6px 14px; border: 0; border-bottom: 3px solid transparent; border-radius: 4px 4px 0 0;
@@ -1225,13 +1303,10 @@ function custom_render_database_stats() {
 	echo '</div>';
 }
 
-// HEALTH STATUS — the only place the green / orange / red cutoffs live.
-// At or below orange = green. Above orange = orange. Above red = red.
-//   'meta'      → postmeta, usermeta, termmeta, er_post_stats. Orange 10k, red 50k.
-//   'map_views' → er_map_views. Sits at ~11,500 rows normally (~128 visits/day
-//                 over 90 days), so its cutoffs are set above that: orange 15k, red 30k.
+// HEALTH STATUS. The cutoffs: custom_health_cutoffs() in SETTINGS.
 function custom_get_health_status($count, $profile = 'meta') {
-	[$orange, $red] = ($profile === 'map_views') ? [15000, 30000] : [10000, 50000];
+	$cutoffs = custom_health_cutoffs();
+	[$orange, $red] = $cutoffs[$profile] ?? $cutoffs['meta'];
 	if ($count > $red)    return ['cd-alert',   'Consider running a cleanup.'];
 	if ($count > $orange) return ['cd-warning', 'Moderate bloat detected.'];
 	return                       ['cd-success', 'Healthy state.'];
@@ -1261,10 +1336,13 @@ function custom_render_cleanup_history() {
 // 📰 RSS FEED
 // ======================================
 
-// One box, two feeds. Each section pages on its own.
+// One box, one section per feed (SETTINGS). Each section pages on its own.
 function custom_render_rss_feeds_widget() {
-	custom_render_rss_widget('My Blog', home_url('/feed/'));
-	custom_render_rss_widget('My Interests', home_url('/my-interests/feed/'), 'cd-gap');
+	$first = true;
+	foreach (custom_links()['feeds'] as $heading => $feed_url) {
+		custom_render_rss_widget($heading, $feed_url, $first ? '' : 'cd-gap');
+		$first = false;
+	}
 }
 
 // Shared renderer. Prints every item; the JavaScript pages through them.
@@ -1275,7 +1353,7 @@ function custom_render_rss_widget($heading, $feed_url, $class = '') {
 	echo '</div>';
 	echo '<div class="rss-items" style="display: none;">';
 
-	$items = custom_get_rss_items($feed_url, 10);
+	$items = custom_get_rss_items($feed_url, CUSTOM_RSS_ITEMS);
 	if (is_wp_error($items)) {
 		echo '<p>Error fetching feed: ' . esc_html($items->get_error_message()) . '</p>';
 	} else {
@@ -1328,6 +1406,7 @@ function custom_dashboard_inline_assets() {
 	if (!$screen || $screen->id !== 'dashboard') return;
 
 	echo '<style>
+		/* CUSTOM DASHBOARD STYLES (2/2): everything else on the dashboard */
 		/* === Root Colour Variables === */
 		#wpwrap {
 			--cd-blue:   #1e73be;
@@ -1529,14 +1608,8 @@ add_action('wp_dashboard_setup', function () {
 		$wp_meta_boxes['dashboard']['normal']['core']['dashboard_right_now']['title'] = '📇 At a Glance';
 	}
 
-	// Register all Widgets
-	wp_add_dashboard_widget('custom_theme_snapshot',       '🎨 Theme Snapshot',        'custom_render_theme_snapshot_widget');
-	wp_add_dashboard_widget('custom_editing_rules',        '📌 Editing Rules',         'custom_render_editing_rules_widget');
-	wp_add_dashboard_widget('hosting_code_repo',           '🌀 Hosting & Code Repos',  'custom_render_hosting_repo_widget');
-	wp_add_dashboard_widget('quick_links',                 '🔗 Quick Links',           'custom_render_quick_links_widget');
-	wp_add_dashboard_widget('custom_activity_alerts',      '🗓️ Recent Site Activity',  'custom_render_activity_widget');
-	wp_add_dashboard_widget('custom_analysis_toolkit',     '📊 Analysis Toolkit',      'custom_render_analysis_toolkit');
-	wp_add_dashboard_widget('custom_performance',          '🚀 Performance',           'custom_perf_render_widget');
-	wp_add_dashboard_widget('custom_optimize_and_cleanup', '🧹 Optimize & Clean-Up',   'custom_render_innodb_cleanup');
-	wp_add_dashboard_widget('custom_rss_feeds_widget',     '📰 RSS Feed',              'custom_render_rss_feeds_widget');
+	// Register all Widgets (titles and order: custom_widgets() in SETTINGS)
+	foreach (custom_widgets() as $id => [$title, $render]) {
+		wp_add_dashboard_widget($id, $title, $render);
+	}
 });
