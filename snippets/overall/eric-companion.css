@@ -749,7 +749,7 @@ body.dark-mode .post-stats .ps-num {color: var(--color-7);}
 
 /* ---- Explore embed (the [reusable] search box): equal padding above and below
    so it sits evenly between the two display-posts lists around it. ---- */
-.er-explore-embed {padding-top: 20px; padding-bottom: 25px;}
+.sidebar-content .er-explore-embed {padding-top: 30px; padding-bottom: 30px;}
 
 /* ---- About Me author links: two side-by-side icon-tiles (Personal green /
    Professional orange). Real header SVGs wired in sidebar.html serve as the icons. ---- */
