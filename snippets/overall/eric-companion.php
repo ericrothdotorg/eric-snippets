@@ -7,6 +7,7 @@
 // 
 // CONTENTS
 // 
+//   0. SETTINGS                numbers, wording, links: change things here
 //   1. SHARED HELPERS          taxonomy map, breadcrumbs, reading time,
 //                              German content: counting rule, English version,
 //                              lang / hreflang (er_uncounted_ids, er_is_german …)
@@ -33,6 +34,72 @@
 //   - Static CSS lives in style.css / the CSS snippet, NOT here (only per-page
 //     hero background URLs are printed inline).
 // ============================================================
+
+// ======================================
+// 0. SETTINGS: CHANGE THINGS HERE
+// ======================================
+// Numbers, wording and links, all in one place. No styles in this snippet:
+// they live in the theme's style.css and in the snippet "Eric Companion CSS".
+
+defined( 'ER_CARDS_PER_LOAD' ) || define( 'ER_CARDS_PER_LOAD', 12 ); // collection grids: cards shown first and added per infinite-scroll step
+defined( 'ER_RELATED_MAX' )    || define( 'ER_RELATED_MAX', 12 );    // related entries below an entry (at most)
+defined( 'ER_SLIDER_FROM' )    || define( 'ER_SLIDER_FROM', 5 );     // card rows: from this many cards a slider, below that a static row
+
+// Every text this snippet writes, grouped by where it shows (keep %d)
+function er_companion_texts() {
+	return array(
+		// Breadcrumbs
+		'crumbBlog'    => 'Blog',
+		'crumbSearch'  => 'Search Results',
+		'crumb404'     => '404 Not Found',
+		// Cards and collection grids
+		'minRead'      => '%d min read',
+		'noEntries'    => 'No entries found.',
+		// Below an entry: share row and previous / next
+		'shareThis'    => 'Share This',
+		'postNav'      => 'Post navigation',	// screen readers
+		// Header, footer, mobile menu
+		'socials'      => 'Socials',
+		'support'      => 'Support',
+		// Dark mode switch (screen readers)
+		'darkOn'       => 'Dark mode enabled',
+		'darkOff'      => 'Light mode enabled',
+		// Editor: meta box on pages
+		'enVersion'    => 'English version',
+		'enNone'       => '— None —',
+		'enHelp'       => 'German pages only: the English original.',
+	);
+}
+
+// Links and icons
+function er_companion_links() {
+	return array(
+		// Socials / Support: header, footer and mobile menu
+		'socialsUrl'  => '/about-me/contact/',
+		'socialsIcon' => '/wp-content/uploads/2025/12/users-solid-white.svg',
+		'supportUrl'  => '/this-site/',
+		'supportIcon' => '/wp-content/uploads/2025/12/hand-holding-dollar-solid-full-white.svg',
+		// The row of other collections below a collection's grid: heading anchor, heading, overview page
+		'overviews'   => array(
+			'category' => array( 'My-Blog', 'My Blog', '/personal/my-blog/' ),
+			'topics'   => array( 'My-Interests', 'My Interests', '/personal/my-interests/' ),
+			'things'   => array( 'My-Pages', 'My Pages', '/my-pages/' ),
+			'groups'   => array( 'My-Quotes', 'My Quotes', '/about-me/my-quotes/' ),
+			'types'    => array( 'My-Traits', 'My Traits', '/professional/my-background/my-traits/' ),
+		),
+		// Share row below an entry, in this order: label => [ address ({url}, {title}), icon ]
+		'share'       => array(
+			'Bluesky'  => array( 'https://bsky.app/intent/compose?text={title}%20{url}', 'bluesky' ),
+			'Facebook' => array( 'https://www.facebook.com/sharer/sharer.php?u={url}', 'facebook' ),
+			'LINE'     => array( 'https://social-plugins.line.me/lineit/share?url={url}', 'line' ),
+			'LinkedIn' => array( 'https://www.linkedin.com/sharing/share-offsite/?url={url}', 'linkedin' ),
+			'Telegram' => array( 'https://t.me/share/url?url={url}&text={title}', 'telegram' ),
+			'Threads'  => array( 'https://www.threads.net/intent/post?text={title}%20{url}', 'threads' ),
+			'WhatsApp' => array( 'https://api.whatsapp.com/send?text={title}%20{url}', 'whatsapp' ),
+			'Email'    => array( 'mailto:?subject={title}&body={url}', 'email' ),
+		),
+	);
+}
 
 // ======================================
 // 1. SHARED HELPERS
@@ -268,7 +335,7 @@ function er_breadcrumbs() {
 				$crumbs[] = '<span aria-current="page">' . esc_html( get_the_title( $posts_page_id ) ) . '</span>';
 			}
 		} else {
-			$crumbs[] = '<span aria-current="page">' . esc_html__( 'Blog' ) . '</span>';
+			$crumbs[] = '<span aria-current="page">' . esc_html( er_companion_texts()['crumbBlog'] ) . '</span>';
 		}
 	
 	} elseif ( is_post_type_archive() ) {
@@ -277,10 +344,10 @@ function er_breadcrumbs() {
 		$crumbs[]      = '<span aria-current="page">' . esc_html( $post_type_obj->labels->name ) . '</span>';
 
 	} elseif ( is_search() ) {
-		$crumbs[] = '<span aria-current="page">' . esc_html__( 'Search Results' ) . '</span>';
+		$crumbs[] = '<span aria-current="page">' . esc_html( er_companion_texts()['crumbSearch'] ) . '</span>';
 
 	} elseif ( is_404() ) {
-		$crumbs[] = '<span aria-current="page">' . esc_html__( '404 Not Found' ) . '</span>';
+		$crumbs[] = '<span aria-current="page">' . esc_html( er_companion_texts()['crumb404'] ) . '</span>';
 	}
 
 	// Build output
@@ -323,7 +390,7 @@ function er_reading_time( $post_id = null, $echo = false ) {
 			.       '<circle cx="12" cy="12" r="10" fill="none"/>'
 			.       '<polyline points="12 6 12 12 16 14" fill="none"/>'
 			.   '</svg>'
-			.   $minutes . ' min read'
+			.   esc_html( sprintf( er_companion_texts()['minRead'], $minutes ) )
 			. '</li>';
 	if ( $echo ) {
 		echo $output;
@@ -448,16 +515,16 @@ add_filter( 'get_pages', function ( $pages ) {
 
 // Meta box "English version" on pages: only filled in on German pages
 add_action( 'add_meta_boxes_page', function () {
-	add_meta_box( 'er_en_version', esc_html__( 'English version', 'textdomain' ), function ( $post ) {
+	add_meta_box( 'er_en_version', esc_html( er_companion_texts()['enVersion'] ), function ( $post ) {
 		wp_nonce_field( 'er_en_version', 'er_en_version_nonce' );
 		wp_dropdown_pages( array(
 			'name'              => 'er_en_version',
 			'selected'          => (int) get_post_meta( $post->ID, 'er_en_version', true ),
-			'show_option_none'  => '— None —',
+			'show_option_none'  => er_companion_texts()['enNone'],
 			'option_none_value' => '0',
 			'exclude'           => array( $post->ID ),
 		) );
-		echo '<p class="description">' . esc_html__( 'German pages only: the English original.', 'textdomain' ) . '</p>';
+		echo '<p class="description">' . esc_html( er_companion_texts()['enHelp'] ) . '</p>';
 	}, 'page', 'side' );
 } );
 add_action( 'save_post_page', function ( $post_id ) {
@@ -822,7 +889,7 @@ add_shortcode( 'er_cpt_archive', function( $atts ) {
 		$taxonomy  = $queried->taxonomy;
 		$post_type = array_search( $taxonomy, $taxonomy_map, true );
 		$atts      = shortcode_atts( array(
-			'limit'   => 12,
+			'limit'   => ER_CARDS_PER_LOAD,
 			'orderby' => 'date',
 			'order'   => 'DESC',
 		), $atts, 'er_cpt_archive' );
@@ -855,7 +922,7 @@ add_shortcode( 'er_cpt_archive', function( $atts ) {
 		$post_type = get_queried_object()->name;
 		$taxonomy  = $taxonomy_map[ $post_type ];
 		$atts      = shortcode_atts( array(
-			'limit'   => 12,
+			'limit'   => ER_CARDS_PER_LOAD,
 			'orderby' => 'date',
 			'order'   => 'DESC',
 		), $atts, 'er_cpt_archive' );
@@ -958,7 +1025,7 @@ add_shortcode( 'er_cpt_archive', function( $atts ) {
 	$loop = new WP_Query( $query_args );
 
 	if ( ! $loop->have_posts() ) {
-		echo '<p>No entries found.</p>';
+		echo '<p>' . esc_html( er_companion_texts()['noEntries'] ) . '</p>';
 		return ob_get_clean();
 	}
 
@@ -995,13 +1062,7 @@ add_shortcode( 'er_cpt_archive', function( $atts ) {
 		? $queried
 		: ( $active_slug !== '' ? get_term_by( 'slug', $active_slug, $taxonomy ) : false );
 	if ( $er_current_term instanceof WP_Term ) {
-		$er_other_terms = array(
-			'category' => array( 'My-Blog', 'My Blog', '/personal/my-blog/' ),
-			'topics'   => array( 'My-Interests', 'My Interests', '/personal/my-interests/' ),
-			'things'   => array( 'My-Pages', 'My Pages', '/my-pages/' ),
-			'groups'   => array( 'My-Quotes', 'My Quotes', '/about-me/my-quotes/' ),
-			'types'    => array( 'My-Traits', 'My Traits', '/professional/my-background/my-traits/' ),
-		);
+		$er_other_terms = er_companion_links()['overviews'];
 		if ( isset( $er_other_terms[ $taxonomy ] ) ) {
 			// IDs of all terms except the current one → passed as include_id
 			$er_other_ids = get_terms( array(
@@ -1019,8 +1080,8 @@ add_shortcode( 'er_cpt_archive', function( $atts ) {
 					esc_html( $er_label )
 				);
 				echo '<div style="margin-bottom: var(--wp--preset--spacing--medium)">';
-				// As Related: 4 or fewer → a static row (a slider would only repeat them), more → the slider
-				$er_layout = count( $er_other_ids ) > 4 ? 'slideshow-multiple-items-4' : 'is-layout-grid';
+				// As Related: fewer than ER_SLIDER_FROM → a static row (a slider would only repeat them), more → the slider
+				$er_layout = count( $er_other_ids ) >= ER_SLIDER_FROM ? 'slideshow-multiple-items-4' : 'is-layout-grid';
 				echo do_shortcode( '[display-taxonomies taxonomy="' . $taxonomy . '" include_id="' . implode( ',', $er_other_ids ) . '" show_count="true" order="ASC" orderby="title" image_size="large" wrapper="div" wrapper_class="display-posts-listing ' . $er_layout . ' daneden-slideInUp"]' );
 				echo '</div>';
 			}
@@ -1041,7 +1102,7 @@ function er_load_more_handler() {
 	// Search mode: mixed post types, no taxonomy/term filter.
 	$search = isset( $_POST['search'] ) ? sanitize_text_field( wp_unslash( $_POST['search'] ) ) : '';
 	if ( $search !== '' ) {
-		$limit  = max( 1, min( 48, absint( $_POST['limit'] ?? 12 ) ) );
+		$limit  = max( 1, min( 48, absint( $_POST['limit'] ?? ER_CARDS_PER_LOAD ) ) );
 		$offset = absint( $_POST['offset'] ?? 0 );
 
 		$loop = new WP_Query( array(
@@ -1072,7 +1133,7 @@ function er_load_more_handler() {
 	}
 
 	$post_type       = sanitize_key( wp_unslash( $_POST['post_type'] ?? '' ) );
-	$limit           = max( 1, min( 48, absint( $_POST['limit'] ?? 12 ) ) );
+	$limit           = max( 1, min( 48, absint( $_POST['limit'] ?? ER_CARDS_PER_LOAD ) ) );
 	$allowed_orderby = [ 'date', 'title', 'rand', 'menu_order' ];
 	$orderby         = sanitize_key( wp_unslash( $_POST['orderby'] ?? '' ) );
 	$orderby         = in_array( $orderby, $allowed_orderby, true ) ? $orderby : 'date';
@@ -1157,7 +1218,7 @@ add_shortcode( 'er_related_posts', function() {
 
 	$query_args = array(
 		'post_type'      => $post_type,
-		'posts_per_page' => 12,
+		'posts_per_page' => ER_RELATED_MAX,
 		'post_status'    => 'publish',
 		'orderby'        => 'rand',
 		'post__not_in'   => array_merge( array( $post->ID ), er_uncounted_ids() ), // German items are never related (1d)
@@ -1186,8 +1247,8 @@ add_shortcode( 'er_related_posts', function() {
 	
 		// Count what we actually got back so we can pick the layout.
 		$count = $related->post_count;
-		// 4 or fewer → static grid (no slider, no clones, no duplicates). More than 4 → the slider kicks in.
-		$is_slider = ( $count > 4 );
+		// Fewer than ER_SLIDER_FROM → static grid (no slider, no clones, no duplicates); from there on the slider.
+		$is_slider = ( $count >= ER_SLIDER_FROM );
 		$layout_class = $is_slider
 			? 'slideshow-multiple-items-4 is-layout-slider daneden-slideInUp'
 			: 'is-layout-grid is-count-' . $count . ' daneden-slideInUp';
@@ -1230,16 +1291,10 @@ add_shortcode( 'er_post_footer', function () {
 	$u     = rawurlencode( $url );
 	$t     = rawurlencode( $title );
 
-	$networks = array(
-		'Bluesky'  => array( 'https://bsky.app/intent/compose?text=' . $t . '%20' . $u, 'bluesky' ),
-		'Facebook' => array( 'https://www.facebook.com/sharer/sharer.php?u=' . $u,       'facebook' ),
-		'LINE'     => array( 'https://social-plugins.line.me/lineit/share?url=' . $u,    'line' ),
-		'LinkedIn' => array( 'https://www.linkedin.com/sharing/share-offsite/?url=' . $u, 'linkedin' ),
-		'Telegram' => array( 'https://t.me/share/url?url=' . $u . '&text=' . $t,         'telegram' ),
-		'Threads'  => array( 'https://www.threads.net/intent/post?text=' . $t . '%20' . $u, 'threads' ),
-		'WhatsApp' => array( 'https://api.whatsapp.com/send?text=' . $t . '%20' . $u,    'whatsapp' ),
-		'Email'    => array( 'mailto:?subject=' . $t . '&body=' . $u,                    'email' ),
-	);
+	$networks = array();
+	foreach ( er_companion_links()['share'] as $label => $net ) { // SETTINGS: {url} / {title} filled in here
+		$networks[ $label ] = array( strtr( $net[0], array( '{url}' => $u, '{title}' => $t ) ), $net[1] );
+	}
 
 	$icons = er_post_footer_icons();
 
@@ -1257,7 +1312,7 @@ add_shortcode( 'er_post_footer', function () {
 	<div class="er-post-footer">
 
 		<div class="er-pf-net">
-			<span class="er-pf-net-label">Share This</span>
+			<span class="er-pf-net-label"><?php echo esc_html( er_companion_texts()['shareThis'] ); ?></span>
 			<div class="er-pf-net-links">
 				<?php
 				foreach ( $networks as $label => $data ) :
@@ -1279,7 +1334,7 @@ add_shortcode( 'er_post_footer', function () {
 		</div>
 
 		<?php if ( $prev || $next ) : ?>
-		<nav class="er-postnav" aria-label="Post navigation">
+		<nav class="er-postnav" aria-label="<?php echo esc_attr( er_companion_texts()['postNav'] ); ?>">
 
 			<div class="er-postnav-side er-postnav-prev">
 				<?php if ( $prev ) :
@@ -1433,30 +1488,32 @@ add_filter( 'render_block', function ( $block_content, $block ) {
 }, 10, 2 );
 
 // ---- 8c. Socials + Support icons — [er_socials_support]; single source for header, footer, mobile overlay ----
-// URLs + icon files defined once here; two skins differ only in wrapper/classes/icon size:
+// URLs, icon files and labels: SETTINGS at the top; two skins differ only in wrapper/classes/icon size:
 //   context="bar"     (default) → desktop header + footer  (.er-socials-support / .er-header-icon, 22px)
 //   context="overlay"           → mobile hamburger overlay (.er-nav-overlay-extra, 20px)
 add_shortcode( 'er_socials_support', function ( $atts ) {
 	$atts = shortcode_atts( array( 'context' => 'bar' ), $atts, 'er_socials_support' );
 
-	// Single source of truth: links + icons.
-	$socials_url  = '/about-me/contact/';
-	$socials_icon = '/wp-content/uploads/2025/12/users-solid-white.svg';
-	$support_url  = '/this-site/';
-	$support_icon = '/wp-content/uploads/2025/12/hand-holding-dollar-solid-full-white.svg';
+	// Links, icons and labels: SETTINGS (er_companion_links, er_companion_texts)
+	$l = er_companion_links();
+	$t = er_companion_texts();
+	$socials_url  = $l['socialsUrl'];
+	$socials_icon = $l['socialsIcon'];
+	$support_url  = $l['supportUrl'];
+	$support_icon = $l['supportIcon'];
 
 	if ( $atts['context'] === 'overlay' ) {
 		// Mobile overlay skin: .er-nav-overlay-extra, plain anchors, 20px icons.
 		return '<div class="er-nav-overlay-extra">'
-		     . '<a href="' . esc_url( $socials_url ) . '"><img src="' . esc_url( $socials_icon ) . '" alt="" width="20" height="20"><span>Socials</span></a>'
-		     . '<a href="' . esc_url( $support_url ) . '"><img src="' . esc_url( $support_icon ) . '" alt="" width="20" height="20"><span>Support</span></a>'
+		     . '<a href="' . esc_url( $socials_url ) . '"><img src="' . esc_url( $socials_icon ) . '" alt="" width="20" height="20"><span>' . esc_html( $t['socials'] ) . '</span></a>'
+		     . '<a href="' . esc_url( $support_url ) . '"><img src="' . esc_url( $support_icon ) . '" alt="" width="20" height="20"><span>' . esc_html( $t['support'] ) . '</span></a>'
 		     . '</div>';
 	}
 
 	// Default bar skin: .er-socials-support, .er-header-icon anchors, 22px icons.
 	return '<span class="er-socials-support">'
-	     . '<a class="er-header-icon" href="' . esc_url( $socials_url ) . '"><img src="' . esc_url( $socials_icon ) . '" alt="" width="22" height="22"><span class="er-header-label">Socials</span></a>'
-	     . '<a class="er-header-icon" href="' . esc_url( $support_url ) . '"><img src="' . esc_url( $support_icon ) . '" alt="" width="22" height="22"><span class="er-header-label">Support</span></a>'
+	     . '<a class="er-header-icon" href="' . esc_url( $socials_url ) . '"><img src="' . esc_url( $socials_icon ) . '" alt="" width="22" height="22"><span class="er-header-label">' . esc_html( $t['socials'] ) . '</span></a>'
+	     . '<a class="er-header-icon" href="' . esc_url( $support_url ) . '"><img src="' . esc_url( $support_icon ) . '" alt="" width="22" height="22"><span class="er-header-label">' . esc_html( $t['support'] ) . '</span></a>'
 	     . '</span>';
 } );
 
@@ -1493,7 +1550,7 @@ add_action( 'wp_footer', function() {
 			var changeMode = function() {
 				var isDark = body.classList.toggle('dark-mode');
 				if (changeModeSwitch) { changeModeSwitch.checked = isDark; changeModeSwitch.setAttribute('aria-checked', isDark); }
-				if (statusEl) { statusEl.textContent = isDark ? 'Dark mode enabled' : 'Light mode enabled'; }
+				if (statusEl) { statusEl.textContent = isDark ? <?php echo wp_json_encode( er_companion_texts()['darkOn'] ); ?> : <?php echo wp_json_encode( er_companion_texts()['darkOff'] ); ?>; }
 				try { localStorage.setItem('changeMode', isDark ? 'true' : 'false'); } catch(e) { console.warn('LocalStorage unavailable'); }
 			};
 
