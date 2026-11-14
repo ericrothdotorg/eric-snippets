@@ -44,6 +44,7 @@
 defined( 'ER_CARDS_PER_LOAD' ) || define( 'ER_CARDS_PER_LOAD', 12 ); // collection grids: cards shown first and added per infinite-scroll step
 defined( 'ER_RELATED_MAX' )    || define( 'ER_RELATED_MAX', 12 );    // related entries below an entry (at most)
 defined( 'ER_SLIDER_FROM' )    || define( 'ER_SLIDER_FROM', 5 );     // card rows: from this many cards a slider, below that a static row
+defined( 'ER_READING_WPM' )    || define( 'ER_READING_WPM', 200 );   // reading speed (words per minute): "min read" on cards and in [post_stats] (Site Essentials)
 
 // Every text this snippet writes, grouped by where it shows (keep %d)
 function er_companion_texts() {
@@ -372,14 +373,14 @@ function er_breadcrumbs() {
 add_shortcode( 'er_breadcrumbs', 'er_breadcrumbs' );
 
 // ---- 1c. Reading time — used by er_render_card() for archive cards ----
-// READING_SPEED_WPM is defined in Site Essentials & Cookies PHP; falls back to 200 via defined() guard.
+// Reading speed: ER_READING_WPM in SETTINGS (this snippet runs everywhere, so front end, admin and AJAX agree).
 // (On single posts, reading time shows via [post_stats] in the sidebar — no injection here.)
 
 function er_reading_time( $post_id = null, $echo = false ) {
 	$post_id    = $post_id ?: get_the_ID();
 	$content    = get_post_field( 'post_content', $post_id );
 	$word_count = str_word_count( wp_strip_all_tags( strip_shortcodes( $content ) ) );
-	$wpm        = defined( 'READING_SPEED_WPM' ) ? READING_SPEED_WPM : 200;
+	$wpm        = ER_READING_WPM;
 	$minutes    = max( 1, (int) ceil( $word_count / $wpm ) );
 	$output = '<li class="er-reading-time">'
 			.   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" '
