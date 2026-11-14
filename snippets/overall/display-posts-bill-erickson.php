@@ -469,6 +469,8 @@ add_action( 'wp_head', function () {
 		
 		/* Sidebar Widgets */
 		.display-posts-listing#latest > *:not(:first-child):not(:last-child) {margin: 25px 0;}
+		.sidebar-content .display-posts-listing.grid {grid-gap: 10px;} /* any grid in the narrow sidebar (e.g. Explore) */
+		.sidebar-content .display-posts-listing.grid .title {font-size: var(--er-fs-body);} /* one step smaller: two titles fit side by side */
 		
 		/* Traits Conclusion */
 		.display-posts-listing.grid.traits-conclusion {grid-gap: 0.25rem;}
