@@ -42,7 +42,8 @@
  *   every counter on the site; private pages never count.
  *
  * SECTIONS (in this order)
- *   Settings & helpers    constants, the browser list's name, shared JS rules, types, hubs
+ *   Settings              numbers, constellation colours, all wording, preview samples
+ *   Helpers               the browser list's name, shared JS rules, types, hubs
  *   The places            all places (cached 12 h), collection links
  *   Table & progress      er_journey table, er_sj_store(), daily cleanup
  *   Recording             every place adds itself to the browser list (wp_footer 20)
@@ -58,22 +59,122 @@
  *     Button order / position                 move the Button blocks freely
  *     Where the QR code appears               a Shortcode block with [er_sj_qr_code];
  *                                             aligned right / centred: inside a Row group
- *   In this snippet:
+ *   In this snippet: everything in SETTINGS, right below this header
+ *     Numbers (90-day window, most read)      ER_SJ_DAYS, ER_SJ_TOP
+ *     Colours of the constellations           er_sj_hues()
  *     Wording the script writes               er_sj_texts()       (keep %d / %s)
  *     Sample values in the editor preview     er_sj_stat_sample()
- *     Colours, sizes, spacing                 the <style> block under "THE PAGE"
- *     Colours of the constellations           HUES in the page script
- *     Most read per type / 90-day window      ER_SJ_TOP / ER_SJ_DAYS (top of this snippet)
+ *     Sizes, spacing, other colours           search "SITE JOURNEY STYLES"
  *   Afterwards: purge LiteSpeed; in the editor, ↻ Refresh in the shortcode preview.
  * ========================================================================== */
 
 // ======================================
-// SETTINGS & HELPERS
+// SETTINGS: CHANGE THINGS HERE
 // ======================================
+// Numbers, colours, wording and the editor preview's samples, all in one place.
+// Styles (sizes, spacing, other colours): search for "SITE JOURNEY STYLES".
 
 defined( 'ER_SJ_DAYS' ) || define( 'ER_SJ_DAYS', 90 ); // same window as Visitor Tracking
 defined( 'ER_SJ_PAGE' ) || define( 'ER_SJ_PAGE', 162357 ); // the Site Journey page (linked from the footer line)
 defined( 'ER_SJ_TOP' ) || define( 'ER_SJ_TOP', 10 ); // "most read" places per type: gold in the sky, listed by [er_sj_popular]
+
+// Colours of the constellations in the sky, used in this order (then repeated)
+function er_sj_hues() {
+	return array( '#2283d8', '#8b7fe8', '#2bb38a', '#e0679a', '#d08a2c', '#4aa3f0', '#6fd0b0', '#c59bf2', '#f0a35c', '#5cc1d6', '#e8807a', '#9fcf5a', '#7d9cf0', '#d9b44a' );
+}
+
+// Every text the snippet writes itself, grouped by where it shows. Change the wording
+// here only. %d / %1$d / %2$d / %s are filled in by the script: keep them.
+function er_sj_texts() {
+	return array(
+		// [er_sj_progress] and [er_sj_sky]: type names, "42 of 350"
+		'pages'        => 'Pages',
+		'posts'        => 'Posts',
+		'interests'    => 'Interests',
+		'quotes'       => 'Quotes',
+		'traits'       => 'Traits',
+		'of'           => '%1$d of %2$d',
+		'visited'      => 'read',	// screen readers, after a read entry in [er_sj_list] / [er_sj_popular]
+		'open'         => 'Open',	// [er_sj_sky] on touch screens: link in the title shown by the first tap
+
+		// [er_sj_stat show="level"] and "level-note" (card: level)
+		// Levels by where a visitor stands among all visitors of the last 90 days
+		'levels'       => array( 'Newcomer', 'Explorer', 'Pathfinder', 'Voyager', 'Legend' ),
+		'lvTop'        => 'Among the top %s of visitors',	// "Among the top 25% of visitors · "
+		'lvIn1'        => 'in 1 more entry',	// after the next level in bold: "Pathfinder in 1 more entry"
+		'lvInN'        => 'in %d more entries',	// "Pathfinder in 3 more entries"
+		'lvLegend'     => 'You\'ve read more than anyone',	// the top level, Legend
+
+		// [er_sj_stat show="completed-note"] (card: collections completed; the value is the number)
+		// A collection = one term of a type's taxonomy (Pages: things, Posts: category, …), drawn as one constellation in the sky
+		'done0'        => 'Collections completed – your first one is waiting',	// 0
+		'done1'        => 'Collection completed',	// 1
+		'doneN'        => 'Collections completed',	// 2 or more
+
+		// [er_sj_stat show="favourite-note"] (card: favourite collection; the value is its name)
+		'fav1'         => 'Your favourite collection · 1 entry',
+		'favN'         => 'Your favourite collection · %d entries',
+		'favNone'      => 'Your favourite collection shows up here',	// nothing read yet
+
+		// [er_sj_stat show="almost-note"] (card: almost there; the value is the collection's name)
+		// The next unread entry follows as a link: "… · next: Deeds"
+		'near1'        => 'Almost there: 1 entry to go · next:',
+		'nearN'        => 'Almost there: %d entries to go · next:',
+		'nearAll'      => 'You\'ve read them all!',	// every collection finished
+
+		// Footer line on every place: "Read 2 of 11 in Karma · Next: Deeds"
+		'footRead'     => 'Read %1$d of %2$d',
+		'footAll'      => 'Read all %d',	// collection finished: "Read all 11 in Karma ✓"
+		'footIn'       => 'in %s',
+		'footNext'     => 'Next:',
+
+		// Buttons #journey-new, #journey-link, #journey-qr (feedback on the button, 3 s)
+		'everywhere'   => 'You\'ve read them all!',	// #journey-new with nothing left unread
+		'copied'       => 'Link copied ✓',
+		'selectCopy'   => 'Copy the link below',	// the browser refused copying
+		'linkLabel'    => 'Your personal link',	// screen readers: the link field
+		'hideQr'       => 'Hide QR Code',
+		'qrShown'      => 'QR code shown below.',	// screen readers only: confirms the click (the page text explains the scanning)
+		'qrAlt'        => 'QR code of your personal link',
+		'qrFailed'     => 'QR code not available',
+
+		// Notes above the first building block on the Site Journey page
+		'restored'     => 'Welcome back! %d pages from your personal link were added here.',
+		'restoredNone' => 'Your personal link holds nothing new for this browser.',
+		'failed'       => 'Your progress could not be loaded right now. Please try again later.',
+	);
+}
+
+// Sample values for the editor preview only, built from the real texts so the wording
+// always matches what visitors see. Numbers and collection names are made up.
+function er_sj_stat_sample( $show ) {
+	$t     = er_sj_texts();
+	$collection = '<a href="#">Karma</a>';
+	$samples = array(
+		'percent'        => '12%',
+		'explored'       => '42',
+		'total'          => '350',
+		'level'          => esc_html( $t['levels'][1] ),
+		'level-note'     => esc_html( sprintf( $t['lvTop'], '25%' ) ) . ' · <b>' . esc_html( $t['levels'][2] ) . '</b> ' . esc_html( sprintf( $t['lvInN'], 3 ) ),
+		'completed'      => '2',
+		'completed-note' => esc_html( $t['doneN'] ),
+		'favourite'      => $collection,
+		'favourite-note' => esc_html( sprintf( $t['favN'], 7 ) ),
+		'almost'         => $collection,
+		'almost-note'    => esc_html( sprintf( $t['nearN'], 3 ) ) . ' <a href="#">Deeds</a>',
+		'explorers'      => '1,234',
+		'active-week'    => '56',
+		'countries'      => '40',
+		'my-country'     => 'Switzerland',
+		'my-country-n'   => '12',
+	);
+	return isset( $samples[ $show ] ) ? $samples[ $show ] : '—';
+}
+
+// ======================================
+// HELPERS
+// ======================================
+
 
 // The browser list of the current user: logged-in users keep their own, which no beacon counts
 function er_sj_key() {
@@ -531,68 +632,6 @@ add_action( 'wp_ajax_nopriv_er_sj_data', 'er_sj_data' );
 // The level only says where a visitor stands ("among the top 5%"), the explorer
 // values count people, "most read" is a rank.
 
-// Every text the snippet writes itself, grouped by where it shows. Change the wording
-// here only. %d / %1$d / %2$d / %s are filled in by the script: keep them.
-function er_sj_texts() {
-	return array(
-		// [er_sj_progress] and [er_sj_sky]: type names, "42 of 350"
-		'pages'        => 'Pages',
-		'posts'        => 'Posts',
-		'interests'    => 'Interests',
-		'quotes'       => 'Quotes',
-		'traits'       => 'Traits',
-		'of'           => '%1$d of %2$d',
-		'visited'      => 'read',	// screen readers, after a read entry in [er_sj_list] / [er_sj_popular]
-		'open'         => 'Open',	// [er_sj_sky] on touch screens: link in the title shown by the first tap
-
-		// [er_sj_stat show="level"] and "level-note" (card: level)
-		// Levels by where a visitor stands among all visitors of the last 90 days
-		'levels'       => array( 'Newcomer', 'Explorer', 'Pathfinder', 'Voyager', 'Legend' ),
-		'lvTop'        => 'Among the top %s of visitors',	// "Among the top 25% of visitors · "
-		'lvIn1'        => 'in 1 more entry',	// after the next level in bold: "Pathfinder in 1 more entry"
-		'lvInN'        => 'in %d more entries',	// "Pathfinder in 3 more entries"
-		'lvLegend'     => 'You\'ve read more than anyone',	// the top level, Legend
-
-		// [er_sj_stat show="completed-note"] (card: collections completed; the value is the number)
-		// A collection = one term of a type's taxonomy (Pages: things, Posts: category, …), drawn as one constellation in the sky
-		'done0'        => 'Collections completed – your first one is waiting',	// 0
-		'done1'        => 'Collection completed',	// 1
-		'doneN'        => 'Collections completed',	// 2 or more
-
-		// [er_sj_stat show="favourite-note"] (card: favourite collection; the value is its name)
-		'fav1'         => 'Your favourite collection · 1 entry',
-		'favN'         => 'Your favourite collection · %d entries',
-		'favNone'      => 'Your favourite collection shows up here',	// nothing read yet
-
-		// [er_sj_stat show="almost-note"] (card: almost there; the value is the collection's name)
-		// The next unread entry follows as a link: "… · next: Deeds"
-		'near1'        => 'Almost there: 1 entry to go · next:',
-		'nearN'        => 'Almost there: %d entries to go · next:',
-		'nearAll'      => 'You\'ve read them all!',	// every collection finished
-
-		// Footer line on every place: "Read 2 of 11 in Karma · Next: Deeds"
-		'footRead'     => 'Read %1$d of %2$d',
-		'footAll'      => 'Read all %d',	// collection finished: "Read all 11 in Karma ✓"
-		'footIn'       => 'in %s',
-		'footNext'     => 'Next:',
-
-		// Buttons #journey-new, #journey-link, #journey-qr (feedback on the button, 3 s)
-		'everywhere'   => 'You\'ve read them all!',	// #journey-new with nothing left unread
-		'copied'       => 'Link copied ✓',
-		'selectCopy'   => 'Copy the link below',	// the browser refused copying
-		'linkLabel'    => 'Your personal link',	// screen readers: the link field
-		'hideQr'       => 'Hide QR Code',
-		'qrShown'      => 'QR code shown below.',	// screen readers only: confirms the click (the page text explains the scanning)
-		'qrAlt'        => 'QR code of your personal link',
-		'qrFailed'     => 'QR code not available',
-
-		// Notes above the first building block on the Site Journey page
-		'restored'     => 'Welcome back! %d pages from your personal link were added here.',
-		'restoredNone' => 'Your personal link holds nothing new for this browser.',
-		'failed'       => 'Your progress could not be loaded right now. Please try again later.',
-	);
-}
-
 function er_sj_mark() { $GLOBALS['er_sj_page'] = true; } // style and script go into this page's footer only
 
 add_shortcode( 'er_sj_progress', function () {
@@ -661,32 +700,6 @@ function er_sj_is_editor_preview() {
 	return '/custom/v1/shortcode-preview' === untrailingslashit( $route );
 }
 
-// Sample values for the editor preview only, built from the real texts so the wording
-// always matches what visitors see. Numbers and collection names are made up.
-function er_sj_stat_sample( $show ) {
-	$t     = er_sj_texts();
-	$collection = '<a href="#">Karma</a>';
-	$samples = array(
-		'percent'        => '12%',
-		'explored'       => '42',
-		'total'          => '350',
-		'level'          => esc_html( $t['levels'][1] ),
-		'level-note'     => esc_html( sprintf( $t['lvTop'], '25%' ) ) . ' · <b>' . esc_html( $t['levels'][2] ) . '</b> ' . esc_html( sprintf( $t['lvInN'], 3 ) ),
-		'completed'      => '2',
-		'completed-note' => esc_html( $t['doneN'] ),
-		'favourite'      => $collection,
-		'favourite-note' => esc_html( sprintf( $t['favN'], 7 ) ),
-		'almost'         => $collection,
-		'almost-note'    => esc_html( sprintf( $t['nearN'], 3 ) ) . ' <a href="#">Deeds</a>',
-		'explorers'      => '1,234',
-		'active-week'    => '56',
-		'countries'      => '40',
-		'my-country'     => 'Switzerland',
-		'my-country-n'   => '12',
-	);
-	return isset( $samples[ $show ] ) ? $samples[ $show ] : '—';
-}
-
 add_shortcode( 'er_sj_qr_code', function () {
 	er_sj_mark();
 	return '<div class="er-sj-qrcode"></div>';
@@ -696,9 +709,10 @@ add_action( 'wp_footer', function () {
 	if ( empty( $GLOBALS['er_sj_page'] ) ) {
 		return;
 	}
-	$cfg = array( 'ajax' => admin_url( 'admin-ajax.php' ), 'self' => er_sj_place(), 'key' => er_sj_key(), 'top' => ER_SJ_TOP, 'texts' => er_sj_texts() ); // self: this page, if it is a place
+	$cfg = array( 'ajax' => admin_url( 'admin-ajax.php' ), 'self' => er_sj_place(), 'key' => er_sj_key(), 'top' => ER_SJ_TOP, 'texts' => er_sj_texts(), 'hues' => er_sj_hues() ); // self: this page, if it is a place
 	?>
 	<style>
+		/* SITE JOURNEY STYLES: sizes, spacing and colours of the page's building blocks */
 		:is(.er-sj-progress, .er-sj-skywrap, .er-sj-msg) {--sj-card: var(--color-8); --sj-line: var(--color-5); --sj-head: var(--color-4);}
 		body.dark-mode :is(.er-sj-progress, .er-sj-skywrap, .er-sj-msg) {--sj-card: var(--color-10); --sj-line: var(--color-3); --sj-head: var(--color-7);}
 		.er-sj-skywrap [hidden] {display: none !important;}
@@ -772,7 +786,7 @@ add_action( 'wp_footer', function () {
 		var T = CFG.texts || {};
 		var KEY = CFG.key;
 		var TYPES = [['page', T.pages], ['post', T.posts], ['my-interests', T.interests], ['my-quotes', T.quotes], ['my-traits', T.traits]];
-		var HUES = ['#2283d8', '#8b7fe8', '#2bb38a', '#e0679a', '#d08a2c', '#4aa3f0', '#6fd0b0', '#c59bf2', '#f0a35c', '#5cc1d6', '#e8807a', '#9fcf5a', '#7d9cf0', '#d9b44a'];
+		var HUES = CFG.hues; // er_sj_hues() in SETTINGS
 		var NS = 'http://www.w3.org/2000/svg';
 		var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 		var items = [], byId = {}, seen = {}, hist = {}, links = {}, current = 'page';
