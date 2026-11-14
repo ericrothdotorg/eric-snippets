@@ -2,12 +2,14 @@
 // NOTE: When in mu-plugins, add: defined('ABSPATH') || exit;
 
 // ======================================
-// CONFIGURATION CONSTANTS
+// SETTINGS: CHANGE THINGS HERE
 // ======================================
+// Numbers, wording and redirects, all in one place.
+// Styles (cookie banner, scroll bar, back-to-top): search for "SITE ESSENTIALS STYLES".
+// Reading speed for "min read": ER_READING_WPM in Eric Companion PHP (used everywhere).
 
 // Content & SEO
 define('ALT_TEXT_MAX_LENGTH', 100);          // Maximum Characters for Image ALT Text
-define('READING_SPEED_WPM', 200);            // Words per Minute for read Time Calculation
 
 // Cache Durations (in Seconds)
 define('CACHE_POST_STATS', 3600);            // 1 hour - Post Statistics Cache
@@ -19,6 +21,55 @@ define('CLARITY_ID', 'eic7b2e9o1');          // Microsoft Clarity ID
 // Regex Patterns (compiled once for Performance)
 define('REGEX_DECORATIVE_IMAGES', '/(divider|icon|bg|decor|spacer)/i');
 define('REGEX_LOGO_PATTERNS', '/logo|icon|avatar|emoji|placeholder|data:image\/svg/i');
+
+// Every text this snippet writes, grouped by where it shows (keep %d / %s)
+function er_essentials_texts() {
+    return [
+        // Cookie banner
+        'cookieText'        => 'We serve <strong>cookies</strong> to enhance your browsing experience. Learn more in our', // may contain <strong>
+        'cookiePolicy'      => 'Site Policies',
+        'cookiePolicyUrl'   => '/this-site/site-policies/',
+        'cookieAccept'      => 'Accept',
+        'cookieReject'      => 'Essentials',
+        'cookieLabel'       => 'Cookie notice',            // screen readers
+        'cookieClose'       => 'Close cookie notice',      // screen readers
+        'cookieAcceptLabel' => 'Accept all cookies',       // screen readers
+        'cookieRejectLabel' => 'Reject optional cookies',  // screen readers
+        // [post_stats] in the sidebar (cached 1 hour per entry: CACHE_POST_STATS)
+        'psMinutes'         => '%d min',
+        'psRead'            => 'Read · %s Words',
+        'psChars'           => 'Characters',
+        'psParagraphs'      => 'Paragraphs',
+        'psSentences'       => 'Sentences',
+        'psWordsPer'        => 'Words / Sentence',
+        'psInternal'        => 'Internal Links',
+        'psExternal'        => 'External Links',
+        'psTitles'          => 'Titles',
+        'psImages'          => 'Images',
+        'psVideos'          => 'Videos',
+        // Tag cloud
+        'noTags'            => 'No tags found.',
+        // Screen readers and tooltips
+        'linkTo'            => 'Link to %s',               // an image link without a name: "Link to example.com"
+        'linkToImage'       => 'Link to image',
+        'newTab'            => 'Opens in a new tab',
+        'scrollProgress'    => 'Page scroll progress',
+        'toTop'             => 'Go to top',
+    ];
+}
+
+// Old addresses => new ones (301). Both with trailing slash.
+function er_essentials_redirects() {
+    return [
+        '/contact-me/'    => '/about-me/contact/',
+        '/services/'      => '/professional/',
+        '/my-background/' => '/professional/my-background/',
+        '/my-traits/'     => '/professional/my-background/my-traits/',
+        '/my-blog/'       => '/personal/my-blog/',
+        '/my-interests/'  => '/personal/my-interests/',
+        '/my-quotes/'     => '/about-me/my-quotes/',
+    ];
+}
 
 // ======================================
 // WP CORE OPTIMIZATIONS
@@ -206,24 +257,6 @@ function er_fix_wp_lightbox_js() {
 add_action( 'wp_footer', 'er_fix_wp_lightbox_js' );
 
 // ======================================
-// BREADCRUMBS
-// ======================================
-
-// er_breadcrumbs() lives in Eric Companion PHP.
-// Defined there so it is available in all execution contexts
-// (frontend, admin-ajax.php, Gutenberg editor) — it is called by er_hero_shortcode()
-
-// ======================================
-// READING TIME
-// ======================================
-
-// er_reading_time() and its render_block hook live in Eric Companion PHP.
-// Defined there so the function is available in all execution contexts
-// (frontend, admin-ajax.php, Gutenberg editor) — it is called by er_render_card()
-// and er_load_more_handler() which run on admin-ajax.php, and by er_hero_shortcode().
-// READING_SPEED_WPM constant (defined above) is used via defined() fallback guard
-
-// ======================================
 // SHORTCODES
 // ======================================
 
@@ -288,7 +321,7 @@ add_shortcode('post_stats', function() {
     $word_count = str_word_count($text);
     $stats = [
         'words' => $word_count,
-        'minutes' => ceil($word_count / READING_SPEED_WPM),
+        'minutes' => ceil($word_count / (defined('ER_READING_WPM') ? ER_READING_WPM : 200)), // owner: Eric Companion PHP
         'chars' => strlen($text),
         'paragraphs' => substr_count($content, '</p>'),
     ];
@@ -314,21 +347,22 @@ add_shortcode('post_stats', function() {
     $fmt = fn($n) => number_format($n, 0, '.', ",");
     // Sidebar hero (Read Time + Words) + 9-cell metric grid. Numbers unchanged; only markup restructured.
     $cell = fn( $num, $label ) => '<div class="ps-cell"><span class="ps-num">' . $num . '</span><span class="ps-lbl">' . $label . '</span></div>';
+    $T = er_essentials_texts();
 	$output = '<div class="post-stats">'
 		 . '<div class="ps-cell ps-readtime">'
-		 .     '<span class="ps-num">' . $stats['minutes'] . ' min</span>'
-		 .     '<span class="ps-lbl">Read · ' . $fmt($stats['words']) . ' Words</span>'
+		 .     '<span class="ps-num">' . esc_html(sprintf($T['psMinutes'], $stats['minutes'])) . '</span>'
+		 .     '<span class="ps-lbl">' . esc_html(sprintf($T['psRead'], $fmt($stats['words']))) . '</span>'
 		 . '</div>'
 		 . '<div class="ps-grid">'
-		 .     $cell( $fmt($stats['chars']),      'Characters' )
-		 .     $cell( $fmt($stats['paragraphs']), 'Paragraphs' )
-		 .     $cell( $fmt($sentence_count),      'Sentences' )
-		 .     $cell( $avg_words,                 'Words / Sentence' )
-		 .     $cell( $fmt($internal),            'Internal Links' )
-		 .     $cell( $fmt($external),            'External Links' )
-		 .     $cell( $fmt($stats['titles']),     'Titles' )
-		 .     $cell( $fmt($stats['images']),     'Images' )
-		 .     $cell( $fmt($stats['videos']),     'Videos' )
+		 .     $cell( $fmt($stats['chars']),      esc_html($T['psChars']) )
+		 .     $cell( $fmt($stats['paragraphs']), esc_html($T['psParagraphs']) )
+		 .     $cell( $fmt($sentence_count),      esc_html($T['psSentences']) )
+		 .     $cell( $avg_words,                 esc_html($T['psWordsPer']) )
+		 .     $cell( $fmt($internal),            esc_html($T['psInternal']) )
+		 .     $cell( $fmt($external),            esc_html($T['psExternal']) )
+		 .     $cell( $fmt($stats['titles']),     esc_html($T['psTitles']) )
+		 .     $cell( $fmt($stats['images']),     esc_html($T['psImages']) )
+		 .     $cell( $fmt($stats['videos']),     esc_html($T['psVideos']) )
 		 . '</div>'
 		 . '</div>';
     set_transient($cache_key, $output, CACHE_POST_STATS);
@@ -359,7 +393,7 @@ function er_merged_tag_cloud_shortcode( $atts ) {
         $found = get_terms([ 'taxonomy' => $taxonomy, 'hide_empty' => true ]);
         if ( ! is_wp_error( $found ) ) $terms = array_merge( $terms, $found );
     }
-    if ( empty( $terms ) ) return '<p>No tags found.</p>';
+    if ( empty( $terms ) ) return '<p>' . esc_html( er_essentials_texts()['noTags'] ) . '</p>';
     // Byte order (strcmp), not the database's: "Über Mich" stays at the end
     usort( $terms, fn( $a, $b ) => strcmp( $a->name, $b->name ) );
     if ( $atts['number'] > 0 ) {
@@ -432,7 +466,7 @@ add_filter('the_content', function ($content) {
                 if (preg_match('/href=(["\'])([^"\']+)\1/i', $link_attrs, $href_match)) {
                     $url = $href_match[2];
                     $domain = parse_url($url, PHP_URL_HOST);
-                    $label = $domain ? "Link to $domain" : "Link to image";
+                    $label = $domain ? sprintf(er_essentials_texts()['linkTo'], $domain) : er_essentials_texts()['linkToImage'];
                     $link_attrs = 'aria-label="' . esc_attr($label) . '" ' . $link_attrs;
                 }
             }
@@ -482,15 +516,7 @@ add_filter('render_block_core/navigation', function ($html) {
 
 // SEO-friendly 301 Redirects for old URLs
 add_action('template_redirect', function() {
-    $redirects = [
-        '/contact-me/'		=> '/about-me/contact/',
-        '/services/'		=> '/professional/',
-        '/my-background/'	=> '/professional/my-background/',
-		'/my-traits/'		=> '/professional/my-background/my-traits/',
-        '/my-blog/'			=> '/personal/my-blog/',
-        '/my-interests/'	=> '/personal/my-interests/',
-		'/my-quotes/'		=> '/about-me/my-quotes/',
-    ];
+    $redirects = er_essentials_redirects(); // SETTINGS
     $uri = isset($_SERVER['REQUEST_URI']) ? trailingslashit(sanitize_text_field(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH))) : '';
     if (isset($redirects[$uri])) {
         wp_redirect($redirects[$uri], 301);
@@ -536,25 +562,27 @@ function er_find_priority_high_images($blocks, &$images = []) {
 // ======================================
 
 add_action('wp_footer', function () {
+    $T = er_essentials_texts(); // SETTINGS
     ?>
 	
 	<!-- Cookie Consent Banner -->
 	
-	<div id="cookie-notice" role="dialog" aria-label="Cookie notice" aria-hidden="true" aria-modal="false" style="visibility: hidden; text-align: justify; color: var(--color-8); font-family: inherit; background: var(--color-10); padding: 15px 20px 20px 20px; position: fixed; bottom: 15px; left: 15px; width: 100%; max-width: 300px; border-radius: 10px; z-index: 10000; box-sizing: border-box;">
-		<button type="button" id="cookie-close" aria-label="Close cookie notice">
+	<div id="cookie-notice" role="dialog" aria-label="<?php echo esc_attr($T['cookieLabel']); ?>" aria-hidden="true" aria-modal="false" style="visibility: hidden; text-align: justify; color: var(--color-8); font-family: inherit; background: var(--color-10); padding: 15px 20px 20px 20px; position: fixed; bottom: 15px; left: 15px; width: 100%; max-width: 300px; border-radius: 10px; z-index: 10000; box-sizing: border-box;">
+		<button type="button" id="cookie-close" aria-label="<?php echo esc_attr($T['cookieClose']); ?>">
 		  <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
 			<path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8z"/>
 		  </svg>
 		</button>
-		We serve <strong>cookies</strong> to enhance your browsing experience. Learn more in our
-		<a href="/this-site/site-policies/">Site Policies</a><br>
+		<?php echo wp_kses($T['cookieText'], ['strong' => []]) . "\n"; ?>
+		<a href="<?php echo esc_url($T['cookiePolicyUrl']); ?>"><?php echo esc_html($T['cookiePolicy']); ?></a><br>
 		<span style="display: block; text-align: center;">
-			<button type="button" id="cookie-accept" aria-label="Accept all cookies"><span style="font-weight: bold;">Accept</span></button>
-			<button type="button" id="cookie-reject" aria-label="Reject optional cookies" class="reject-btn"><span style="font-weight: bold;">Essentials</span></button>
+			<button type="button" id="cookie-accept" aria-label="<?php echo esc_attr($T['cookieAcceptLabel']); ?>"><span style="font-weight: bold;"><?php echo esc_html($T['cookieAccept']); ?></span></button>
+			<button type="button" id="cookie-reject" aria-label="<?php echo esc_attr($T['cookieRejectLabel']); ?>" class="reject-btn"><span style="font-weight: bold;"><?php echo esc_html($T['cookieReject']); ?></span></button>
 		</span>
 	</div>
 
 	<style>
+		/* SITE ESSENTIALS STYLES (1/3): cookie banner */
 		#cookie-close {position: absolute; top: -20px; right: -20px; background: transparent !important; border: none !important; color: var(--color-3); font-size: 1.5rem; line-height: 1; cursor: pointer; padding: 0 !important; margin: 0 !important;} /* SVG x Icon inherits this Color */
 		#cookie-notice button:not(#cookie-close) {position: relative; font-weight: var(--er-fw-normal); color: var(--color-8); background: var(--color-4); border-radius: 5px; padding: 8px; margin-top: 15px; width: 48%; cursor: pointer; border: none; margin-left: 2%; display: inline-block; overflow: hidden;}
 		#cookie-notice button:not(#cookie-close):first-child {margin-left: 0;}
@@ -575,11 +603,12 @@ add_action('wp_footer', function () {
 	<!-- Scroll Progress Indicator -->
 
 	<style>
+		/* SITE ESSENTIALS STYLES (2/3): scroll progress bar */
 		.scroll-indicator-bar {will-change: width; width: 0%; position: fixed; bottom: 0; height: 5px; background: var(--color-2); z-index: 5000}
 	</style>
 
 
-	<div class="scroll-indicator-container" role="progressbar" aria-label="Page scroll progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+	<div class="scroll-indicator-container" role="progressbar" aria-label="<?php echo esc_attr($T['scrollProgress']); ?>" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
 		<div class="scroll-indicator-bar" id="my_scroll_indicator"></div>
 	</div>
 
@@ -588,11 +617,12 @@ add_action('wp_footer', function () {
 	<!-- Rocket SVG icon (reproduced once during migration); colors/shape/hover match the sibling pills. Self-contained, no theme dependency. -->
 	<!-- href="#top" is the native no-JS fallback: with no element of that id, browsers scroll to the document top. -->
 
-	<a href="#top" class="er-back-to-top" title="Go to top" aria-label="Go to top">
+	<a href="#top" class="er-back-to-top" title="<?php echo esc_attr($T['toTop']); ?>" aria-label="<?php echo esc_attr($T['toTop']); ?>">
 		<svg aria-hidden="true" focusable="false" width="18" height="18" viewBox="0 0 20 20" fill="currentColor"><path d="M18.1,9.4c-0.2,0.4-0.5,0.6-0.9,0.6h-3.7c0,0-0.6,8.7-0.9,9.1C12.2,19.6,11.1,20,10,20c-1,0-2.3-0.3-2.7-0.9C7,18.7,6.5,10,6.5,10H2.8c-0.4,0-0.7-0.2-1-0.6C1.7,9,1.7,8.6,1.9,8.3c2.8-4.1,7.2-8,7.4-8.1C9.5,0.1,9.8,0,10,0s0.5,0.1,0.6,0.2c0.2,0.1,4.6,3.9,7.4,8.1C18.2,8.7,18.3,9.1,18.1,9.4z"></path></svg>
 	</a>
 
 	<style>
+		/* SITE ESSENTIALS STYLES (3/3): back-to-top button */
 		.er-back-to-top {position: fixed; bottom: 25px; right: 25px; z-index: 999; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: var(--color-3); border-radius: 50%; box-shadow: 0 0 10px rgba(0,0,0,.2); color: var(--color-8); opacity: 0; visibility: hidden; transition: opacity 0.3s ease, visibility 0.3s ease, transform 0.2s ease;}
 		.er-back-to-top.er-show {opacity: 1; visibility: visible;}
 		.er-back-to-top:hover {transform: scale(1.1);}
@@ -766,7 +796,7 @@ add_action('wp_footer', function () {
 					link.classList.add('external-link');
 					// Add Title for new-tab Links if missing
 					if (link.target === '_blank' && !link.hasAttribute('title')) {
-						link.setAttribute('title', 'Opens in a new tab');
+						link.setAttribute('title', <?php echo wp_json_encode($T['newTab']); ?>);
 					}
 				});
 
