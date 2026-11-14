@@ -622,7 +622,7 @@ footer.wp-block-template-part .er-breadcrumbs [aria-current="page"] {color: var(
 /* Footer top row (footer.html): the first row of the footer columns, with the breadcrumbs left and
    Site Overview + Site Reach + Site Journey right. Below 1200px a full-width row; the links wrap under
    the breadcrumbs. From 1200px it takes the columns' own grid lines (subgrid), so the links start
-   exactly where the third column (Socials) starts. margin-bottom + the row-gap = the 40px it had above. */
+   exactly where the third column (Socials) starts. margin-bottom + the row-gap (25px) = 50px to the columns, about the gap below them. */
 .er-footer-toprow {
 	display: flex;
 	flex-wrap: wrap;
@@ -630,7 +630,7 @@ footer.wp-block-template-part .er-breadcrumbs [aria-current="page"] {color: var(
 	align-items: center;
 	gap: 12px 24px;
 	flex-basis: 100%; /* its own line in the wrapping columns */
-	margin-bottom: 15px;
+	margin-bottom: 25px;
 }
 @media (min-width: 1200px) {
 	.er-footer-toprow {display: grid; grid-template-columns: subgrid; grid-column: 1 / -1; column-gap: normal;} /* normal: the columns' gap */
