@@ -50,6 +50,21 @@
  *   Data for the page     admin-ajax er_sj_data: places + what all explorers add up to
  *   The page              shortcodes, texts, then its CSS + JS (wp_footer 21)
  *   QR code library       third-party, loaded only on request (admin-ajax er_sj_qr)
+ *
+ * COMMON CHANGES (where to make them)
+ *   In the editor, no code:
+ *     Headings, intro texts, cards, buttons   normal blocks on the Site Journey page
+ *     Sky key words, tab label, view buttons  [er_sj_sky label visited notyet next mine popular]
+ *     Button order / position                 move the Button blocks freely
+ *     Where the QR code appears               a Shortcode block with [er_sj_qr_code];
+ *                                             aligned right / centred: inside a Row group
+ *   In this snippet:
+ *     Wording the script writes               er_sj_texts()       (keep %d / %s)
+ *     Sample values in the editor preview     er_sj_stat_sample()
+ *     Colours, sizes, spacing                 the <style> block under "THE PAGE"
+ *     Colours of the constellations           HUES in the page script
+ *     Most read per type / 90-day window      ER_SJ_TOP / ER_SJ_DAYS (top of this snippet)
+ *   Afterwards: purge LiteSpeed; in the editor, ↻ Refresh in the shortcode preview.
  * ========================================================================== */
 
 // ======================================
@@ -502,7 +517,9 @@ add_action( 'wp_ajax_nopriv_er_sj_data', 'er_sj_data' );
 //     The editor preview (Editor Live Previews) shows sample values: er_sj_stat_sample().
 //     It is recognised by its route, er_sj_is_editor_preview(); Editor Live Previews needs no change.
 // [er_sj_qr_code]
-//     Where the QR code appears (optional; without it, right below the QR button).
+//     Where the QR code appears: place it in the editor (e.g. right below the buttons; for
+//     right or centred, put the Shortcode block in a Row group and set its justification).
+//     Without it, the code appears right below the QR button's own Buttons block.
 //
 // Buttons: any Button block linking to #journey-new (random unread place),
 // #journey-link (copy the journey link) or #journey-qr (show / hide the QR code).
@@ -565,7 +582,7 @@ function er_sj_texts() {
 		'selectCopy'   => 'Copy the link below',	// the browser refused copying
 		'linkLabel'    => 'Your personal link',	// screen readers: the link field
 		'hideQr'       => 'Hide QR Code',
-		'scan'         => 'Scan with your other device to continue there.',	// under the QR code
+		'qrShown'      => 'QR code shown below.',	// screen readers only: confirms the click (the page text explains the scanning)
 		'qrAlt'        => 'QR code of your personal link',
 		'qrFailed'     => 'QR code not available',
 
@@ -736,9 +753,9 @@ add_action( 'wp_footer', function () {
 		:is(.er-sj-listbox, .er-sj-popular) li.is-seen::marker {content: "✓ "; color: var(--color-1);}
 		.er-sj-sr {position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;}
 		.er-sj-link {display: block; width: 100%; font-size: var(--er-fs-xs);}
-		.er-sj-qrcode:has(svg) {margin-top: 16px; width: 220px; padding: 10px 10px 8px; background: #fff; border-radius: 10px;}
+		.er-sj-qrcode:has(svg) {margin-top: 16px; width: 220px; padding: 10px; background: #fff; border-radius: 10px;}
+		.er-sj-qrcode:empty {display: none;} /* until it shows something: no space, no gap, even inside a Row */
 		.er-sj-qrcode svg {display: block; width: 100%; height: auto;}
-		.er-sj-qrcap {margin: 6px 0 0; font-size: var(--er-fs-xs); line-height: 1.4; text-align: center; color: var(--color-3);}
 		.er-sj-qrcode .er-sj-link {margin-top: 16px;}
 		.er-sj-stat.is-big {display: block; font-size: var(--er-fs-xl); font-weight: var(--er-fw-bold); line-height: 1.2; color: var(--color-4);} /* xl: long collection names wrap between words */
 		.er-sj-stat.is-note {display: block; font-style: italic; text-align: left;} /* the note under a card's value: no justified gaps */
@@ -1361,17 +1378,13 @@ add_action( 'wp_footer', function () {
 			if (!open.length) { flash(btn, T.everywhere); return; }
 			location.href = open[Math.floor(Math.random() * open.length)].u;
 		}
-		// The place below the buttons: [er_sj_qr_code], or right after the row of buttons without it
+		// Where the QR code (or the link to copy by hand) appears: the [er_sj_qr_code] block, placed
+		// in the editor. Without one, right below the button's own Buttons block.
 		function spot(btn) {
 			if (!Q) {
 				Q = document.createElement('div');
 				Q.className = 'er-sj-qrcode';
-				// climb out of every row the button sits in (Buttons, Row group, Columns)
-				var row = btn.closest('.wp-block-buttons') || btn;
-				while (row.parentElement && row.parentElement.matches('.is-layout-flex, .wp-block-column, .wp-block-columns')) {
-					row = row.parentElement;
-				}
-				row.after(Q);
+				(btn.closest('.wp-block-buttons') || btn).after(Q);
 			}
 			return Q;
 		}
@@ -1416,14 +1429,10 @@ add_action( 'wp_footer', function () {
 				q.addData(link());
 				q.make();
 				box.innerHTML = q.createSvgTag({ cellSize: 4, margin: 2, scalable: true, alt: T.qrAlt });
-				var cap = document.createElement('p');
-				cap.className = 'er-sj-qrcap';
-				cap.textContent = T.scan;
-				box.appendChild(cap);
 				clearTimeout(btn.__timer);
 				btn.textContent = T.hideQr;
 				btn.setAttribute('aria-expanded', 'true');
-				live.textContent = T.scan;
+				live.textContent = T.qrShown;
 			}, function () { qrLoading = null; flash(btn, T.qrFailed); });
 		}
 		document.addEventListener('click', function (e) {
