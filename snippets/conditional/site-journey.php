@@ -42,7 +42,7 @@
  *   every counter on the site; private pages never count.
  *
  * SECTIONS (in this order)
- *   Settings & helpers    constants, the browser list's name, content types, hubs
+ *   Settings & helpers    constants, the browser list's name, shared JS rules, types, hubs
  *   The places            all places (cached 12 h), collection links
  *   Table & progress      er_journey table, er_sj_store(), daily cleanup
  *   Recording             every place adds itself to the browser list (wp_footer 20)
@@ -63,6 +63,20 @@ defined( 'ER_SJ_TOP' ) || define( 'ER_SJ_TOP', 10 ); // "most read" places per t
 // The browser list of the current user: logged-in users keep their own, which no beacon counts
 function er_sj_key() {
 	return is_user_logged_in() ? 'er_journey_admin' : 'er_journey';
+}
+
+// The two rules every script on the page shares, written once: how the browser list is read,
+// and which entry is "next". Printed at the top of each script that needs them (recording,
+// footer line, Site Journey page); the first one defines window.erSJlib, the others reuse it.
+function er_sj_js_lib() {
+	return 'window.erSJlib = window.erSJlib || {'
+		// The browser list of read entries (ids); empty if missing or unreadable
+		. 'load: function (key) { var v = []; try { v = JSON.parse(localStorage.getItem(key)) || []; } catch (e) {} return Array.isArray(v) ? v : []; },'
+		// The next unread entry of a collection (ids in site order): the first unread one after
+		// "self", wrapping around; from the start if self is not in it. Footer line and the
+		// Almost-there card both use it, so they always name the same entry.
+		. 'next: function (ids, self, isRead) { var at = ids.indexOf(self); for (var k = 1; k <= ids.length; k++) { var id = ids[(at + k + ids.length) % ids.length]; if (!isRead(id)) return id; } return 0; }'
+		. '};' . "\n";
 }
 
 function er_sj_excluded() {
@@ -281,8 +295,8 @@ add_action( 'wp_footer', function () {
 	if ( ! $id ) {
 		return;
 	}
-	echo '<script>(function(){var k="' . er_sj_key() . '",v=[];try{v=JSON.parse(localStorage.getItem(k))||[]}catch(e){}'
-		. 'if(!Array.isArray(v))v=[];var id=' . $id . ';if(v.indexOf(id)<0){v.push(id);try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}'
+	echo '<script>' . er_sj_js_lib() . '(function(){var k="' . er_sj_key() . '",v=erSJlib.load(k);'
+		. 'var id=' . $id . ';if(v.indexOf(id)<0){v.push(id);try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}'
 		. 'window.erJourneyCount=function(){return v.length}})();</script>' . "\n";
 }, 20 );
 
@@ -347,21 +361,15 @@ add_action( 'wp_footer', function () {
 		.er-sj-line .er-sj-sep {margin-inline: 6px; color: var(--color-9);}
 	</style>
 	<script>
+	<?php echo er_sj_js_lib(); ?>
 	(function () {
 		var d = <?php echo wp_json_encode( $data, JSON_HEX_TAG | JSON_UNESCAPED_UNICODE ); ?>, T = d.texts;
 		var crumbs = document.querySelector('footer.wp-block-template-part .er-breadcrumbs');
 		if (!crumbs) return;
-		var seen = [];
-		try { seen = JSON.parse(localStorage.getItem(d.key)) || []; } catch (e) {}
-		if (!Array.isArray(seen)) seen = [];
-		var read = d.places.filter(function (p) { return seen.indexOf(p[0]) >= 0; }).length;
-		var at = 0;
-		d.places.forEach(function (p, i) { if (p[0] === d.self) at = i; });
-		var next = null;
-		for (var k = 1; k < d.places.length && !next; k++) {
-			var p = d.places[(at + k) % d.places.length];
-			if (seen.indexOf(p[0]) < 0) next = p;
-		}
+		var seen = erSJlib.load(d.key), isRead = function (id) { return seen.indexOf(id) >= 0; };
+		var read = d.places.filter(function (p) { return isRead(p[0]); }).length;
+		var nextId = erSJlib.next(d.places.map(function (p) { return p[0]; }), d.self, isRead);
+		var next = d.places.filter(function (p) { return p[0] === nextId; })[0];
 		function link(href, text) { if (!href) return text; var a = document.createElement('a'); a.href = href; a.textContent = text; return a; }
 		var line = document.createElement('p');
 		line.className = 'er-sj-line';
@@ -393,7 +401,7 @@ add_action( 'wp_footer', function () {
 
 // What all explorers of the last 90 days add up to, cached for 15 minutes:
 //   hist      { explored: visitors } - levels and the explorer figures
-//   week      explorers whose progress changed in the last 7 days
+//   week      explorers who visited in the last 7 days (every beacon refreshes updated_at)
 //   countries [[country code, explorers], …], most first (Visitor Tracking's table)
 //   popular   place ids, most read first (World Map's cached top pages)
 // Rows are stored in site time, so the cutoff is computed in site time too.
@@ -464,9 +472,15 @@ add_action( 'wp_ajax_nopriv_er_sj_data', 'er_sj_data' );
 //
 // [er_sj_progress]
 //     Ring and bars.
-// [er_sj_sky label="…" visited="…" notyet="…" mine="…" popular="…"]
+// [er_sj_sky label="…" visited="…" notyet="…" next="…" mine="…" popular="…"]
 //     Tab bar, sky and key. mine + popular add a switch to a view where the
 //     ER_SJ_TOP most read places of the tab shine gold (rank only, never a count).
+//     In the own view: lines between two read stars light up, a completed collection
+//     shines with a ✓, the "next" entry (the Almost-there card's) pulses, a collection's
+//     name opens its page (site link style, dark pair; so do the names of the overview
+//     and front page stars). A constellation's size follows its
+//     number of entries; its tilt, elongation and star pattern come from its name.
+//     On touch screens the first tap on a star shows its title, the second opens it.
 // [er_sj_list]
 //     The places of the selected tab as a list of links (e.g. inside a Details
 //     block): the way into the sky for keyboard and screen reader users.
@@ -512,6 +526,7 @@ function er_sj_texts() {
 		'traits'       => 'Traits',
 		'of'           => '%1$d of %2$d',
 		'visited'      => 'read',	// screen readers, after a read entry in [er_sj_list] / [er_sj_popular]
+		'open'         => 'Open',	// [er_sj_sky] on touch screens: link in the title shown by the first tap
 
 		// [er_sj_stat show="level"] and "level-note" (card: level)
 		// Levels by where a visitor stands among all visitors of the last 90 days
@@ -575,20 +590,21 @@ add_shortcode( 'er_sj_progress', function () {
 
 add_shortcode( 'er_sj_sky', function ( $atts ) {
 	er_sj_mark();
-	$a = shortcode_atts( array( 'label' => 'Choose a type:', 'visited' => 'read', 'notyet' => 'unread', 'mine' => '', 'popular' => '' ), $atts );
+	$a = shortcode_atts( array( 'label' => 'Choose a type:', 'visited' => 'read', 'notyet' => 'unread', 'next' => 'next', 'mine' => '', 'popular' => '' ), $atts );
 	// mine + popular: a switch between the visitor's own reading and the most read places
 	$views = '' !== $a['mine'] && '' !== $a['popular']
 		? '<div class="er-sj-views" role="group" hidden>'
 			. '<button type="button" class="er-sj-tab" aria-pressed="true" data-view="mine">' . esc_html( $a['mine'] ) . '</button>'
 			. '<button type="button" class="er-sj-tab" aria-pressed="false" data-view="popular">' . esc_html( $a['popular'] ) . '</button></div>'
 		: '';
-	return '<div class="er-sj-skywrap" data-visited="' . esc_attr( $a['visited'] ) . '" data-notyet="' . esc_attr( $a['notyet'] ) . '" data-popular="' . esc_attr( $a['popular'] ) . '">'
+	return '<div class="er-sj-skywrap" data-visited="' . esc_attr( $a['visited'] ) . '" data-notyet="' . esc_attr( $a['notyet'] ) . '" data-next="' . esc_attr( $a['next'] ) . '" data-popular="' . esc_attr( $a['popular'] ) . '">'
 		. '<div class="er-sj-skybox">'
 		. '<div class="er-sj-tabbar"><span class="er-sj-tablabel" id="er-sj-tablabel">' . esc_html( $a['label'] ) . '</span>'
 		. '<div class="er-sj-tabs" role="tablist" aria-labelledby="er-sj-tablabel"></div>' . $views . '</div>'
 		. '<div id="er-sj-sky" role="tabpanel"><svg class="er-sj-svg" viewBox="0 0 1000 420" aria-hidden="true"></svg></div>'
 		. '<div class="er-sj-tip" hidden></div>'
-		. '<div class="er-sj-key" aria-hidden="true"><span><i class="is-seen"></i>' . esc_html( $a['visited'] ) . '</span><span><i></i>' . esc_html( $a['notyet'] ) . '</span></div></div></div>';
+		. '<div class="er-sj-key" aria-hidden="true"><span><i class="is-seen"></i>' . esc_html( $a['visited'] ) . '</span><span><i></i>' . esc_html( $a['notyet'] ) . '</span>'
+		. '<span class="er-sj-keynext" hidden><i class="is-next"></i>' . esc_html( $a['next'] ) . '</span></div></div></div>'; // shown while a next entry exists
 } );
 
 add_shortcode( 'er_sj_list', function () {
@@ -688,19 +704,27 @@ add_action( 'wp_footer', function () {
 		.er-sj-tab:is([aria-selected="true"], [aria-pressed="true"]) {background: var(--color-1); border-color: var(--color-1); color: var(--color-8);}
 		.er-sj-tabnum {margin-left: 4px; font-size: var(--er-fs-xs); font-weight: var(--er-fw-bold); color: #ffd700;} /* gold, as the front-page stat numbers */
 		.er-sj-tab[aria-selected="true"] .er-sj-tabnum {color: var(--color-8);}
-		.er-sj-skybox {position: relative; background: var(--color-6); border-radius: 12px; overflow: hidden;}
+		.er-sj-skybox {position: relative; background: var(--color-6); border-radius: 12px; overflow: hidden; --er-link: var(--color-11); --er-link-hover: var(--color-12);} /* dark background: the dark link pair (style.css), ≥ 4.9:1 on --color-6 */
 		body.dark-mode .er-sj-skybox {box-shadow: 0 0 0 1px var(--color-4);} /* the sky's black is the dark page's black */
 		.er-sj-svg {display: block; width: 100%; height: auto;}
 		.er-sj-label {fill: var(--color-5); letter-spacing: 0.4px; font-family: inherit;}
+		.er-sj-label.is-done {fill: var(--color-8); font-weight: var(--er-fw-bold);} /* a completed collection */
+		.er-sj-labellink .er-sj-label {fill: var(--er-link); font-weight: bold;} /* the site's link style (SVG text: fill) */
+		.er-sj-labellink:hover .er-sj-label {fill: var(--er-link-hover);}
+		.er-sj-next {fill: none; stroke: #ffd700; stroke-width: 1.5; transform-box: fill-box; transform-origin: center; animation: er-sj-pulse 1.8s ease-out infinite;}
+		@keyframes er-sj-pulse {from {transform: scale(1); opacity: 0.9;} to {transform: scale(2.2); opacity: 0;}}
 		.er-sj-star {cursor: pointer;}
 		.er-sj-tw {animation: er-sj-tw 3.2s ease-in-out infinite alternate;}
 		@keyframes er-sj-tw {from {opacity: 1;} to {opacity: 0.45;}}
 		.er-sj-tip {position: absolute; z-index: 2; max-width: 260px; padding: 7px 10px; border-radius: 8px; background: rgba(14, 24, 37, 0.95); border: 1px solid var(--color-3); color: var(--color-5); font-size: var(--er-fs-xs); line-height: 1.4; pointer-events: none;}
 		.er-sj-tip b {display: block; color: var(--color-8);}
+		.er-sj-tip.is-tap {pointer-events: auto;} /* touch: the title carries an Open link */
+		.er-sj-tip a {display: inline-block; margin-top: 4px; font-weight: var(--er-fw-bold);}
 		.er-sj-key {position: absolute; left: 12px; bottom: 10px; display: flex; gap: 16px; font-size: var(--er-fs-xs); color: var(--color-5); pointer-events: none;}
 		.er-sj-key i {display: inline-block; width: 9px; height: 9px; margin-right: 6px; border-radius: 50%; border: 1.5px solid #8b7fe8; vertical-align: -1px;}
 		.er-sj-key i.is-seen {background: #fff; border-color: #fff; box-shadow: 0 0 0 3px rgba(231, 240, 248, 0.15);}
 		.er-sj-key i.is-top {background: #ffd700; border-color: #ffd700; box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.15);}
+		.er-sj-key i.is-next {border-color: #ffd700; box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.25);}
 		.er-sj-views {display: flex; gap: 8px; margin-left: auto;}
 		:is(.er-sj-tab, .er-sj-link):focus-visible {outline: var(--a11y-focus-width) solid var(--a11y-focus-color); outline-offset: var(--a11y-focus-offset);}
 		:is(.er-sj-listbox, .er-sj-popular) {columns: 4 180px; column-gap: 24px; font-size: var(--er-fs-sm);}
@@ -721,9 +745,10 @@ add_action( 'wp_footer', function () {
 		body.dark-mode .er-sj-stat.is-big {color: var(--color-7);}
 		.er-sj-msg {margin: 0.5rem 0 0; font-size: var(--er-fs-sm); color: var(--sj-head);}
 		.er-sj-msg:empty {display: none;}
-		@media (prefers-reduced-motion: reduce) {.er-sj-arc, .er-sj-bar i {transition: none;}}
+		@media (prefers-reduced-motion: reduce) {.er-sj-arc, .er-sj-bar i {transition: none;} .er-sj-next {animation: none; transform: scale(1.6); opacity: 0.8;}}
 	</style>
 	<script>
+	<?php echo er_sj_js_lib(); ?>
 	window.erSJ = <?php echo wp_json_encode( $cfg ); ?>;
 	(function () {
 		var CFG = window.erSJ || {};
@@ -735,6 +760,7 @@ add_action( 'wp_footer', function () {
 		var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 		var items = [], byId = {}, seen = {}, hist = {}, links = {}, current = 'page';
 		var week = 0, countries = [], popular = [], view = 'mine';
+		var nextId = 0; // the Almost-there card's next entry: it pulses in the sky
 
 		// The building blocks are optional: each part only runs where its block is on the page
 		var P = document.querySelector('.er-sj-progress');
@@ -782,11 +808,7 @@ add_action( 'wp_footer', function () {
 		}
 
 		// ---- Stored journey (written on every page by the recording script) ----
-		function load() {
-			var v = [];
-			try { v = JSON.parse(localStorage.getItem(KEY)) || []; } catch (e) {}
-			return Array.isArray(v) ? v : [];
-		}
+		function load() { return erSJlib.load(KEY); }
 		function save(list) {
 			try { localStorage.setItem(KEY, JSON.stringify(list)); } catch (e) {}
 		}
@@ -837,6 +859,11 @@ add_action( 'wp_footer', function () {
 		function rng(seed) {
 			var s = seed % 2147483647; if (s <= 0) s += 2147483646;
 			return function () { s = s * 16807 % 2147483647; return (s - 1) / 2147483646; };
+		}
+		function hash(text) { // a stable number from a name, as a seed for rng()
+			var h = 7;
+			for (var i = 0; i < text.length; i++) h = (h * 31 + text.charCodeAt(i)) % 2147483647;
+			return h;
 		}
 
 		// ---- Numbers ----
@@ -901,16 +928,9 @@ add_action( 'wp_footer', function () {
 				if (t.read && (!fav || t.read > fav.read || (t.read === fav.read && t.left < fav.left))) fav = t;
 				if (t.left && (!near || (t.read > 0) > (near.read > 0) || ((t.read > 0) === (near.read > 0) && t.left < near.left))) near = t;
 			});
-			// The next unread entry by the footer line's rule: after this page if it belongs to the
-			// collection, else from the collection's start - so card and footer always name the same entry
-			var next = null;
-			if (near) {
-				var at = near.list.map(function (it) { return it.i; }).indexOf(CFG.self);
-				for (var k = 1; k <= near.list.length && !next; k++) {
-					var cand = near.list[(at + k + near.list.length) % near.list.length];
-					if (!seen[cand.i]) next = cand;
-				}
-			}
+			// The next unread entry: the same rule as the footer line (erSJlib.next)
+			var next = near ? byId[erSJlib.next(near.list.map(function (it) { return it.i; }), CFG.self, function (id) { return seen[id]; })] : null;
+			nextId = next ? next.i : 0;
 			return {
 				level: lv[0], 'level-note': lv[1],
 				completed: String(done), 'completed-note': done ? (done === 1 ? T.done1 : T.doneN) : T.done0,
@@ -1084,6 +1104,7 @@ add_action( 'wp_footer', function () {
 
 		function sky() {
 			var svg = S.querySelector('.er-sj-svg'), wide = S.clientWidth >= 600;
+			hideTip(); // its star is about to be redrawn
 			topList();
 			var cl = clusters(current), n = cl.list.length, hub = cl.hub.length > 0;
 			var vw = wide ? 1000 : 420;
@@ -1099,19 +1120,26 @@ add_action( 'wp_footer', function () {
 			var ch = wide ? 210 : 190, cw = vw / cols, vh = top + rows * ch + band + 26; // 26: room for the key
 			svg.textContent = '';
 			svg.setAttribute('viewBox', '0 0 ' + vw + ' ' + vh);
-			var r = rng(4242);
+			var r = rng(4242), nameBottom = 0;
+			// A constellation's size follows its number of entries (the largest fills its cell), and
+			// each collection gets its own tilt and elongation from its name: no two look alike
+			var most = Math.max.apply(null, cl.list.map(function (c) { return c[1].length; }).concat(1));
 			// Nebulae first, then the far stars, then the constellations on top
 			var centers = cl.list.map(function (c, i) {
 				var col = i % cols, row = Math.floor(i / cols), inLast = n - (rows - 1) * cols;
 				var off = (row === rows - 1) ? (cols - inLast) * cw / 2 : 0;
 				var y = top + ch * row + ch / 2 - 8 + (row >= topRows ? band : 0);
-				return [off + cw * col + cw / 2 + (r() - 0.5) * 24, y + (r() - 0.5) * 14, Math.min(cw, ch) * 0.34];
+				var size = Math.max(0.45, c[1].length / most), shape = rng(hash(c[0]));
+				return [off + cw * col + cw / 2 + (r() - 0.5) * 24, y + (r() - 0.5) * 14, Math.min(cw, ch) * 0.38 * size, shape() * Math.PI, 0.45 + shape() * 0.5];
 			});
 			centers.forEach(function (c, i) {
-				var h = HUES[i % HUES.length];
-				el('ellipse', { cx: c[0], cy: c[1], rx: c[2] * 1.35, ry: c[2] * 1.05, fill: h, opacity: 0.07 }, svg);
-				el('ellipse', { cx: c[0] + c[2] * 0.25, cy: c[1] - c[2] * 0.1, rx: c[2], ry: c[2] * 0.7, fill: h, opacity: 0.07 }, svg);
-				el('ellipse', { cx: c[0] - c[2] * 0.2, cy: c[1] + c[2] * 0.12, rx: c[2] * 0.5, ry: c[2] * 0.4, fill: h, opacity: 0.09 }, svg);
+				var h = HUES[i % HUES.length], t = c[3], tilt = 'rotate(' + (t * 180 / Math.PI) + ' ' + c[0] + ' ' + c[1] + ')', ry = Math.max(c[4], 0.6);
+				c[5] = c[1]; // the nebula's lowest point: the collection's name goes below it
+				[[0, 0, 1.2, 0.95, 0.07], [0.25, -0.1, 1, 0.7, 0.07], [-0.2, 0.12, 0.5, 0.4, 0.09]].forEach(function (e) {
+					var dx = c[2] * e[0], dy = c[2] * e[1], ex = c[2] * e[2], ey = c[2] * e[3] * ry;
+					el('ellipse', { cx: c[0] + dx, cy: c[1] + dy, rx: ex, ry: ey, fill: h, opacity: e[4], transform: tilt }, svg);
+					c[5] = Math.max(c[5], c[1] + dx * Math.sin(t) + dy * Math.cos(t) + Math.sqrt(Math.pow(ex * Math.sin(t), 2) + Math.pow(ey * Math.cos(t), 2)));
+				});
 			});
 			for (var s = 0; s < (wide ? 260 : 130); s++) {
 				var big = r() > 0.9;
@@ -1128,11 +1156,24 @@ add_action( 'wp_footer', function () {
 				if (root) el('line', { x1: rx, y1: ry, x2: hb[0], y2: hb[1], stroke: '#e7f0f8', 'stroke-opacity': 0.35, 'stroke-dasharray': '2 5', 'stroke-width': 1 }, svg);
 			});
 			cl.list.forEach(function (c, i) {
-				var cx = centers[i][0], cy = centers[i][1], rad = centers[i][2], h = HUES[i % HUES.length];
-				var pts = c[1].map(function (it, k) {
-					var rr = rng(it.i), a = k * 2.39996 + rr() * 0.5, d = rad * Math.sqrt((k + 0.6) / c[1].length);
-					return [cx + Math.cos(a) * d, cy + Math.sin(a) * d * 0.8, it];
+				var cx = centers[i][0], cy = centers[i][1], rad = centers[i][2], tilt = centers[i][3], flat = centers[i][4], h = HUES[i % HUES.length];
+				// Stars scattered like a real constellation: each takes, of 12 random spots in the
+				// collection's tilted, elongated area, the one farthest from the stars already
+				// placed. Seeded by entry and collection: every star keeps its place on every visit,
+				// and a new entry adds a star without moving the others.
+				var placed = [];
+				var pts = c[1].map(function (it) {
+					var rr = rng(it.i + hash(c[0]) % 100000), best = null;
+					for (var k = 0; k < 12; k++) {
+						var a = rr() * 6.283, d = Math.sqrt(rr()), px = Math.cos(a) * d, py = Math.sin(a) * d * flat, gap = 9;
+						placed.forEach(function (q) { gap = Math.min(gap, Math.pow(q[0] - px, 2) + Math.pow(q[1] - py, 2)); });
+						if (!best || gap > best[2]) best = [px, py, gap];
+					}
+					placed.push(best);
+					var x = best[0] * Math.cos(tilt) - best[1] * Math.sin(tilt), y = best[0] * Math.sin(tilt) + best[1] * Math.cos(tilt);
+					return [cx + x * rad, cy + y * rad * 0.85, it];
 				});
+				var lowest = Math.max(centers[i][5], Math.max.apply(null, pts.map(function (p) { return p[1]; })) + 8); // below nebula and stars
 				// Constellation lines: each star joins its nearest star already in the figure
 				var inFig = [0];
 				while (inFig.length < pts.length) {
@@ -1145,30 +1186,45 @@ add_action( 'wp_footer', function () {
 						}
 					}
 					inFig.push(best[1]);
-					el('line', { x1: pts[best[0]][0], y1: pts[best[0]][1], x2: pts[best[1]][0], y2: pts[best[1]][1], stroke: h, 'stroke-opacity': 0.35, 'stroke-width': 1 }, svg);
+					// Own view: a line between two read stars lights up, so reading draws the figure
+					var lit = view === 'mine' && seen[pts[best[0]][2].i] && seen[pts[best[1]][2].i];
+					el('line', { x1: pts[best[0]][0], y1: pts[best[0]][1], x2: pts[best[1]][0], y2: pts[best[1]][1], stroke: h, 'stroke-opacity': lit ? 0.95 : 0.35, 'stroke-width': lit ? 1.6 : 1 }, svg);
 				}
 				var done = 0;
 				pts.forEach(function (p) { star(svg, p[0], p[1], p[2], h, false); if (seen[p[2].i]) done++; });
-				var t = el('text', { x: cx, y: Math.min(cy + rad * 0.8 + 22, vh - 34), 'text-anchor': 'middle', 'class': 'er-sj-label', 'font-size': wide ? 13 : 16 }, svg);
-				t.textContent = c[0] + '  ' + done + '/' + c[1].length;
+				var full = view === 'mine' && done === c[1].length; // a completed collection
+				// The name opens the collection's own page (where there is one)
+				var url = links[current + '|' + c[0]], holder = url ? el('a', { href: url, tabindex: '-1', 'class': 'er-sj-labellink' }, svg) : svg;
+				var ty = lowest + (wide ? 24 : 30); // a clear gap below the nebula (more on narrow screens: larger text)
+				nameBottom = Math.max(nameBottom, ty);
+				var t = el('text', { x: cx, y: ty, 'text-anchor': 'middle', 'class': 'er-sj-label' + (full ? ' is-done' : ''), 'font-size': wide ? 13 : 16 }, holder);
+				t.textContent = c[0] + '  ' + done + '/' + c[1].length + (full ? ' ✓' : '');
 			});
 			hubs.forEach(function (hb) {
 				star(svg, hb[0], hb[1], hb[2], '#e7f0f8', true);
-				var t = el('text', { x: hb[0], y: hb[1] + 26, 'text-anchor': 'middle', 'class': 'er-sj-label', 'font-size': wide ? 13 : 16 }, svg);
+				// Its name links like a collection's: to its type's list, as the star does
+				var hl = el('a', { href: hb[2].a || hb[2].u, tabindex: '-1', 'class': 'er-sj-labellink' }, svg);
+				var t = el('text', { x: hb[0], y: hb[1] + 26, 'text-anchor': 'middle', 'class': 'er-sj-label', 'font-size': wide ? 13 : 16 }, hl);
 				t.textContent = hb[2].t;
 			});
 			// The front page on top, in gold (its line down to the overview is drawn with the others)
 			if (root) {
 				star(svg, rx, ry, root, '#ffd700', true);
-				var rt = el('text', { x: rx, y: ry - 16, 'text-anchor': 'middle', 'class': 'er-sj-label', 'font-size': wide ? 13 : 16 }, svg);
+				var rl = el('a', { href: root.u, tabindex: '-1', 'class': 'er-sj-labellink' }, svg); // its name links too
+				var rt = el('text', { x: rx, y: ry - 16, 'text-anchor': 'middle', 'class': 'er-sj-label', 'font-size': wide ? 13 : 16 }, rl);
 				rt.textContent = root.t;
 			}
+			// A name low in the bottom row makes the sky a bit taller rather than being cut off
+			if (nameBottom + 34 > vh) svg.setAttribute('viewBox', '0 0 ' + vw + ' ' + (nameBottom + 34));
+			// The key names "next" only while its star is in this sky (own view only)
+			var keyNext = S.querySelector('.er-sj-keynext');
+			if (keyNext) keyNext.hidden = !svg.querySelector('.er-sj-next');
 		}
 
 		function star(svg, x, y, it, hue, big) {
 			var a = el('a', { href: (big && it.a) || it.u, tabindex: '-1', 'class': 'er-sj-star' }, svg); // hub star: its type's list
 			a.__it = it;
-			el('circle', { cx: x, cy: y, r: 9, fill: 'transparent' }, a); // easier to hit
+			el('circle', { cx: x, cy: y, r: S.clientWidth < 600 ? 12 : 9, fill: 'transparent' }, a); // easier to hit (more on narrow screens)
 			// Own view: read stars shine white. Most read view: the top places shine gold.
 			var lit = view === 'popular' ? tops[it.i] : seen[it.i], glow = view === 'popular' ? '#ffd700' : '#ffffff';
 			if (lit) {
@@ -1178,6 +1234,8 @@ add_action( 'wp_footer', function () {
 			} else {
 				el('circle', { cx: x, cy: y, r: big ? 4.6 : 2.9, fill: '#070c12', stroke: hue, 'stroke-width': big ? 1.6 : 1.2 }, a);
 			}
+			// Own view: the next entry (the Almost-there card's) pulses
+			if (view === 'mine' && it.i === nextId) el('circle', { cx: x, cy: y, r: big ? 6 : 4.5, 'class': 'er-sj-next' }, a);
 		}
 
 		// The switch between the own view and the most read view (only with mine + popular, and
@@ -1211,29 +1269,57 @@ add_action( 'wp_footer', function () {
 			if (!has && view === 'popular') setView('mine');
 		}
 
-		// Tooltip for the star under the pointer
+		// Tooltip: the title of a star. Mouse: on hover. Touch: the first tap shows the title with
+		// an Open link, a second tap on the same star opens it, a tap on the empty sky closes it.
+		var hideTip = function () {};
 		function tips() {
 			var tip = S.querySelector('.er-sj-tip'), box = S.querySelector('.er-sj-skybox');
-			var visited = S.getAttribute('data-visited'), notyet = S.getAttribute('data-notyet');
-			box.addEventListener('pointerover', function (e) {
-				var a = e.target.closest && e.target.closest('.er-sj-star');
-				if (!a || !a.__it) return;
+			var visited = S.getAttribute('data-visited'), notyet = S.getAttribute('data-notyet'), nextWord = S.getAttribute('data-next');
+			var touch = false, tapped = null;
+			function show(a, withLink) {
 				var it = a.__it, r = a.getBoundingClientRect(), b = box.getBoundingClientRect();
 				tip.textContent = '';
 				var t = document.createElement('b'); t.textContent = it.t;
-				var s = document.createElement('span'); s.textContent = (it.g.length ? it.g.join(', ') + ' · ' : '') + (seen[it.i] ? visited : notyet);
+				var s = document.createElement('span');
+				s.textContent = (it.g.length ? it.g.join(', ') + ' · ' : '') + (seen[it.i] ? visited : notyet)
+					+ (view === 'mine' && it.i === nextId ? ' · ' + nextWord : '');
 				tip.append(t, s);
+				if (withLink) {
+					var go = document.createElement('a');
+					go.href = a.getAttribute('href');
+					go.textContent = T.open + ' →';
+					tip.append(document.createElement('br'), go);
+				}
+				tip.classList.toggle('is-tap', !!withLink);
 				tip.hidden = false;
 				var left = Math.min(Math.max(4, r.left - b.left + r.width / 2 - tip.offsetWidth / 2), b.width - tip.offsetWidth - 4);
 				var top = r.top - b.top - tip.offsetHeight - 6;
 				tip.style.left = left + 'px';
 				tip.style.top = (top < 4 ? r.bottom - b.top + 6 : top) + 'px';
+			}
+			hideTip = function () { tip.hidden = true; tip.classList.remove('is-tap'); tapped = null; };
+			box.addEventListener('pointerdown', function (e) { touch = e.pointerType !== 'mouse'; }, true);
+			box.addEventListener('pointerover', function (e) {
+				if (e.pointerType !== 'mouse') return;
+				var a = e.target.closest && e.target.closest('.er-sj-star');
+				if (a && a.__it) show(a, false);
 			});
 			box.addEventListener('pointerout', function (e) {
+				if (e.pointerType !== 'mouse' || tapped) return;
 				var a = e.target.closest && e.target.closest('.er-sj-star');
-				if (a && !a.contains(e.relatedTarget)) tip.hidden = true;
+				if (a && !a.contains(e.relatedTarget)) hideTip();
+			});
+			box.addEventListener('click', function (e) {
+				if (!touch || e.target.closest('.er-sj-tip')) return; // the Open link opens as usual
+				var a = e.target.closest('.er-sj-star');
+				if (!a || !a.__it) { hideTip(); return; }               // empty sky or a collection name
+				if (tapped === a) return;                               // second tap: open the entry
+				e.preventDefault();
+				tapped = a;
+				show(a, true);
 			});
 		}
+
 
 		// [er_sj_list]: the places of the selected tab as plain links, grouped and counted like the
 		// sky - for keyboards, screen readers and anyone who prefers text
@@ -1246,9 +1332,10 @@ add_action( 'wp_footer', function () {
 				var box = document.createElement('div');
 				box.className = 'er-sj-group';
 				var done = g[1].filter(function (it) { return seen[it.i]; }).length;
-				if (g[0]) {
-					var h = document.createElement('h3');
-					h.textContent = g[0] + ' ' + done + '/' + g[1].length;
+				if (g[0]) { // a collection: its name opens its page, a completed one gets a ✓ (as in the sky)
+					var h = document.createElement('h3'), url = links[current + '|' + g[0]], name = g[0];
+					if (url) { name = document.createElement('a'); name.href = url; name.textContent = g[0]; }
+					h.append(name, ' ' + done + '/' + g[1].length + (done === g[1].length ? ' ✓' : ''));
 					box.appendChild(h);
 				}
 				var ul = document.createElement('ul');
