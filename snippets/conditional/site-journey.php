@@ -22,7 +22,7 @@
  *   content type (the front page above each) with a "most read" view, the
  *   explorers' countries, and a journey link / QR code to continue on another
  *   device. On every place, a line in the footer shows the progress in that
- *   place's topic and links the next unread one.
+ *   place's collection and links the next unread one.
  *
  * OWNS
  *   Table er_journey (visitor_id, explored, updated_at): created here if
@@ -43,7 +43,7 @@
  *
  * SECTIONS (in this order)
  *   Settings & helpers    constants, the browser list's name, content types, hubs
- *   The places            all places (cached 12 h), topic links
+ *   The places            all places (cached 12 h), collection links
  *   Table & progress      er_journey table, er_sj_store(), daily cleanup
  *   Recording             every place adds itself to the browser list (wp_footer 20)
  *   Footer line           "Read 2 of 11 in Karma · Next: …" (wp_footer 22)
@@ -102,14 +102,14 @@ function er_sj_hub( $type ) {
 // THE PLACES
 // ======================================
 
-// All places: id, title, relative url, type, groups (g: one constellation per
-// topic, as on the filter pills; h: the sky it is the hub of). A place with
-// several topics shines in each of their constellations but is counted once, as
-// its own type, so the numbers match the site's real counts. A page without a
-// topic (the front page) sits in the middle of the Pages sky. An overview page
+// All places: id, title, relative url, type, groups (g: its collections = the terms
+// of its type's taxonomy, as on the filter pills, one constellation each; h: the sky
+// it is the hub of). A place in several collections shines in each of their
+// constellations but is counted once, as its own type, so the numbers match the
+// site's real counts. A page without a collection (the front page) sits in the middle of the Pages sky. An overview page
 // (er_sj_types()) is also drawn as the hub in the middle of its sky; My Pages,
 // the hub of the Pages sky itself, sits only there.
-// Cached 12 h, cleared whenever content or topics change.
+// Cached 12 h, cleared whenever content or terms change.
 function er_sj_items() {
 	$items = get_transient( 'er_sj_items_v5' );
 	if ( is_array( $items ) ) {
@@ -170,9 +170,9 @@ function er_sj_items() {
 }
 function er_sj_flush() { delete_transient( 'er_sj_items_v5' ); delete_transient( 'er_sj_links' ); }
 
-// Each topic's own page ("post|Karma" => /category/karma/), so the cards can link a topic.
+// Each collection's own page ("post|Karma" => /category/karma/), so the cards can link a collection.
 // Cached like the places, cleared with them.
-function er_sj_topic_links() {
+function er_sj_collection_links() {
 	$links = get_transient( 'er_sj_links' );
 	if ( is_array( $links ) ) {
 		return $links;
@@ -292,10 +292,10 @@ add_action( 'wp_footer', function () {
 
 // On the footer's breadcrumb row, right-aligned: "Read 2 of 11 in Karma · Next: Deeds".
 // "Read 2 of 11" opens the Site Journey page (plain text on that page itself), "Deeds"
-// the next unread place of the same topic: for pages in the order of the page tree, for
-// everything else in the order of publication. A finished topic reads "Read all 11 in
-// Karma ✓". The topic is the one the breadcrumb shows: the first term, on pages the one
-// named like their top-level page. Pages without a topic get no line. Runs after the
+// the next unread place of the same collection: for pages in the order of the page tree, for
+// everything else in the order of publication. A finished collection reads "Read all 11 in
+// Karma ✓". The collection is the one the breadcrumb shows: the first term, on pages the one
+// named like their top-level page. Pages without a collection get no line. Runs after the
 // recording, so this page counts.
 add_action( 'wp_footer', function () {
 	$id = er_sj_place();
@@ -313,17 +313,17 @@ add_action( 'wp_footer', function () {
 	if ( ! $self || ! $self['g'] ) {
 		return;
 	}
-	$topic = $self['g'][0];
+	$collection = $self['g'][0];
 	if ( 'page' === $self['y'] ) {
 		$anc = get_post_ancestors( $id );
 		$top = html_entity_decode( get_the_title( $anc ? end( $anc ) : $id ), ENT_QUOTES, 'UTF-8' );
 		if ( in_array( $top, $self['g'], true ) ) {
-			$topic = $top;
+			$collection = $top;
 		}
 	}
 	$places = array();
 	foreach ( $items as $it ) {
-		if ( $it['y'] === $self['y'] && in_array( $topic, $it['g'], true ) ) {
+		if ( $it['y'] === $self['y'] && in_array( $collection, $it['g'], true ) ) {
 			$places[] = array( $it['i'], $it['u'], $it['t'] );
 		}
 	}
@@ -332,10 +332,10 @@ add_action( 'wp_footer', function () {
 	}
 	$data = array(
 		'self'   => $id,
-		'topic'  => $topic,
+		'collection' => $collection,
 		'places' => $places, // in site order: the next unread one comes after this page
 		'page'   => ER_SJ_PAGE === $id ? '' : wp_make_link_relative( get_permalink( ER_SJ_PAGE ) ), // no link to itself
-		'quote'  => 'my-quotes' === $self['y'], // a quote topic carries the quote ring
+		'quote'  => 'my-quotes' === $self['y'], // a quote collection carries the quote ring
 		'key'    => er_sj_key(),
 		'texts'  => array_intersect_key( er_sj_texts(), array_flip( array( 'footRead', 'footAll', 'footIn', 'footNext' ) ) ),
 	);
@@ -366,13 +366,13 @@ add_action( 'wp_footer', function () {
 		var line = document.createElement('p');
 		line.className = 'er-sj-line';
 		var done = read >= d.places.length;
-		var topic = document.createElement('span');
-		topic.textContent = d.topic;
-		if (d.quote) topic.className = 'er-quote-mark'; // the quote ring (Eric Companion CSS)
+		var name = document.createElement('span');
+		name.textContent = d.collection;
+		if (d.quote) name.className = 'er-quote-mark'; // the quote ring (Eric Companion CSS)
 		var parts = T.footIn.split('%s');
 		line.append(
 			link(d.page, done ? T.footAll.replace('%d', d.places.length) : T.footRead.replace('%1$d', read).replace('%2$d', d.places.length)),
-			' ' + parts[0], topic, (parts[1] || '') + (done ? ' ✓' : '')
+			' ' + parts[0], name, (parts[1] || '') + (done ? ' ✓' : '')
 		);
 		if (next) {
 			var sep = document.createElement('span'); sep.className = 'er-sj-sep'; sep.textContent = '·'; sep.setAttribute('aria-hidden', 'true');
@@ -440,12 +440,12 @@ function er_sj_crowd() {
 	return $crowd;
 }
 
-// Places, topic links and what all explorers add up to.
+// Places, collection links and what all explorers add up to.
 function er_sj_data() {
 	$crowd = er_sj_crowd();
 	wp_send_json_success( array(
 		'items'     => er_sj_items(),
-		'links'     => (object) er_sj_topic_links(),
+		'links'     => (object) er_sj_collection_links(),
 		'hist'      => (object) $crowd['hist'],
 		'week'      => $crowd['week'],
 		'countries' => $crowd['countries'],
@@ -521,25 +521,26 @@ function er_sj_texts() {
 		'lvInN'        => 'in %d more entries',	// "Pathfinder in 3 more entries"
 		'lvLegend'     => 'You\'ve read more than anyone',	// the top level, Legend
 
-		// [er_sj_stat show="completed-note"] (card: topics completed; the value is the number)
-		'done0'        => 'Topics completed – your first one is waiting',	// 0
-		'done1'        => 'Topic completed',	// 1
-		'doneN'        => 'Topics completed',	// 2 or more
+		// [er_sj_stat show="completed-note"] (card: collections completed; the value is the number)
+		// A collection = one term of a type's taxonomy (Pages: things, Posts: category, …), drawn as one constellation in the sky
+		'done0'        => 'Collections completed – your first one is waiting',	// 0
+		'done1'        => 'Collection completed',	// 1
+		'doneN'        => 'Collections completed',	// 2 or more
 
-		// [er_sj_stat show="favourite-note"] (card: favourite topic; the value is the topic)
-		'fav1'         => 'Your favourite topic · 1 entry',
-		'favN'         => 'Your favourite topic · %d entries',
-		'favNone'      => 'Your favourite topic shows up here',	// nothing read yet
+		// [er_sj_stat show="favourite-note"] (card: favourite collection; the value is its name)
+		'fav1'         => 'Your favourite collection · 1 entry',
+		'favN'         => 'Your favourite collection · %d entries',
+		'favNone'      => 'Your favourite collection shows up here',	// nothing read yet
 
-		// [er_sj_stat show="almost-note"] (card: almost there; the value is the topic)
+		// [er_sj_stat show="almost-note"] (card: almost there; the value is the collection's name)
 		// The next unread entry follows as a link: "… · next: Deeds"
 		'near1'        => 'Almost there: 1 entry to go · next:',
 		'nearN'        => 'Almost there: %d entries to go · next:',
-		'nearAll'      => 'You\'ve read them all!',	// every topic finished
+		'nearAll'      => 'You\'ve read them all!',	// every collection finished
 
 		// Footer line on every place: "Read 2 of 11 in Karma · Next: Deeds"
 		'footRead'     => 'Read %1$d of %2$d',
-		'footAll'      => 'Read all %d',	// topic finished: "Read all 11 in Karma ✓"
+		'footAll'      => 'Read all %d',	// collection finished: "Read all 11 in Karma ✓"
 		'footIn'       => 'in %s',
 		'footNext'     => 'Next:',
 
@@ -628,10 +629,10 @@ function er_sj_is_editor_preview() {
 }
 
 // Sample values for the editor preview only, built from the real texts so the wording
-// always matches what visitors see. Numbers and topic names are made up.
+// always matches what visitors see. Numbers and collection names are made up.
 function er_sj_stat_sample( $show ) {
 	$t     = er_sj_texts();
-	$topic = '<a href="#">Karma</a>';
+	$collection = '<a href="#">Karma</a>';
 	$samples = array(
 		'percent'        => '12%',
 		'explored'       => '42',
@@ -640,9 +641,9 @@ function er_sj_stat_sample( $show ) {
 		'level-note'     => esc_html( sprintf( $t['lvTop'], '25%' ) ) . ' · <b>' . esc_html( $t['levels'][2] ) . '</b> ' . esc_html( sprintf( $t['lvInN'], 3 ) ),
 		'completed'      => '2',
 		'completed-note' => esc_html( $t['doneN'] ),
-		'favourite'      => $topic,
+		'favourite'      => $collection,
 		'favourite-note' => esc_html( sprintf( $t['favN'], 7 ) ),
-		'almost'         => $topic,
+		'almost'         => $collection,
 		'almost-note'    => esc_html( sprintf( $t['nearN'], 3 ) ) . ' <a href="#">Deeds</a>',
 		'explorers'      => '1,234',
 		'active-week'    => '56',
@@ -715,7 +716,7 @@ add_action( 'wp_footer', function () {
 		.er-sj-qrcode svg {display: block; width: 100%; height: auto;}
 		.er-sj-qrcap {margin: 6px 0 0; font-size: var(--er-fs-xs); line-height: 1.4; text-align: center; color: var(--color-3);}
 		.er-sj-qrcode .er-sj-link {margin-top: 16px;}
-		.er-sj-stat.is-big {display: block; font-size: var(--er-fs-xl); font-weight: var(--er-fw-bold); line-height: 1.2; color: var(--color-4);} /* xl: long topic names wrap between words */
+		.er-sj-stat.is-big {display: block; font-size: var(--er-fs-xl); font-weight: var(--er-fw-bold); line-height: 1.2; color: var(--color-4);} /* xl: long collection names wrap between words */
 		.er-sj-stat.is-note {display: block; font-style: italic; text-align: left;} /* the note under a card's value: no justified gaps */
 		body.dark-mode .er-sj-stat.is-big {color: var(--color-7);}
 		.er-sj-msg {margin: 0.5rem 0 0; font-size: var(--er-fs-sm); color: var(--sj-head);}
@@ -873,9 +874,9 @@ add_action( 'wp_footer', function () {
 			var top = [1, 2, 5, 10, 25, 50].filter(function (x) { return x >= 100 - share(own); })[0];
 			return [names[now], [T.lvTop.replace('%s', top + '%') + ' · '].concat(next)];
 		}
-		// Topics: one per type and topic (Personal pages and Personal quotes are two). In the
+		// Collections: one per type and term (Personal pages and Personal quotes are two). In the
 		// same order as the footer line: pages along the page tree, the rest by publication.
-		function topics() {
+		function collections() {
 			var map = {};
 			items.forEach(function (it) {
 				it.g.forEach(function (g) {
@@ -891,17 +892,17 @@ add_action( 'wp_footer', function () {
 				return t;
 			});
 		}
-		// A topic name links to the topic's own page; a quote topic carries the quote ring
-		function topicPart(t) { return { a: [t.url || '', t.name], q: t.quote }; }
+		// A collection name links to the collection's own page; a quote collection carries the quote ring
+		function collectionPart(t) { return { a: [t.url || '', t.name], q: t.quote }; }
 		function achievements(c) {
-			var lv = level(c.done), all = topics(), done = 0, fav = null, near = null;
+			var lv = level(c.done), all = collections(), done = 0, fav = null, near = null;
 			all.forEach(function (t) {
 				if (!t.left) done++;
 				if (t.read && (!fav || t.read > fav.read || (t.read === fav.read && t.left < fav.left))) fav = t;
 				if (t.left && (!near || (t.read > 0) > (near.read > 0) || ((t.read > 0) === (near.read > 0) && t.left < near.left))) near = t;
 			});
 			// The next unread entry by the footer line's rule: after this page if it belongs to the
-			// topic, else from the topic's start - so card and footer always name the same entry
+			// collection, else from the collection's start - so card and footer always name the same entry
 			var next = null;
 			if (near) {
 				var at = near.list.map(function (it) { return it.i; }).indexOf(CFG.self);
@@ -913,8 +914,8 @@ add_action( 'wp_footer', function () {
 			return {
 				level: lv[0], 'level-note': lv[1],
 				completed: String(done), 'completed-note': done ? (done === 1 ? T.done1 : T.doneN) : T.done0,
-				favourite: fav ? [topicPart(fav)] : '—', 'favourite-note': fav ? (fav.read === 1 ? T.fav1 : T.favN.replace('%d', fav.read)) : T.favNone,
-				almost: near ? [topicPart(near)] : '✓',
+				favourite: fav ? [collectionPart(fav)] : '—', 'favourite-note': fav ? (fav.read === 1 ? T.fav1 : T.favN.replace('%d', fav.read)) : T.favNone,
+				almost: near ? [collectionPart(near)] : '✓',
 				'almost-note': near ? [(near.left === 1 ? T.near1 : T.nearN.replace('%d', near.left)) + ' ', { a: [next.u, next.t] }] : T.nearAll
 			};
 		}
