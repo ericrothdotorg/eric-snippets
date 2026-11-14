@@ -21,8 +21,7 @@
  *   [er_sj_qr_code]): progress, achievement and explorer cards, one sky per
  *   content type (the front page above each) with a "most read" view, the
  *   explorers' countries, and a journey link / QR code to continue on another
- *   device. On every place, a line in the footer shows the progress in that
- *   place's collection and links the next unread one.
+ *   device.
  *
  * OWNS
  *   Table er_journey (visitor_id, explored, updated_at): created here if
@@ -47,7 +46,6 @@
  *   The places            all places (cached 12 h), collection links
  *   Table & progress      er_journey table, er_sj_store(), daily cleanup
  *   Recording             every place adds itself to the browser list (wp_footer 20)
- *   Footer line           "Read 2 of 11 in Karma · Next: …" (wp_footer 22)
  *   Data for the page     admin-ajax er_sj_data: places + what all explorers add up to
  *   The page              shortcodes, texts, then its CSS + JS (wp_footer 21)
  *   QR code library       third-party, loaded only on request (admin-ajax er_sj_qr)
@@ -75,7 +73,6 @@
 // Styles (sizes, spacing, other colours): search for "SITE JOURNEY STYLES".
 
 defined( 'ER_SJ_DAYS' ) || define( 'ER_SJ_DAYS', 90 ); // same window as Visitor Tracking
-defined( 'ER_SJ_PAGE' ) || define( 'ER_SJ_PAGE', 162357 ); // the Site Journey page (linked from the footer line)
 defined( 'ER_SJ_TOP' ) || define( 'ER_SJ_TOP', 10 ); // "most read" places per type: gold in the sky, listed by [er_sj_popular]
 
 // Colours of the constellations in the sky, used in this order (then repeated)
@@ -121,12 +118,6 @@ function er_sj_texts() {
 		'near1'        => 'Almost there: 1 entry to go · next:',
 		'nearN'        => 'Almost there: %d entries to go · next:',
 		'nearAll'      => 'You\'ve read them all!',	// every collection finished
-
-		// Footer line on every place: "Read 2 of 11 in Karma · Next: Deeds"
-		'footRead'     => 'Read %1$d of %2$d',
-		'footAll'      => 'Read all %d',	// collection finished: "Read all 11 in Karma ✓"
-		'footIn'       => 'in %s',
-		'footNext'     => 'Next:',
 
 		// Buttons #journey-new, #journey-link, #journey-qr (feedback on the button, 3 s)
 		'everywhere'   => 'You\'ve read them all!',	// #journey-new with nothing left unread
@@ -183,14 +174,14 @@ function er_sj_key() {
 
 // The two rules every script on the page shares, written once: how the browser list is read,
 // and which entry is "next". Printed at the top of each script that needs them (recording,
-// footer line, Site Journey page); the first one defines window.erSJlib, the others reuse it.
+// Site Journey page); the first one defines window.erSJlib, the others reuse it.
 function er_sj_js_lib() {
 	return 'window.erSJlib = window.erSJlib || {'
 		// The browser list of read entries (ids); empty if missing or unreadable
 		. 'load: function (key) { var v = []; try { v = JSON.parse(localStorage.getItem(key)) || []; } catch (e) {} return Array.isArray(v) ? v : []; },'
 		// The next unread entry of a collection (ids in site order): the first unread one after
-		// "self", wrapping around; from the start if self is not in it. Footer line and the
-		// Almost-there card both use it, so they always name the same entry.
+		// "self", wrapping around; from the start if self is not in it. The Almost-there card
+		// uses it (and the sky's pulsing star shows the same entry).
 		. 'next: function (ids, self, isRead) { var at = ids.indexOf(self); for (var k = 1; k <= ids.length; k++) { var id = ids[(at + k + ids.length) % ids.length]; if (!isRead(id)) return id; } return 0; }'
 		. '};' . "\n";
 }
@@ -200,7 +191,7 @@ function er_sj_excluded() {
 }
 
 // Content types on the journey, in tab order: label and the taxonomy that groups
-// them (the same as the filter pills and the footer)
+// them (the same as the filter pills)
 function er_sj_types() {
 	return array(
 		'page'         => array( 'Pages', 'things' ),
@@ -386,8 +377,7 @@ add_action( 'er_sj_daily_cleanup', function () {
 
 // The place on screen: pages, posts, interests, quotes and traits that are not
 // excluded. Archives, search and 404 get 0. Logged-in users are recorded in their
-// own list (er_sj_key()); er_sj_store() never counts them. Cached per request
-// (recording and footer line).
+// own list (er_sj_key()); er_sj_store() never counts them. Cached per request.
 function er_sj_place() {
 	static $id = null;
 	if ( null !== $id ) {
@@ -415,101 +405,6 @@ add_action( 'wp_footer', function () {
 		. 'var id=' . $id . ';if(v.indexOf(id)<0){v.push(id);try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}'
 		. 'window.erJourneyCount=function(){return v.length}})();</script>' . "\n";
 }, 20 );
-
-// ======================================
-// FOOTER LINE (every place; on the Site Journey page without the link to itself)
-// ======================================
-
-// On the footer's breadcrumb row, right-aligned: "Read 2 of 11 in Karma · Next: Deeds".
-// "Read 2 of 11" opens the Site Journey page (plain text on that page itself), "Deeds"
-// the next unread place of the same collection: for pages in the order of the page tree, for
-// everything else in the order of publication. A finished collection reads "Read all 11 in
-// Karma ✓". The collection is the one the breadcrumb shows: the first term, on pages the one
-// named like their top-level page. Pages without a collection get no line. Runs after the
-// recording, so this page counts.
-add_action( 'wp_footer', function () {
-	$id = er_sj_place();
-	if ( ! $id ) {
-		return;
-	}
-	$items = er_sj_items();
-	$self  = null;
-	foreach ( $items as $it ) {
-		if ( $it['i'] === $id ) {
-			$self = $it;
-			break;
-		}
-	}
-	if ( ! $self || ! $self['g'] ) {
-		return;
-	}
-	$collection = $self['g'][0];
-	if ( 'page' === $self['y'] ) {
-		$anc = get_post_ancestors( $id );
-		$top = html_entity_decode( get_the_title( $anc ? end( $anc ) : $id ), ENT_QUOTES, 'UTF-8' );
-		if ( in_array( $top, $self['g'], true ) ) {
-			$collection = $top;
-		}
-	}
-	$places = array();
-	foreach ( $items as $it ) {
-		if ( $it['y'] === $self['y'] && in_array( $collection, $it['g'], true ) ) {
-			$places[] = array( $it['i'], $it['u'], $it['t'] );
-		}
-	}
-	if ( 'page' === $self['y'] ) {
-		usort( $places, function ( $a, $b ) { return strcmp( $a[1], $b[1] ); } ); // by address = the page tree
-	}
-	$data = array(
-		'self'   => $id,
-		'collection' => $collection,
-		'places' => $places, // in site order: the next unread one comes after this page
-		'page'   => ER_SJ_PAGE === $id ? '' : wp_make_link_relative( get_permalink( ER_SJ_PAGE ) ), // no link to itself
-		'quote'  => 'my-quotes' === $self['y'], // a quote collection carries the quote ring
-		'key'    => er_sj_key(),
-		'texts'  => array_intersect_key( er_sj_texts(), array_flip( array( 'footRead', 'footAll', 'footIn', 'footNext' ) ) ),
-	);
-	?>
-	<style>
-		.er-sj-crumbrow {display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 6px 24px; max-width: var(--er-wide-row); margin: 0 auto 25px;}
-		footer.wp-block-template-part .er-sj-crumbrow > .er-breadcrumbs {max-width: none; margin: 0;} /* the row takes over width and spacing */
-		.er-sj-line {margin: 0; color: var(--color-8);} /* size: the footer's own (Eric Companion CSS) */
-		.er-sj-line .er-sj-sep {margin-inline: 6px; color: var(--color-9);}
-	</style>
-	<script>
-	<?php echo er_sj_js_lib(); ?>
-	(function () {
-		var d = <?php echo wp_json_encode( $data, JSON_HEX_TAG | JSON_UNESCAPED_UNICODE ); ?>, T = d.texts;
-		var crumbs = document.querySelector('footer.wp-block-template-part .er-breadcrumbs');
-		if (!crumbs) return;
-		var seen = erSJlib.load(d.key), isRead = function (id) { return seen.indexOf(id) >= 0; };
-		var read = d.places.filter(function (p) { return isRead(p[0]); }).length;
-		var nextId = erSJlib.next(d.places.map(function (p) { return p[0]; }), d.self, isRead);
-		var next = d.places.filter(function (p) { return p[0] === nextId; })[0];
-		function link(href, text) { if (!href) return text; var a = document.createElement('a'); a.href = href; a.textContent = text; return a; }
-		var line = document.createElement('p');
-		line.className = 'er-sj-line';
-		var done = read >= d.places.length;
-		var name = document.createElement('span');
-		name.textContent = d.collection;
-		if (d.quote) name.className = 'er-quote-mark'; // the quote ring (Eric Companion CSS)
-		var parts = T.footIn.split('%s');
-		line.append(
-			link(d.page, done ? T.footAll.replace('%d', d.places.length) : T.footRead.replace('%1$d', read).replace('%2$d', d.places.length)),
-			' ' + parts[0], name, (parts[1] || '') + (done ? ' ✓' : '')
-		);
-		if (next) {
-			var sep = document.createElement('span'); sep.className = 'er-sj-sep'; sep.textContent = '·'; sep.setAttribute('aria-hidden', 'true');
-			line.append(sep, T.footNext + ' ', link(next[1], next[2]));
-		}
-		var row = document.createElement('div');
-		row.className = 'er-sj-crumbrow';
-		crumbs.before(row);
-		row.append(crumbs, line);
-	})();
-	</script>
-	<?php
-}, 22 );
 
 // ======================================
 // DATA FOR THE PAGE (admin-ajax, GET, read-only)
@@ -932,8 +827,8 @@ add_action( 'wp_footer', function () {
 			var top = [1, 2, 5, 10, 25, 50].filter(function (x) { return x >= 100 - share(own); })[0];
 			return [names[now], [T.lvTop.replace('%s', top + '%') + ' · '].concat(next)];
 		}
-		// Collections: one per type and term (Personal pages and Personal quotes are two). In the
-		// same order as the footer line: pages along the page tree, the rest by publication.
+		// Collections: one per type and term (Personal pages and Personal quotes are two). In site
+		// order: pages along the page tree, the rest by publication.
 		function collections() {
 			var map = {};
 			items.forEach(function (it) {
@@ -959,7 +854,7 @@ add_action( 'wp_footer', function () {
 				if (t.read && (!fav || t.read > fav.read || (t.read === fav.read && t.left < fav.left))) fav = t;
 				if (t.left && (!near || (t.read > 0) > (near.read > 0) || ((t.read > 0) === (near.read > 0) && t.left < near.left))) near = t;
 			});
-			// The next unread entry: the same rule as the footer line (erSJlib.next)
+			// The next unread entry (erSJlib.next)
 			var next = near ? byId[erSJlib.next(near.list.map(function (it) { return it.i; }), CFG.self, function (id) { return seen[id]; })] : null;
 			nextId = next ? next.i : 0;
 			return {
