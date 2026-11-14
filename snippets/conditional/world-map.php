@@ -10,7 +10,8 @@
  * admin-ajax, where a front-end-only snippet would never register its hooks.
  *
  * MODULES
- *   0  Config ........ the few numbers you may want to change
+ *   0  Settings ...... numbers and all wording: change things here
+ *                      (styles: search for "WORLD MAP STYLES")
  *   1  Data API ...... one public, cached endpoint: er_map_data
  *   2  Map base ...... SVG world, shared CSS, shared JS engine (window.ERMap)
  *   3  Site Reach .... [live_user_map]                 (map)
@@ -32,7 +33,9 @@
  * ========================================================================== */
 
 /* ============================================================================
- * 0  CONFIG
+ * 0  SETTINGS: CHANGE THINGS HERE
+ *    The numbers, then every text the map and its tables show (keep %d).
+ *    Styles (colours, sizes): search for "WORLD MAP STYLES".
  * ========================================================================== */
 
 defined( 'ER_MAP_LIVE_MIN' ) || define( 'ER_MAP_LIVE_MIN',   15 );   // "live" = seen within this many minutes
@@ -46,6 +49,47 @@ defined( 'ER_MAP_CACHE_HISTORY' ) || define( 'ER_MAP_CACHE_HISTORY', 120 ); // s
 /* The framing. Map units: Miller projection, 2000 × 1466.4.
    Must match B (Site Reach JS). */
 defined( 'ER_MAP_BOX_REACH' ) || define( 'ER_MAP_BOX_REACH', '0 101.1 2000 1013.1' ); // 84°N – 60°S
+
+// Every text the map and its tables show, grouped by where it shows
+function er_map_texts() {
+	return array(
+		// Below the map: stats line and legend
+		'statsLive'   => 'Live Visitors:',
+		'statsUpdate' => 'Last Updated:',
+		'keyLive'     => 'Live Visitors',
+		'keyPast'     => 'Past Visitors',
+		// Map buttons (screen readers)
+		'mapLabel'    => 'World map of live and past visitors',
+		'zoomIn'      => 'Zoom in',
+		'zoomOut'     => 'Zoom out',
+		'enlarge'     => 'Enlarge map',
+		'reduce'      => 'Reduce map',
+		'close'       => 'Close enlarged map',
+		// Popup on a dot
+		'badgeLive'   => 'LIVE',
+		'badgePast'   => 'PAST',
+		'unknownCity' => 'Unknown City',
+		'page'        => 'Page:',
+		'browser'     => 'Browser:',
+		'visitors'    => 'Visitors:',
+		'lastSeen'    => 'Last seen:',
+		'secondsAgo'  => '%d seconds ago',
+		'minutesAgo'  => '%d minutes ago',
+		'hoursAgo'    => '%d hours ago',
+		'daysAgo'     => '%d days ago',
+		'home'        => 'Home',	// the front page's name in popup and tables
+		// Tables [currently_visited_pages] and [past_visited_pages]
+		'loading'     => 'Loading…',
+		'noLive'      => 'No live visitors',
+		'noPast'      => 'No past visitors',
+		'thPage'      => 'Page',
+		'thVisitors'  => 'Visitors',
+		'thViews'     => 'Views',
+		'thLocation'  => 'Location',
+		'location1'   => 'location',	// "1 location"
+		'locationN'   => 'locations',	// "3 locations"
+	);
+}
 
 /* Shortcodes are registered on init (after every snippet has loaded), so these
    always win, even if an old snippet with the same shortcode names still runs. */
@@ -324,16 +368,17 @@ function er_map_layers() {
 		. '</g>'
 		. '</svg>';
 
+	$t = er_map_texts();
 	return $land
 		. $shade
 		. sprintf( $open, 'erc-dots' ) . '<path class="erc-past" d=""/><path class="erc-past erc-lg" d=""/></svg>'
 		. '<div class="erc-markers"><span class="erc-others"></span><span class="erm-pin" hidden><span class="erm-card" role="status"></span></span></div>'
-		. '<div class="erm-zoom"><button type="button" data-zoom="2" aria-label="Zoom in">+</button><button type="button" data-zoom="0.5" aria-label="Zoom out">&minus;</button>'
-		. '<button type="button" class="erm-full-btn" aria-pressed="false" aria-label="Enlarge map">'
+		. '<div class="erm-zoom"><button type="button" data-zoom="2" aria-label="' . esc_attr( $t['zoomIn'] ) . '">+</button><button type="button" data-zoom="0.5" aria-label="' . esc_attr( $t['zoomOut'] ) . '">&minus;</button>'
+		. '<button type="button" class="erm-full-btn" aria-pressed="false" aria-label="' . esc_attr( $t['enlarge'] ) . '">'
 		. '<svg class="erm-i-in" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false"><path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>'
 		. '<svg class="erm-i-out" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false"><path d="M6 2v4H2M14 6h-4V2M10 14v-4h4M2 10h4v4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>'
 		. '</button></div>'
-		. '<button type="button" class="erm-close" aria-label="Close enlarged map">&times;</button>';
+		. '<button type="button" class="erm-close" aria-label="' . esc_attr( $t['close'] ) . '">&times;</button>';
 }
 
 // Land, Miller projection, 2000 × 1466.4, clipped to x 0–2000 (Natural Earth).
@@ -355,6 +400,7 @@ function er_map_lights_d( $size ) {
 
 function er_map_base_css() {
 	return <<<'CSS'
+/* WORLD MAP STYLES (1/2): the map itself - land, sea, night, dots, buttons */
 /* ---- Layers (module 2) ---- */
 .erm > svg,
 .erm > .erc-markers{position: absolute; inset: 0; display: block; width: 100%; height: 100%; max-width: none; margin: 0}
@@ -591,37 +637,39 @@ function er_reach_assets() {
 
 function er_reach_script() {
 	$js = str_replace(
-		array( '__ER_AJAX__', '__ER_POLL__' ),
-		array( wp_json_encode( admin_url( 'admin-ajax.php' ) ), (string) ( ER_MAP_POLL * 1000 ) ),
+		array( '__ER_AJAX__', '__ER_POLL__', '__ER_TEXTS__' ),
+		array( wp_json_encode( admin_url( 'admin-ajax.php' ) ), (string) ( ER_MAP_POLL * 1000 ), wp_json_encode( er_map_texts(), JSON_HEX_TAG | JSON_UNESCAPED_UNICODE ) ),
 		er_reach_js()
 	);
 	wp_print_inline_script_tag( $js, array( 'id' => 'er-reach-js' ) );
 }
 
 function er_reach_map_shortcode() {
+	$t = er_map_texts();
 	return er_map_base_assets()
 		. er_reach_assets()
-		. '<div class="er-reach erm" role="region" aria-label="World map of live and past visitors">'
+		. '<div class="er-reach erm" role="region" aria-label="' . esc_attr( $t['mapLabel'] ) . '">'
 		. er_map_layers()
 		. '</div>'
 		. '<div class="erm-stats">'
-		. '<span>Live Visitors: <strong id="live-count">0</strong><span class="erm-sep">·</span>Last Updated: <strong id="last-update">&ndash;</strong></span>'
-		. '<span><span class="erm-key"><i class="is-live"></i>Live Visitors</span><span class="erm-key"><i class="is-past"></i>Past Visitors</span></span>'
+		. '<span>' . esc_html( $t['statsLive'] ) . ' <strong id="live-count">0</strong><span class="erm-sep">·</span>' . esc_html( $t['statsUpdate'] ) . ' <strong id="last-update">&ndash;</strong></span>'
+		. '<span><span class="erm-key"><i class="is-live"></i>' . esc_html( $t['keyLive'] ) . '</span><span class="erm-key"><i class="is-past"></i>' . esc_html( $t['keyPast'] ) . '</span></span>'
 		. '</div>';
 }
 
 function er_reach_current_shortcode() {
 	return er_reach_assets()
-		. '<div class="wp-block-table lum-pages-table" id="lum-current-pages"><p class="erm-muted">Loading&hellip;</p></div>';
+		. '<div class="wp-block-table lum-pages-table" id="lum-current-pages"><p class="erm-muted">' . esc_html( er_map_texts()['loading'] ) . '</p></div>';
 }
 
 function er_reach_past_shortcode() {
 	return er_reach_assets()
-		. '<div class="wp-block-table lum-pages-table" id="lum-past-pages"><p class="erm-muted">Loading&hellip;</p></div>';
+		. '<div class="wp-block-table lum-pages-table" id="lum-past-pages"><p class="erm-muted">' . esc_html( er_map_texts()['loading'] ) . '</p></div>';
 }
 
 function er_reach_css() {
 	return <<<'CSS'
+/* WORLD MAP STYLES (2/2): Site Reach - stats line, legend, popup, tables */
 /* Live-visitor green: map dots + legend. Set here for both, because the legend sits outside .er-reach. */
 .er-reach, .erm-stats{--er-c-live: #28a745}
 .er-reach{
@@ -743,12 +791,13 @@ function er_reach_js() {
 (() => {
 	const AJAX = __ER_AJAX__;
 	const POLL_MS = __ER_POLL__;
+	const T = __ER_TEXTS__; // er_map_texts() in SETTINGS
 
 	const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 	const pretty = (s) => { try { return decodeURIComponent(String(s)); } catch (e) { return String(s); } };
-	const label = (path) => (path === '/' ? 'Home' : pretty(path));
-	const ago = (s) => (s < 60 ? s + ' seconds ago' : s < 3600 ? Math.floor(s / 60) + ' minutes ago'
-		: s < 86400 ? Math.floor(s / 3600) + ' hours ago' : Math.floor(s / 86400) + ' days ago');
+	const label = (path) => (path === '/' ? T.home : pretty(path));
+	const ago = (s) => (s < 60 ? T.secondsAgo.replace('%d', s) : s < 3600 ? T.minutesAgo.replace('%d', Math.floor(s / 60))
+		: s < 86400 ? T.hoursAgo.replace('%d', Math.floor(s / 3600)) : T.daysAgo.replace('%d', Math.floor(s / 86400)));
 	const regions = (() => { try { return new Intl.DisplayNames(['en'], { type: 'region' }); } catch (e) { return null; } })();
 	const country = (cc) => { try { return cc && regions ? regions.of(cc.toUpperCase()) : (cc || ''); } catch (e) { return cc || ''; } };
 	const flag = (cc) => (/^[A-Za-z]{2}$/.test(cc || '') ? String.fromCodePoint(...cc.toUpperCase().split('').map((c) => 127397 + c.charCodeAt(0))) : '');
@@ -944,7 +993,7 @@ function er_reach_js() {
 			}
 			root.classList.toggle('is-full', on);
 			fullBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
-			fullBtn.setAttribute('aria-label', on ? 'Reduce map' : 'Enlarge map');
+			fullBtn.setAttribute('aria-label', on ? T.reduce : T.enlarge);
 			hide();
 			(on ? closeBtn : fullBtn).focus({ preventScroll: true });
 		}
@@ -971,11 +1020,11 @@ function er_reach_js() {
 		}
 
 		function popupHtml(p) {
-			const place = '<b>' + esc(p.city || 'Unknown City') + (p.live ? '<span class="erm-badge is-live">LIVE</span>' : '<span class="erm-badge">PAST</span>') + '</b>'
+			const place = '<b>' + esc(p.city || T.unknownCity) + (p.live ? '<span class="erm-badge is-live">' + esc(T.badgeLive) + '</span>' : '<span class="erm-badge">' + esc(T.badgePast) + '</span>') + '</b>'
 				+ esc(country(p.cc)) + ' ' + flag(p.cc) + '<br>';
 			return p.live
-				? place + 'Page: <a href="' + esc(p.page) + '">' + esc(label(p.page)) + '</a><br>Browser: ' + esc(p.browser) + '<br>Last seen: ' + ago(p.ago)
-				: place + 'Visitors: ' + p.n.toLocaleString() + '<br>Last seen: ' + ago(p.ago);
+				? place + esc(T.page) + ' <a href="' + esc(p.page) + '">' + esc(label(p.page)) + '</a><br>' + esc(T.browser) + ' ' + esc(p.browser) + '<br>' + esc(T.lastSeen) + ' ' + ago(p.ago)
+				: place + esc(T.visitors) + ' ' + p.n.toLocaleString() + '<br>' + esc(T.lastSeen) + ' ' + ago(p.ago);
 		}
 
 		function show(p) {
@@ -1066,13 +1115,13 @@ function er_reach_js() {
 	const link = (path) => '<a href="' + esc(path) + '">' + esc(label(path)) + '</a>';
 
 	function renderCurrent(el, list) {
-		if (!list || !list.length) { el.innerHTML = '<p class="erm-muted">No live visitors</p>'; return; }
+		if (!list || !list.length) { el.innerHTML = '<p class="erm-muted">' + esc(T.noLive) + '</p>'; return; }
 		const pages = new Map();
 		list.forEach((u) => {
 			if (!pages.has(u.page)) pages.set(u.page, { count: 0, city: u.city, country: country(u.cc) });
 			pages.get(u.page).count++;
 		});
-		let html = '<table>' + cols + '<thead><tr><th>Page</th><th>Visitors</th><th>Location</th></tr></thead><tbody>';
+		let html = '<table>' + cols + '<thead><tr><th>' + esc(T.thPage) + '</th><th>' + esc(T.thVisitors) + '</th><th>' + esc(T.thLocation) + '</th></tr></thead><tbody>';
 		pages.forEach((d, page) => {
 			html += '<tr><td>' + link(page) + '</td><td>' + d.count + '</td><td>' + esc(d.city) + (d.city && d.country ? ', ' : '') + esc(d.country) + '</td></tr>';
 		});
@@ -1080,11 +1129,11 @@ function er_reach_js() {
 	}
 
 	function renderPast(el, list) {
-		if (!list || !list.length) { el.innerHTML = '<p class="erm-muted">No past visitors</p>'; return; }
-		let html = '<table>' + cols + '<thead><tr><th>Page</th><th>Views</th><th>Location</th></tr></thead><tbody>';
+		if (!list || !list.length) { el.innerHTML = '<p class="erm-muted">' + esc(T.noPast) + '</p>'; return; }
+		let html = '<table>' + cols + '<thead><tr><th>' + esc(T.thPage) + '</th><th>' + esc(T.thViews) + '</th><th>' + esc(T.thLocation) + '</th></tr></thead><tbody>';
 		list.forEach((p) => {
 			html += '<tr><td>' + link(p.url) + '</td><td>' + Number(p.views).toLocaleString() + '</td><td>'
-				+ p.locations + (p.locations === 1 ? ' location' : ' locations') + '</td></tr>';
+				+ p.locations + ' ' + esc(p.locations === 1 ? T.location1 : T.locationN) + '</td></tr>';
 		});
 		el.innerHTML = html + '</tbody></table>';
 	}
