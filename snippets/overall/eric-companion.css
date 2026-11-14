@@ -619,14 +619,23 @@ footer.flex-container {max-width: var(--er-wide-row); margin-inline: auto; colum
 .er-hero-section.has-background-dim .er-breadcrumbs [aria-current="page"],
 footer.wp-block-template-part .er-breadcrumbs [aria-current="page"] {color: var(--color-8);}
 
-/* Footer breadcrumbs: lifted OUT of footer.flex-container to a block row above the columns. Cap+centre+gutter match the column row; margin-bottom mirrors its row-gap. */
-footer.wp-block-template-part .er-breadcrumbs {
+/* Footer top row (footer.html): breadcrumbs left, Site Overview + Site Reach + Site Journey right; on
+   narrow screens they wrap under the breadcrumbs. Sits above the columns: cap + centre match the column row,
+   margin-bottom mirrors its row-gap. */
+.er-footer-toprow {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: space-between;
+	align-items: center;
+	gap: 12px 24px;
 	max-width: var(--er-wide-row); /* aligned to hero / content like the header */
-	margin-inline: auto;
-	margin-bottom: 25px;
+	margin: 0 auto 25px;
 }
+.er-footer-toprow > :only-child {margin-left: auto;} /* no breadcrumbs: the links stay right */
+.er-footer-toprow .er-socials-support {flex-wrap: wrap; row-gap: 12px;} /* narrow screens: links wrap whole, never their names */
+.er-footer-toprow .er-header-icon {white-space: nowrap;}
 
-/* Footer: one text size, set here only; everything inside inherits it (columns, tag cloud, Site Journey line). Only the breadcrumbs keep their own small size. */
+/* Footer: one text size, set here only; everything inside inherits it (columns, tag cloud, the top row's links). Only the breadcrumbs keep their own small size. */
 footer.wp-block-template-part {font-size: var(--er-fs-sm);}
 
 /* ============================================================
