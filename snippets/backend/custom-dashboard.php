@@ -48,10 +48,13 @@ function custom_links() {
 				'Webmail' => 'https://mail.hostinger.com/',
 				'AI'      => admin_url('admin.php?page=hostinger-ai-assistant'),
 			],
-			'Codes' => [
+			'Repos' => [
 				'GitHub'        => 'https://github.com/ericrothdotorg',
 				'Design Blocks' => admin_url('themes.php?page=design-block-tracker'),
-				'Snippets'      => admin_url('admin.php?page=snippets'),
+			],
+			'Snippets' => [
+				'Manage'        => admin_url('admin.php?page=snippets'),
+				'Live Export'   => wp_nonce_url(admin_url('admin-post.php?action=custom_live_export'), 'custom_live_export'),
 			],
 		],
 		// 🔗 Quick Links
@@ -203,6 +206,49 @@ function custom_render_hosting_repo_widget() {
 		custom_render_button_row($links, $first ? '' : 'margin-top: 6px;', $row_label);
 		$first = false;
 	}
+}
+
+// "Live Export": all snippets as the site runs them, in the plugin's export format
+// (.code-snippets.json). Why not the plugin's own export: with file-based execution the
+// site runs the files, but that export reads the database copy, which can lag behind
+// (it did on 14.11.2026). This reads wp-content/code-snippets/<folder>/{php,css}/index.php:
+// the files' own register of every snippet, with its code and settings.
+add_action('admin_post_custom_live_export', 'custom_live_export');
+function custom_live_export() {
+	if (!current_user_can('manage_options')) wp_die('Not allowed.', 403);
+	check_admin_referer('custom_live_export');
+	$snippets = [];
+	foreach (array_merge(glob(WP_CONTENT_DIR . '/code-snippets/*/php/index.php') ?: [], glob(WP_CONTENT_DIR . '/code-snippets/*/css/index.php') ?: []) as $index) {
+		$list = include $index;
+		if (!is_array($list)) continue;
+		foreach ($list as $id => $snip) {
+			if (!empty($snip['trashed'])) continue;
+			$snippets[(int) $id] = [
+				'id'       => (int) $id,
+				'name'     => $snip['name'] ?? '',
+				'desc'     => $snip['desc'] ?? '',
+				'tags'     => $snip['tags'] ?? [],
+				'scope'    => $snip['scope'] ?? '',
+				'priority' => (int) ($snip['priority'] ?? 10),
+				'active'   => !empty($snip['active']),
+				'modified' => $snip['modified'] ?? '',
+				'code'     => $snip['code'] ?? '',
+			];
+		}
+	}
+	if (!$snippets) wp_die('No snippet files found under wp-content/code-snippets/.', 404);
+	ksort($snippets);
+	$json = wp_json_encode([
+		'generator'    => 'Custom Dashboard: Live Export (from the snippet files)',
+		'date_created' => wp_date('Y-m-d H:i'), // site time (Europe/Zurich)
+		'snippets'     => array_values($snippets),
+	], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+	nocache_headers();
+	header('Content-Type: application/json; charset=utf-8');
+	header('Content-Disposition: attachment; filename="snippets-live-' . wp_date('Y-m-d-Hi') . '.code-snippets.json"');
+	header('Content-Length: ' . strlen($json));
+	echo $json;
+	exit;
 }
 
 // ======================================
