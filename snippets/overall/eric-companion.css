@@ -21,7 +21,8 @@
    CONTENTS
      A. TYPOGRAPHY & TEXT HELPERS   line-break / colour, text-columns, design blocks, page-17552 tabs
      B. COMPONENTS                  details / accordion, tag-cloud pills, image effects,
-                                    bedps cards, embeds / video, buttons, boxes, social-icon rows
+                                    bedps cards, embeds / video, buttons, boxes, social-icon rows,
+                                    enlarge (full-window view)
      C. CONTENT COMPONENTS          grid / cards / related slider / post-footer
      D. FOOTER                      navy wrapper, columns, dropdown, animated word
      E. TEMPLATE-PART COMPONENTS    site logo, archive filter tabs, breadcrumbs
@@ -270,6 +271,21 @@ body.dark-mode .box-shadow {background: var(--color-10); border: 1px solid var(-
 }
 .er-social-icon-link img {width: 100%; height: 100%; object-fit: contain; padding: 12px;}
 .er-social-icon-fill img {object-fit: cover; padding: 0;} /* icons carrying their own background (LibraryThing, About Me): fill the disc so it clips round */
+
+/* ---- Enlarge: a block over the whole window (Site Reach, Site Journey). Markup + script: Eric Companion
+   PHP 1f. Each block places its enlarge button and sizes itself in the layer; the × sits top right of the
+   nearest positioned ancestor (the block). A block taller than the window scrolls inside the layer. ---- */
+:is(.er-enlarge-btn, .er-enlarge-close) {padding: 0; border: 0; border-radius: 8px; background: rgba(7, 12, 18, 0.6); color: #e1e8ed; cursor: pointer;} /* No var Color: the map's / sky's own dark chips */
+:is(.er-enlarge-btn, .er-enlarge-close):hover {background: rgba(7, 12, 18, 0.85);}
+:is(.er-enlarge-btn, .er-enlarge-close):focus-visible {outline: var(--a11y-focus-width) solid var(--a11y-focus-color); outline-offset: var(--a11y-focus-offset);}
+.er-enlarge-btn {width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;}
+.er-enlarge-close {position: absolute; z-index: 2; right: 10px; top: 10px; width: 36px; height: 36px; display: none; font: 400 26px/1 system-ui, sans-serif;}
+.er-enlarge-out, .is-full .er-enlarge-in {display: none;}
+.is-full .er-enlarge-out, .is-full .er-enlarge-close {display: block;}
+.er-enlarge-layer {position: fixed; inset: 0; z-index: 100000; display: flex; overflow-y: auto; overscroll-behavior: contain; padding: clamp(10px, 3vmin, 40px); background: rgba(7, 12, 18, 0.92); animation: er-enlarge-in 0.25s ease-out;}
+.er-enlarge-layer > * {flex: none; margin: auto;} /* centred; a taller block starts at the top and scrolls */
+@keyframes er-enlarge-in {from {opacity: 0;}}
+html.er-enlarge-lock {overflow: hidden;}
 
 /* ============================================================
    C. CONTENT COMPONENTS: grid / cards / related slider / post-footer
@@ -838,7 +854,8 @@ body.dark-mode .er-author-links a {background: var(--color-6);}
 	.animate__animated,
 	.er-social-link-icon,
 	.er-social-icon-link,
-	.content-text > span {
+	.content-text > span,
+	.er-enlarge-layer {
 		animation: none !important;
 		transition: none !important;
 		transform: none !important;
