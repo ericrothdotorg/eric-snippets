@@ -10,7 +10,8 @@
 //   0. SETTINGS                numbers, wording, links: change things here
 //   1. SHARED HELPERS          taxonomy map, breadcrumbs, reading time,
 //                              German content: counting rule, English version,
-//                              lang / hreflang (er_uncounted_ids, er_is_german …)
+//                              lang / hreflang (er_uncounted_ids, er_is_german …),
+//                              enlarge (full-window view: Site Reach, Site Journey)
 //                              (defined first; called by hero, cards, footer)
 //   2. PERFORMANCE             featured-image eager + fetchpriority filter
 //   3. HEAD SCRIPTS            dark-mode FOUC guard,
@@ -566,6 +567,71 @@ add_action( 'wp_head', function () {
 		esc_url( get_permalink( $de ) )
 	);
 }, 2 );
+
+// ---- 1f. Enlarge — a block over the whole window; shared by Site Reach (World Map) and Site Journey ----
+// Like the image lightbox: the block is moved into .er-enlarge-layer (a child of <body>), so no
+// transformed ancestor can trap it; a placeholder keeps its place in the page. Back with ×, Esc,
+// the button or a click beside it. Look: Eric Companion CSS ("Enlarge").
+// Markup: er_enlarge_button() and er_enlarge_close() inside the block (each snippet places them,
+// behind function_exists). Calling either marks the page, so the script is printed only there.
+// Script: window.erEnlarge( root, { before, after } ) - before( on ) runs before the move (e.g. to
+// measure), after( on ) once it is done (e.g. to close a popup or resize). Returns set( on ).
+function er_enlarge_button( $enlarge, $reduce ) {
+	$GLOBALS['er_enlarge'] = true;
+	return '<button type="button" class="er-enlarge-btn" aria-pressed="false" aria-label="' . esc_attr( $enlarge ) . '" data-enlarge="' . esc_attr( $enlarge ) . '" data-reduce="' . esc_attr( $reduce ) . '">'
+		. '<svg class="er-enlarge-in" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false"><path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+		. '<svg class="er-enlarge-out" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false"><path d="M6 2v4H2M14 6h-4V2M10 14v-4h4M2 10h4v4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+		. '</button>';
+}
+function er_enlarge_close( $label ) {
+	$GLOBALS['er_enlarge'] = true;
+	return '<button type="button" class="er-enlarge-close" aria-label="' . esc_attr( $label ) . '">&times;</button>';
+}
+// In the head: the block theme renders the template (and the buttons) before wp_head, so the mark
+// is set here, and the function exists before any snippet's footer script calls it.
+add_action( 'wp_head', function () {
+	if ( empty( $GLOBALS['er_enlarge'] ) ) {
+		return;
+	}
+	?>
+	<script>
+	window.erEnlarge = function (root, o) {
+		o = o || {};
+		var btn = root.querySelector('.er-enlarge-btn'), close = root.querySelector('.er-enlarge-close'), holder = null, layer = null;
+		if (!btn) return function () {};
+		function set(on) {
+			if (on === root.classList.contains('is-full')) return;
+			if (o.before) o.before(on);
+			if (on) {
+				holder = document.createElement('div'); // keeps the block's place, no jump in the page
+				holder.style.height = root.offsetHeight + 'px';
+				root.before(holder);
+				layer = document.createElement('div');
+				layer.className = 'er-enlarge-layer';
+				layer.addEventListener('click', function (e) { if (e.target === layer) set(false); });
+				document.body.append(layer);
+				layer.append(root);
+				document.documentElement.classList.add('er-enlarge-lock');
+			} else {
+				holder.replaceWith(root);
+				layer.remove();
+				holder = layer = null;
+				document.documentElement.classList.remove('er-enlarge-lock');
+			}
+			root.classList.toggle('is-full', on);
+			btn.setAttribute('aria-pressed', String(on));
+			btn.setAttribute('aria-label', btn.getAttribute(on ? 'data-reduce' : 'data-enlarge'));
+			if (o.after) o.after(on);
+			(on && close ? close : btn).focus({ preventScroll: true });
+		}
+		btn.addEventListener('click', function () { set(!root.classList.contains('is-full')); });
+		if (close) close.addEventListener('click', function () { set(false); });
+		document.addEventListener('keydown', function (e) { if (e.key === 'Escape') set(false); });
+		return set;
+	};
+	</script>
+	<?php
+} );
 
 // ======================================
 // 2. PERFORMANCE & ASSET LOADING
