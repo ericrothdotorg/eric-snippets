@@ -29,7 +29,8 @@
  *
  * READS (behind function_exists, never writes)
  *   er_live_visitors (Visitor Tracking): the explorers' countries
- *   er_map_cached() (World Map): its cached top pages, for "most read"
+ *   er_map_views (visit log, read by World Map) + er_map_site_time(), ER_MAP_DAYS
+ *   (World Map): "most read", ranked per type
  *
  * PROVIDES (used by Visitor Tracking, behind function_exists)
  *   er_sj_store( $visitor_id, $count )  stores a visitor's progress number
@@ -93,6 +94,10 @@ function er_sj_texts() {
 		'of'           => '%1$d of %2$d',
 		'visited'      => 'read',	// screen readers, after a read entry in [er_sj_list] / [er_sj_popular]
 		'open'         => 'Open',	// [er_sj_sky] on touch screens: link in the title shown by the first tap
+		'rankKey'      => 'rank, %s = most read',	// [er_sj_sky] key in the most read view, after "1–10"; %s: a bold 1
+		'enlarge'      => 'Enlarge sky',	// [er_sj_sky] buttons (screen readers)
+		'reduce'       => 'Reduce sky',
+		'close'        => 'Close enlarged sky',
 
 		// [er_sj_stat show="level"] and "level-note" (card: level)
 		// Levels by where a visitor stands among all visitors of the last 90 days
@@ -442,16 +447,32 @@ function er_sj_crowd() {
 			$crowd['countries'][] = array( strtoupper( $r['cc'] ), (int) $r['n'] );
 		}
 	}
-	if ( function_exists( 'er_map_cached' ) && function_exists( 'er_map_build_history' ) && defined( 'ER_MAP_CACHE_HISTORY' ) ) {
-		$history = er_map_cached( 'er_map_history', 'er_map_build_history', ER_MAP_CACHE_HISTORY );
-		$ids     = array();
-		foreach ( er_sj_items() as $it ) {
-			$ids[ trailingslashit( $it['u'] ) ] = $it['i'];
+	// Most read: the visit log Site Reach reads (er_map_views: one row per visitor, page and day), in
+	// Site Reach's window (ER_MAP_DAYS), pagination folded into its base page as there. Each type is
+	// ranked on its own, so a type with less traffic (Quotes) still gets its ER_SJ_TOP; Site Reach's
+	// own list is the site-wide top ER_MAP_PAGES_MAX, where such a type may have no entry at all.
+	if ( function_exists( 'er_map_site_time' ) && defined( 'ER_MAP_DAYS' ) ) {
+		$rows  = $wpdb->get_results( $wpdb->prepare(
+			"SELECT page_url, COUNT(*) AS n FROM {$wpdb->prefix}er_map_views WHERE viewed_at >= %s GROUP BY page_url",
+			er_map_site_time( ER_MAP_DAYS * DAY_IN_SECONDS )
+		), ARRAY_A );
+		$views = array();
+		foreach ( (array) $rows as $r ) {
+			$path = (string) wp_parse_url( (string) $r['page_url'], PHP_URL_PATH );
+			$path = rtrim( preg_replace( '#/page/\d+/?$#', '', $path ), '/' ) . '/';
+			$views[ $path ] = ( $views[ $path ] ?? 0 ) + (int) $r['n'];
 		}
-		foreach ( (array) ( $history['pages'] ?? array() ) as $p ) {
-			$path = trailingslashit( (string) $p['url'] );
-			if ( isset( $ids[ $path ] ) ) {
-				$crowd['popular'][] = $ids[ $path ];
+		$ranked = array();
+		foreach ( er_sj_items() as $it ) {
+			$n = $views[ trailingslashit( $it['u'] ) ] ?? 0;
+			if ( $n > 0 ) {
+				$ranked[ $it['y'] ][] = array( $it['i'], $n );
+			}
+		}
+		foreach ( $ranked as $list ) {
+			usort( $list, static fn( $x, $y ) => $y[1] <=> $x[1] );
+			foreach ( array_slice( $list, 0, ER_SJ_TOP ) as $e ) {
+				$crowd['popular'][] = $e[0];
 			}
 		}
 	}
@@ -492,6 +513,10 @@ add_action( 'wp_ajax_nopriv_er_sj_data', 'er_sj_data' );
 //     and front page stars). A constellation's size follows its
 //     number of entries; its tilt, elongation and star pattern come from its name.
 //     On touch screens the first tap on a star shows its title, the second opens it.
+//     Most read view: each gold star carries its rank (1 = most read; the key explains it).
+//     The bar stays under the header while a tall sky scrolls (Posts, Interests); phones:
+//     the types in a drawer behind one button. Enlarge button: the sky over the whole
+//     window (shared with Site Reach: Eric Companion PHP 1f).
 // [er_sj_list]
 //     The places of the selected tab as a list of links (e.g. inside a Details
 //     block): the way into the sky for keyboard and screen reader users.
@@ -542,6 +567,7 @@ add_shortcode( 'er_sj_progress', function () {
 add_shortcode( 'er_sj_sky', function ( $atts ) {
 	er_sj_mark();
 	$a = shortcode_atts( array( 'label' => 'Choose a type:', 'visited' => 'read', 'notyet' => 'unread', 'next' => 'next', 'mine' => '', 'popular' => '' ), $atts );
+	$t = er_sj_texts();
 	// mine + popular: a switch between the visitor's own reading and the most read places
 	$views = '' !== $a['mine'] && '' !== $a['popular']
 		? '<div class="er-sj-views" role="group" hidden>'
@@ -550,9 +576,12 @@ add_shortcode( 'er_sj_sky', function ( $atts ) {
 		: '';
 	return '<div class="er-sj-skywrap" data-visited="' . esc_attr( $a['visited'] ) . '" data-notyet="' . esc_attr( $a['notyet'] ) . '" data-next="' . esc_attr( $a['next'] ) . '" data-popular="' . esc_attr( $a['popular'] ) . '">'
 		. '<div class="er-sj-skybox">'
-		. '<div class="er-sj-tabbar"><span class="er-sj-tablabel" id="er-sj-tablabel">' . esc_html( $a['label'] ) . '</span>'
-		. '<div class="er-sj-tabs" role="tablist" aria-labelledby="er-sj-tablabel"></div>' . $views . '</div>'
-		. '<div id="er-sj-sky" role="tabpanel"><svg class="er-sj-svg" viewBox="0 0 1000 420" aria-hidden="true"></svg></div>'
+		. '<div class="er-sj-tabbar">'
+		. '<button type="button" class="er-sj-tab er-sj-pick" aria-expanded="false" aria-controls="er-sj-picker"></button>' // phones: opens the type list
+		. '<div class="er-sj-picker" id="er-sj-picker"><span class="er-sj-tablabel" id="er-sj-tablabel">' . esc_html( $a['label'] ) . '</span>'
+		. '<div class="er-sj-tabs" role="tablist" aria-labelledby="er-sj-tablabel"></div></div>' . $views . '</div>'
+		. '<div id="er-sj-sky" role="tabpanel"><svg class="er-sj-svg" viewBox="0 0 1000 420" aria-hidden="true"></svg>'
+		. ( function_exists( 'er_enlarge_button' ) ? er_enlarge_button( $t['enlarge'], $t['reduce'] ) . er_enlarge_close( $t['close'] ) : '' ) . '</div>' // enlarge: Eric Companion PHP 1f
 		. '<div class="er-sj-tip" hidden></div>'
 		. '<div class="er-sj-key" aria-hidden="true"><span><i class="is-seen"></i>' . esc_html( $a['visited'] ) . '</span><span><i></i>' . esc_html( $a['notyet'] ) . '</span>'
 		. '<span class="er-sj-keynext" hidden><i class="is-next"></i>' . esc_html( $a['next'] ) . '</span></div></div></div>'; // shown while a next entry exists
@@ -622,7 +651,9 @@ add_action( 'wp_footer', function () {
 		.er-sj-bars {flex: 1 1 280px; display: grid; grid-template-columns: max-content 1fr max-content; gap: 8px 12px; align-items: center; font-size: var(--er-fs-sm);}
 		.er-sj-bar {height: 8px; border-radius: 4px; background: var(--sj-line); overflow: hidden;}
 		.er-sj-bar i {display: block; height: 100%; background: var(--color-1); border-radius: 4px; transition: width 0.8s ease;}
-		.er-sj-tabbar {display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; padding: 22px 18px; background: var(--color-10); border-bottom: 1px solid var(--color-4);}
+		/* The bar stays under the header while a sky taller than the window scrolls (Posts, Interests).
+		   --sj-top: the header's height, measured by the script below (whatever the header's height is). */
+		.er-sj-tabbar {display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; padding: 22px 18px; background: var(--color-10); border-bottom: 1px solid var(--color-4); position: sticky; top: var(--sj-top, 0px); z-index: 3;}
 		.er-sj-tablabel {font-size: var(--er-fs-sm); font-weight: var(--er-fw-bold); color: var(--color-5);}
 		.er-sj-tabs {display: flex; flex-wrap: wrap; gap: 8px;}
 		.er-sj-tab {font: inherit; font-size: var(--er-fs-sm); padding: 7px 16px; border-radius: 20px; border: 1px solid var(--color-1); background: var(--color-10); color: var(--color-5); cursor: pointer; transition: border-color 0.2s, background 0.2s;}
@@ -630,7 +661,7 @@ add_action( 'wp_footer', function () {
 		.er-sj-tab:is([aria-selected="true"], [aria-pressed="true"]) {background: var(--color-1); border-color: var(--color-1); color: var(--color-8);}
 		.er-sj-tabnum {margin-left: 4px; font-size: var(--er-fs-xs); font-weight: var(--er-fw-bold); color: #ffd700;} /* gold, as the front-page stat numbers */
 		.er-sj-tab[aria-selected="true"] .er-sj-tabnum {color: var(--color-8);}
-		.er-sj-skybox {position: relative; background: var(--color-6); border-radius: 12px; overflow: hidden; --er-link: var(--color-11); --er-link-hover: var(--color-12);} /* dark background: the dark link pair (style.css), ≥ 4.9:1 on --color-6 */
+		.er-sj-skybox {position: relative; background: var(--color-6); border-radius: 12px; overflow: clip; --er-link: var(--color-11); --er-link-hover: var(--color-12);} /* dark background: the dark link pair (style.css), ≥ 4.9:1 on --color-6. clip, not hidden: hidden would stop the sticky bar */
 		body.dark-mode .er-sj-skybox {box-shadow: 0 0 0 1px var(--color-4);} /* the sky's black is the dark page's black */
 		.er-sj-svg {display: block; width: 100%; height: auto;}
 		.er-sj-label {fill: var(--color-5); letter-spacing: 0.4px; font-family: inherit;}
@@ -640,9 +671,10 @@ add_action( 'wp_footer', function () {
 		.er-sj-next {fill: none; stroke: #ffd700; stroke-width: 1.5; transform-box: fill-box; transform-origin: center; animation: er-sj-pulse 1.8s ease-out infinite;}
 		@keyframes er-sj-pulse {from {transform: scale(1); opacity: 0.9;} to {transform: scale(2.2); opacity: 0;}}
 		.er-sj-star {cursor: pointer;}
+		.er-sj-rank {fill: var(--color-8); font-family: inherit; font-weight: var(--er-fw-bold); pointer-events: none;} /* Most read view: rank beside a gold star */
 		.er-sj-tw {animation: er-sj-tw 3.2s ease-in-out infinite alternate;}
 		@keyframes er-sj-tw {from {opacity: 1;} to {opacity: 0.45;}}
-		.er-sj-tip {position: absolute; z-index: 2; max-width: 260px; padding: 7px 10px; border-radius: 8px; background: rgba(14, 24, 37, 0.95); border: 1px solid var(--color-3); color: var(--color-5); font-size: var(--er-fs-xs); line-height: 1.4; pointer-events: none;}
+		.er-sj-tip {position: absolute; z-index: 4; max-width: 260px; padding: 7px 10px; border-radius: 8px; background: rgba(14, 24, 37, 0.95); border: 1px solid var(--color-3); color: var(--color-5); font-size: var(--er-fs-xs); line-height: 1.4; pointer-events: none;}
 		.er-sj-tip b {display: block; color: var(--color-8);}
 		.er-sj-tip.is-tap {pointer-events: auto;} /* touch: the title carries an Open link */
 		.er-sj-tip a {display: inline-block; margin-top: 4px; font-weight: var(--er-fw-bold);}
@@ -650,8 +682,35 @@ add_action( 'wp_footer', function () {
 		.er-sj-key i {display: inline-block; width: 9px; height: 9px; margin-right: 6px; border-radius: 50%; border: 1.5px solid #8b7fe8; vertical-align: -1px;}
 		.er-sj-key i.is-seen {background: #fff; border-color: #fff; box-shadow: 0 0 0 3px rgba(231, 240, 248, 0.15);}
 		.er-sj-key i.is-top {background: #ffd700; border-color: #ffd700; box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.15);}
+		.er-sj-key b {color: var(--color-8);} /* the numbers, as the ranks beside the gold stars */
+		.er-sj-keyrank {margin-right: 4px;}
 		.er-sj-key i.is-next {border-color: #ffd700; box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.25);}
 		.er-sj-views {display: flex; gap: 8px; margin-left: auto;}
+		/* Phones: two compact rows - the current type as a button that opens the type list (a drawer
+		   right under it, over the sky), and the two views as one switch. Wider screens: all pills in the bar. */
+		.er-sj-picker {display: contents;}
+		.er-sj-pick {display: none;}
+		@media (max-width: 599px) {
+			.er-sj-tabbar {padding: 12px 14px; gap: 8px;}
+			.er-sj-pick {display: flex; align-items: center; gap: 8px; flex: 1 1 100%; white-space: nowrap;}
+			.er-sj-pick svg {flex: none; margin-left: auto; transition: transform 0.2s;}
+			.is-open .er-sj-pick svg {transform: rotate(180deg);}
+			.er-sj-picker {display: none; position: absolute; left: 0; right: 0; top: var(--sj-drawer-top, 100%); flex-direction: column; gap: 10px; padding: 14px; background: var(--color-10); border-bottom: 1px solid var(--color-4); box-shadow: 0 10px 18px rgba(0, 0, 0, 0.35);}
+			.is-open .er-sj-picker {display: flex;}
+			.er-sj-picker .er-sj-tabs {flex-direction: column; flex-wrap: nowrap;}
+			.er-sj-picker .er-sj-tab {display: flex; justify-content: space-between;}
+			.er-sj-views {flex: 1 1 100%; gap: 0; margin-left: 0;}
+			.er-sj-views .er-sj-tab {flex: 1 1 0;}
+			.er-sj-views .er-sj-tab:first-child {border-radius: 20px 0 0 20px;}
+			.er-sj-views .er-sj-tab:last-child {border-radius: 0 20px 20px 0; margin-left: -1px;}
+		}
+		/* Enlarge (shared look and layer: Eric Companion CSS, script: Eric Companion PHP 1f). Here: the button's
+		   place, and the sky's width in the layer: --sj-full-w from the script - as wide as fits the window's
+		   height; a sky too tall for that (Posts, Interests) takes the full width and scrolls, the bar on top. */
+		#er-sj-sky {position: relative;}
+		#er-sj-sky > .er-enlarge-btn {position: absolute; z-index: 2; left: 10px; top: 10px;}
+		.er-enlarge-layer > .er-sj-skywrap {width: min(100%, var(--sj-full-w, 100%));}
+		.er-enlarge-layer .er-sj-tabbar {top: 0;}
 		:is(.er-sj-tab, .er-sj-link):focus-visible {outline: var(--a11y-focus-width) solid var(--a11y-focus-color); outline-offset: var(--a11y-focus-offset);}
 		:is(.er-sj-listbox, .er-sj-popular) {columns: 4 180px; column-gap: 24px; font-size: var(--er-fs-sm);}
 		.er-sj-popular {columns: 5 180px; margin: 0; padding-left: 1.1em;} /* ER_SJ_TOP 10: two per column */
@@ -943,12 +1002,12 @@ add_action( 'wp_footer', function () {
 			});
 		}
 
-		// ---- Most read: the ER_SJ_TOP places of the selected tab, by World Map's ranking ----
+		// ---- Most read: the ER_SJ_TOP places of the selected tab, ranked per type (er_sj_crowd) ----
 		var tops = {};
 		function topList() {
 			var out = popular.map(function (id) { return byId[id]; }).filter(function (it) { return it && it.y === current; }).slice(0, CFG.top);
 			tops = {};
-			out.forEach(function (it) { tops[it.i] = true; });
+			out.forEach(function (it, n) { tops[it.i] = n + 1; }); // its rank, 1 = most read
 			return out;
 		}
 		// [er_sj_popular]: the same places as links, in the list's columns
@@ -1023,9 +1082,28 @@ add_action( 'wp_footer', function () {
 				n.className = 'er-sj-tabnum';
 				n.textContent = c.per[t[0]][0] + '/' + c.per[t[0]][1];
 				b.append(t[1] + ' ', n);
-				b.addEventListener('click', function () { current = t[0]; ranked(); tabs(); sky(); if (L) list(); if (R) popularList(); });
+				b.addEventListener('click', function () { drawer(false); keepBar(function () { current = t[0]; ranked(); tabs(); sky(); if (L) list(); if (R) popularList(); }); });
 				box.appendChild(b);
+				if (t[0] === current) pick(t[1], n.textContent);
 			});
+		}
+
+		// Phones: the button that opens the type list shows the current type and its numbers
+		function pick(name, num) {
+			var p = S.querySelector('.er-sj-pick');
+			if (!p) return;
+			var n = document.createElement('span');
+			n.className = 'er-sj-tabnum';
+			n.textContent = num;
+			p.replaceChildren(name + ' ', n);
+			p.insertAdjacentHTML('beforeend', '<svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true" focusable="false"><path d="M2 4l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>');
+		}
+		function drawer(on) {
+			var bar = S.querySelector('.er-sj-tabbar'), p = S.querySelector('.er-sj-pick');
+			if (!p || on === bar.classList.contains('is-open')) return;
+			if (on) bar.style.setProperty('--sj-drawer-top', (p.offsetTop + p.offsetHeight + 8) + 'px'); // right under the button
+			bar.classList.toggle('is-open', on);
+			p.setAttribute('aria-expanded', String(on));
 		}
 
 		function sky() {
@@ -1038,7 +1116,9 @@ add_action( 'wp_footer', function () {
 			// Its line runs straight down to the middle, so no constellation may sit in the centre
 			// column above it: an even number of columns, and a lone constellation goes below.
 			var root = items.filter(function (it) { return it.r; })[0], top = root ? (wide ? 70 : 84) : 0;
-			var cols = wide ? (n > 8 ? (hub ? 4 : 5) : (n > 4 ? (hub && !root ? 3 : 4) : Math.min(n, hub ? 2 : 4))) : Math.min(n, 2);
+			// Up to 4 constellations around a hub: one row (4 columns keep a cell wider than tall, so nothing
+			// gets smaller and the sky stays low); more than 4: two rows or more, as before.
+			var cols = wide ? (n > 8 ? (hub ? 4 : 5) : (n > 4 ? (hub && !root ? 3 : 4) : (hub ? (n === 1 ? 1 : n + n % 2) : n))) : Math.min(n, 2);
 			cols = Math.max(1, cols);
 			var rows = Math.max(1, Math.ceil(n / cols));
 			// With a hub the clusters sit above and below a free band in the middle
@@ -1140,11 +1220,37 @@ add_action( 'wp_footer', function () {
 				var rt = el('text', { x: rx, y: ry - 16, 'text-anchor': 'middle', 'class': 'er-sj-label', 'font-size': wide ? 13 : 16 }, rl);
 				rt.textContent = root.t;
 			}
-			// A name low in the bottom row makes the sky a bit taller rather than being cut off
-			if (nameBottom + 34 > vh) svg.setAttribute('viewBox', '0 0 ' + vw + ' ' + (nameBottom + 34));
+			// A name low in the bottom row makes the sky a bit taller rather than being cut off or covered
+			// by the key: room for the key's real height + its bottom offset (10px) + a 12px gap, in sky units
+			// (the sky scales with its width, the key does not)
+			var room = Math.max(34, Math.ceil((S.querySelector('.er-sj-key').offsetHeight + 22) * vw / (svg.clientWidth || vw)));
+			if (nameBottom + room > vh) svg.setAttribute('viewBox', '0 0 ' + vw + ' ' + (nameBottom + room));
+			fitVars();
 			// The key names "next" only while its star is in this sky (own view only)
 			var keyNext = S.querySelector('.er-sj-keynext');
 			if (keyNext) keyNext.hidden = !svg.querySelector('.er-sj-next');
+		}
+
+		// Switching type or view while the sky is scrolled under the bar: a shorter sky would leave the
+		// visitor below it. The page (or the enlarged view) moves so the bar stays where it was and the
+		// new sky starts right under it.
+		function keepBar(change) {
+			var bar = S.querySelector('.er-sj-tabbar'), at = bar.getBoundingClientRect().top;
+			var inside = S.getBoundingClientRect().top < at - 1; // the sky's top has scrolled above the bar
+			change();
+			if (!inside) return;
+			var by = S.getBoundingClientRect().top - at, lay = S.closest('.er-enlarge-layer');
+			if (lay) lay.scrollTop += by; else window.scrollBy(0, by);
+		}
+
+		// Width of the enlarged sky (CSS: .er-enlarge-layer): as wide as the whole sky fits the window's height.
+		// If that is narrower than on the page (Posts, Interests: too tall for any window), the full width.
+		function fitVars() {
+			if (!S.classList.contains('is-full')) return;
+			var vb = S.querySelector('.er-sj-svg').viewBox.baseVal;
+			var pad = Math.min(40, Math.max(10, 0.03 * Math.min(innerWidth, innerHeight))); // the layer's padding (Eric Companion CSS)
+			var fit = (innerHeight - 2 * pad - S.querySelector('.er-sj-tabbar').offsetHeight) * vb.width / vb.height;
+			S.style.setProperty('--sj-full-w', fit >= parseFloat(S.dataset.pageW) ? fit + 'px' : '100%');
 		}
 
 		function star(svg, x, y, it, hue, big) {
@@ -1162,6 +1268,11 @@ add_action( 'wp_footer', function () {
 			}
 			// Own view: the next entry (the Almost-there card's) pulses
 			if (view === 'mine' && it.i === nextId) el('circle', { cx: x, cy: y, r: big ? 6 : 4.5, 'class': 'er-sj-next' }, a);
+			// Most read view: the rank next to a gold star (1 = most read; never a count)
+			if (view === 'popular' && tops[it.i]) {
+				var wideSky = svg.viewBox.baseVal.width >= 1000;
+				el('text', { x: x + (big ? 9 : 7), y: y - (big ? 7 : 5), 'class': 'er-sj-rank', 'font-size': wideSky ? 11 : 15 }, svg).textContent = tops[it.i];
+			}
 		}
 
 		// The switch between the own view and the most read view (only with mine + popular, and
@@ -1171,7 +1282,7 @@ add_action( 'wp_footer', function () {
 		function setView(v) {
 			view = v;
 			switcher.box.querySelectorAll('[data-view]').forEach(function (x) { x.setAttribute('aria-pressed', String(x.getAttribute('data-view') === v)); });
-			switcher.key.replaceChildren.apply(switcher.key, v === 'popular' ? [switcher.top] : switcher.mine);
+			switcher.key.replaceChildren.apply(switcher.key, v === 'popular' ? switcher.top : switcher.mine);
 		}
 		function views() {
 			var box = S.querySelector('.er-sj-views'), key = S.querySelector('.er-sj-key');
@@ -1179,12 +1290,18 @@ add_action( 'wp_footer', function () {
 			var top = document.createElement('span'), dot = document.createElement('i');
 			dot.className = 'is-top';
 			top.append(dot, S.getAttribute('data-popular'));
-			switcher = { box: box, key: key, top: top, mine: Array.prototype.slice.call(key.childNodes) };
+			var rank = document.createElement('span'), nums = document.createElement('b'); // what the numbers beside the gold stars mean
+			nums.className = 'er-sj-keyrank';
+			nums.textContent = '1–' + CFG.top;
+			var words = String(T.rankKey).split('%s'), one = document.createElement('b');
+			one.textContent = '1';
+			rank.append(nums, ' ' + words[0]);
+			if (words.length > 1) rank.append(one, words.slice(1).join('%s'));
+			switcher = { box: box, key: key, top: [top, rank], mine: Array.prototype.slice.call(key.childNodes) };
 			box.addEventListener('click', function (e) {
 				var b = e.target.closest('[data-view]');
 				if (!b || b.getAttribute('data-view') === view) return;
-				setView(b.getAttribute('data-view'));
-				sky();
+				keepBar(function () { setView(b.getAttribute('data-view')); sky(); });
 			});
 			ranked();
 		}
@@ -1374,8 +1491,28 @@ add_action( 'wp_footer', function () {
 			if (S) {
 				views(); tabs(); sky(); tips();
 				var w = S.clientWidth;
-				window.addEventListener('resize', function () {
-					if ((S.clientWidth >= 600) !== (w >= 600)) { w = S.clientWidth; sky(); }
+				var refit = function () {
+					if ((S.clientWidth >= 600) !== (w >= 600)) { w = S.clientWidth; sky(); } else fitVars();
+				};
+				window.addEventListener('resize', refit);
+
+				// Phones: the type list opens and closes with its button; a tap anywhere else or Esc closes it
+				var pickBtn = S.querySelector('.er-sj-pick');
+				if (pickBtn) pickBtn.addEventListener('click', function () { drawer(!S.querySelector('.er-sj-tabbar').classList.contains('is-open')); });
+				document.addEventListener('click', function (e) { if (!S.querySelector('.er-sj-tabbar').contains(e.target)) drawer(false); });
+				document.addEventListener('keydown', function (e) { if (e.key === 'Escape') drawer(false); });
+
+				// The sticky bar sits right under the header: its height, kept up to date (it shrinks on scroll)
+				var header = document.querySelector('.er-header');
+				if (header && window.ResizeObserver) {
+					new ResizeObserver(function () { S.style.setProperty('--sj-top', header.offsetHeight + 'px'); }).observe(header);
+				}
+
+				// Enlarge: the whole sky over the window (shared: Eric Companion PHP 1f). Before: the page width
+				// (the enlarged sky is never smaller); after: the tooltip closes, the sky's width is set.
+				if (window.erEnlarge) window.erEnlarge(S, {
+					before: function (on) { if (on) S.dataset.pageW = S.offsetWidth; },
+					after: function () { hideTip(); refit(); }
 				});
 			}
 		}
