@@ -59,7 +59,7 @@ function er_companion_texts() {
 		// Below an entry: share row and previous / next
 		'shareThis'    => 'Share This',
 		'postNav'      => 'Post navigation',	// screen readers
-		// Header, footer, mobile menu
+		// Header, mobile menu
 		'socials'      => 'Socials',
 		'support'      => 'Support',
 		// Dark mode switch (screen readers)
@@ -75,7 +75,7 @@ function er_companion_texts() {
 // Links and icons
 function er_companion_links() {
 	return array(
-		// Socials / Support: header, footer and mobile menu
+		// Socials / Support: header and mobile menu
 		'socialsUrl'  => '/about-me/contact/',
 		'socialsIcon' => '/wp-content/uploads/2025/12/users-solid-white.svg',
 		'supportUrl'  => '/this-site/',
@@ -1462,14 +1462,20 @@ add_action( 'wp_footer', function() {
 	<?php
 }, 15 );
 
-// ---- 8b. Mobile-overlay Socials/Support pair (injected into the nav overlay) ----
+// ---- 8b. Mobile-overlay Socials/Support pair + Overview/Reach/Journey row (injected into the nav overlay) ----
 // Injected inside the nav's responsive-container-content, after the menu <ul> closes.
-// Markup comes from [er_socials_support context="overlay"] — single source (see 8c).
+// Socials/Support markup comes from [er_socials_support context="overlay"] — single source (see 8c).
+// Overview/Reach/Journey: second row in the same overlay skin; same links and icons as the footer (parts/footer.html).
 add_filter( 'render_block', function ( $block_content, $block ) {
 	if ( ( $block['blockName'] ?? '' ) !== 'core/navigation' ) {
 		return $block_content;
 	}
-	$pair = do_shortcode( '[er_socials_support context="overlay"]' );
+	$pair = do_shortcode( '[er_socials_support context="overlay"]' )
+	      . '<div class="er-nav-overlay-extra">'
+	      . '<a href="/this-site/site-overview/"><img src="/wp-content/uploads/2026/11/site-map-white.svg" alt="" width="20" height="20"><span>Overview</span></a>'
+	      . '<a href="/this-site/site-reach/"><img src="/wp-content/uploads/2026/11/map-location-dot-solid-white.svg" alt="" width="20" height="20"><span>Reach</span></a>'
+	      . '<a href="/this-site/site-journey/"><img src="/wp-content/uploads/2026/11/route-solid-white.svg" alt="" width="20" height="20"><span>Journey</span></a>'
+	      . '</div>';
 	// The responsive-container-content holds the menu <ul>. Inject right after
 	// that <ul> closes, before the container's own closing </div>.
 	// Anchor: the content container has id="...-content". We insert before the
@@ -1488,9 +1494,9 @@ add_filter( 'render_block', function ( $block_content, $block ) {
 	return substr_replace( $block_content, $pair, $insert_at, 0 );
 }, 10, 2 );
 
-// ---- 8c. Socials + Support icons — [er_socials_support]; single source for header, footer, mobile overlay ----
+// ---- 8c. Socials + Support icons — [er_socials_support]; single source for header, mobile overlay ----
 // URLs, icon files and labels: SETTINGS at the top; two skins differ only in wrapper/classes/icon size:
-//   context="bar"     (default) → desktop header + footer  (.er-socials-support / .er-header-icon, 22px)
+//   context="bar"     (default) → desktop header           (.er-socials-support / .er-header-icon, 22px)
 //   context="overlay"           → mobile hamburger overlay (.er-nav-overlay-extra, 20px)
 add_shortcode( 'er_socials_support', function ( $atts ) {
 	$atts = shortcode_atts( array( 'context' => 'bar' ), $atts, 'er_socials_support' );
