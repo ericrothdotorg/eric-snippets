@@ -275,7 +275,7 @@ body.dark-mode .box-shadow {background: var(--color-10); border: 1px solid var(-
 /* ---- Enlarge: a block over the whole window (Site Reach, Site Journey). Markup + script: Eric Companion
    PHP 1f. Each block places its enlarge button and sizes itself in the layer; the × sits top right of the
    nearest positioned ancestor (the block). A block taller than the window scrolls inside the layer. ---- */
-:is(.er-enlarge-btn, .er-enlarge-close) {padding: 0; border: 0; border-radius: 8px; background: rgba(7, 12, 18, 0.6); color: #e1e8ed; cursor: pointer;} /* No var Color: the map's / sky's own dark chips */
+:is(.er-enlarge-btn, .er-enlarge-close) {padding: 0; border: 0; border-radius: 8px; background: rgba(7, 12, 18, 0.6); color: #e1e8ed; cursor: pointer;} /* No var Color: the dark chips of Site Reach's map and the star map */
 :is(.er-enlarge-btn, .er-enlarge-close):hover {background: rgba(7, 12, 18, 0.85);}
 :is(.er-enlarge-btn, .er-enlarge-close):focus-visible {outline: var(--a11y-focus-width) solid var(--a11y-focus-color); outline-offset: var(--a11y-focus-offset);}
 .er-enlarge-btn {width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;}
