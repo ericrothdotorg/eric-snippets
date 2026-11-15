@@ -496,49 +496,63 @@ body.dark-mode .er-postnav::before {background: var(--color-3);}
 /* ============================================================
    D. FOOTER
    Targets footer.wp-block-template-part + the footer column/item classes from
-   the theme's parts/footer.html. Gaps are scoped to footer.flex-container so
-   they don't leak to the toggles (also .flex-container).
+   the theme's parts/footer.html. Spacing: tokens below, applied as gaps by the
+   containers (.er-footer, .er-footer-columns, the columns and their rows).
    ============================================================ */
 
 /* ---- Outer footer box: navy bg, light text, hero-matching hover curve ---- */
-footer.wp-block-template-part {background: var(--color-10); border: 1px solid var(--color-4); color: var(--color-5); transition: border-radius 1s ease; padding-block: 60px;}
+footer.wp-block-template-part {background: var(--color-10); border: 1px solid var(--color-4); color: var(--color-5); transition: border-radius 1s ease; padding-block: var(--er-footer-pad);}
 footer.wp-block-template-part:hover {border-top-right-radius: 15vw;}
 
-/* ---- Footer column row (scoped so the gap doesn't hit other flex-containers). ---- */
-footer.flex-container {max-width: var(--er-wide-row); margin-inline: auto; column-gap: 50px; row-gap: 25px;} /* --er-wide-row: aligned to hero/content like the header (Session 11) */
+/* ---- Footer spacing: every distance in the footer is one of these tokens, set here only.
+   Containers own the space (gap); footer elements carry no margin or padding of their own.
+   A column's direct children are its rows. So whatever is added to a row or a column, or moved
+   from one column to another, gets the same spacing without a new rule. ---- */
+footer.wp-block-template-part {
+	--er-footer-pad: 60px;     /* above the top row, below the tag cloud */
+	--er-footer-section: 50px; /* top row → columns → tag cloud; columns side by side */
+	--er-footer-stack: 25px;   /* columns below each other (below 1200px, when the columns wrap) */
+	--er-footer-row: 24px;     /* rows of a column: menu / links → logo / toggle */
+	--er-footer-item: 10px;    /* items stacked in a row: Ninja Services, toggle, Cookies */
+	--er-footer-media: 35px;   /* graphic → its text: QR code, logo, dark-mode toggle */
+	--er-footer-icon: 10px;    /* icon → its label */
+}
+/* Mobile: the columns stack, so the top row and the tag cloud follow at the same distance as the columns. */
+@media (max-width: 767px) {footer.wp-block-template-part {--er-footer-section: var(--er-footer-stack);}}
+
+/* ---- Footer: three rows (top row, columns, tag cloud) ---- */
+.er-footer {display: flex; flex-direction: column; gap: var(--er-footer-section); max-width: var(--er-wide-row); margin-inline: auto;} /* --er-wide-row: aligned to hero/content like the header */
+
+/* ---- Columns: below 1200px they wrap; each column is a stack of rows ---- */
+.er-footer-columns {display: flex; flex-wrap: wrap; align-items: flex-start; column-gap: var(--er-footer-section); row-gap: var(--er-footer-stack);}
 .flex-item-footer-left,
 .flex-item-footer-middle,
 .flex-item-footer-right {max-width: 430px; flex-grow: 1;}
-/* From 1200px: three columns stay in one row whatever the text length (e.g. translated pages);
-   the widths match the English layout. Below 1200px the row wraps as before.
-   contain: the tag-cloud row spans all columns but must not widen them. */
+.flex-item-footer-middle,
+.flex-item-footer-right {display: flex; flex-direction: column; row-gap: var(--er-footer-row);}
+/* From 1200px: three columns in one row whatever the text length (e.g. translated pages); the widths
+   match the English layout. The columns share two row tracks (subgrid), so the second rows start on
+   one line whatever the first rows hold (e.g. a menu that wraps). Left: one block over both rows. */
 @media (min-width: 1200px) {
-	footer.flex-container {display: grid; grid-template-columns: minmax(0, 347fr) minmax(max-content, 430fr) minmax(0, 413fr);}
-	footer.flex-container > :last-child {grid-column: 1 / -1; contain: inline-size;}
-	/* The three columns start on one line (QR code, "About Me | …", "Socials | Support"); no space above the socials line.
-	   The middle column's margin-top is reset below, after the rule that sets it. */
-	footer.flex-container {align-items: start;}
-	.flex-item-footer-right > p:first-child {margin-top: 0;}
+	.er-footer-columns {display: grid; grid-template-columns: minmax(0, 347fr) minmax(max-content, 430fr) minmax(0, 413fr); grid-template-rows: auto auto; row-gap: var(--er-footer-row);}
+	.flex-item-footer-left {grid-row: span 2;}
+	.flex-item-footer-middle,
+	.flex-item-footer-right {display: grid; grid-row: span 2; grid-template-rows: subgrid; align-items: center;}
 }
 /* Longer (translated) text: toggles stay on one line, wrapped lines stay left-aligned */
 #tts-toggle-btn, #dark-mode-toggle-btn {flex: none; flex-wrap: nowrap;}
 .copyright-text, .site-updates-text {text-align: left;}
 
 /* ---- Footer column LEFT ---- */
-.qr-and-links-wrapper {display: flex; align-items: center;}
-.qr-links-column {display: flex; flex-direction: column; padding-left: 45px;}
-.ninja-services-link, .cookies-link {display: flex; align-items: center;}
-.ninja-services-link {margin-bottom: 10px;}
-.cookies-link {margin-top: 10px;} /* same gap as below Ninja Services; the three items stay centred on the QR code as a set */
-.ninja-services-link span, .cookies-link span {padding-left: 10px;}
+.qr-and-links-wrapper {display: flex; align-items: center; gap: var(--er-footer-media);}
+.qr-links-column {display: flex; flex-direction: column; gap: var(--er-footer-item);} /* the three items stay centred on the QR code as a set */
+.ninja-services-link, .cookies-link {display: flex; align-items: center; gap: var(--er-footer-icon);}
 
 /* ---- Footer column MIDDLE ---- */
-.flex-item-footer-middle {margin-top: 20px;}
-@media (min-width: 1200px) {.flex-item-footer-middle {margin-top: 0;}} /* columns top-aligned, see above */
 .dropdown-separator {color: var(--color-9); padding-left: 10px; padding-right: 5px;}
-.logo-copyright-wrapper {display: flex; align-items: center; padding-top: 20px;}
-.logo-copyright-wrapper > a {position: relative; top: 2px;}
-.copyright-text {margin: 0; padding-left: 35px;}
+.logo-copyright-wrapper {display: flex; align-items: center; gap: var(--er-footer-media);}
+.logo-copyright-wrapper .site-logo {display: block;} /* no inline line box under the logo: logo and text centre on each other */
+.copyright-text {margin: 0;}
 
 /* Site logo is in section E, the octagon-text mark in section F — neither is
    footer-only, so they moved out of here. */
@@ -559,8 +573,9 @@ footer.flex-container {max-width: var(--er-wide-row); margin-inline: auto; colum
 .dropdown:hover .dropdown-content, .dropdown:focus-within .dropdown-content {display: block;}
 
 /* ---- Footer column RIGHT ---- */
-.site-updates-wrapper {display: flex; align-items: center; padding-top: 10px;}
-.site-updates-text {padding-left: 35px; margin: 0;}
+.flex-item-footer-right .er-header-icon {gap: var(--er-footer-icon);} /* the header keeps its own 0.55rem */
+.site-updates-wrapper {display: flex; align-items: center; gap: var(--er-footer-media);}
+.site-updates-text {margin: 0;}
 /* Rotating word after "for the latest": the 11 words are real text in parts / footer.html, so the
    Language Switcher and the browser's own translation translate them. They sit on top of each other
    (one grid cell, so the line keeps the width of the longest word) and take turns, each for 1/11 of
@@ -619,28 +634,7 @@ footer.flex-container {max-width: var(--er-wide-row); margin-inline: auto; colum
 .er-hero-section.has-background-dim .er-breadcrumbs [aria-current="page"],
 footer.wp-block-template-part .er-breadcrumbs [aria-current="page"] {color: var(--color-8);}
 
-/* Footer top row (footer.html): the first row of the footer columns, with the breadcrumbs left and
-   Site Overview + Site Reach + Site Journey right. Below 1200px a full-width row; the links wrap under
-   the breadcrumbs. From 1200px it takes the columns' own grid lines (subgrid), so the links start
-   exactly where the third column (Socials) starts. margin-bottom + the row-gap (25px) = 50px to the columns, about the gap below them. */
-.er-footer-toprow {
-	display: flex;
-	flex-wrap: wrap;
-	justify-content: space-between;
-	align-items: center;
-	gap: 12px 24px;
-	flex-basis: 100%; /* its own line in the wrapping columns */
-	margin-bottom: 25px;
-}
-@media (min-width: 1200px) {
-	.er-footer-toprow {display: grid; grid-template-columns: subgrid; grid-column: 1 / -1; column-gap: normal;} /* normal: the columns' gap */
-	.er-footer-toprow > .er-breadcrumbs {grid-column: 1 / 3; contain: inline-size;} /* contain: a long trail wraps, never widens the columns (like the tag cloud row) */
-	.er-footer-toprow > .er-socials-support {grid-column: 3;}
-}
-.er-footer-toprow .er-socials-support {flex-wrap: wrap; gap: 12px 1rem;} /* 1rem (not 1.5rem): all three fit the third column from ~1340px; below, links wrap whole, never their names */
-.er-footer-toprow .er-header-icon {white-space: nowrap;}
-
-/* Footer: one text size, set here only; everything inside inherits it (columns, tag cloud, the top row's links). Only the breadcrumbs keep their own small size. */
+/* Footer: one text size, set here only; everything inside inherits it (columns, tag cloud). Only the breadcrumbs keep their own small size. */
 footer.wp-block-template-part {font-size: var(--er-fs-sm);}
 
 /* ============================================================
