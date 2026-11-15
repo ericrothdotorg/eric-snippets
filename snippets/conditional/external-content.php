@@ -69,7 +69,7 @@ add_action('wp_footer', function () {
     </style>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
+        (function() {
             function createPlaceholder(iframe, videoId, platform) {
                 var title = iframe.getAttribute('title') || (platform === 'youtube' ? 'YouTube video' : 'Vimeo video');
                 var placeholder = document.createElement('div');
@@ -131,7 +131,7 @@ add_action('wp_footer', function () {
             document.querySelectorAll('iframe[data-src*="player.vimeo.com/video"]').forEach(function(iframe) {
                 createPlaceholder(iframe, iframe.dataset.src.split('/video/')[1].split('?')[0], 'vimeo');
             });
-        });
+        })();
     </script>
     <?php
 });
