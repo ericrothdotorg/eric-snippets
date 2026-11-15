@@ -16,9 +16,9 @@
  *   number of explored places travels with Visitor Tracking's beacon and is
  *   kept per visitor (logged-out only) for the level and the explorer figures
  *   on the Site Journey page. The page is built in the editor from normal
- *   blocks plus the building blocks below ([er_sj_progress], [er_sj_sky],
+ *   blocks plus the building blocks below ([er_sj_progress], [er_sj_star_map],
  *   [er_sj_list], [er_sj_popular], [er_sj_countries], [er_sj_stat],
- *   [er_sj_qr_code]): progress, achievement and explorer cards, one sky per
+ *   [er_sj_qr_code]): progress, achievement and explorer cards, one star map per
  *   content type (the front page above each) with a "most read" view, the
  *   explorers' countries, and a journey link / QR code to continue on another
  *   device.
@@ -54,7 +54,7 @@
  * COMMON CHANGES (where to make them)
  *   In the editor, no code:
  *     Headings, intro texts, cards, buttons   normal blocks on the Site Journey page
- *     Sky key words, tab label, view buttons  [er_sj_sky label visited notyet next mine popular]
+ *     Star map key words, tab label, view buttons  [er_sj_star_map label visited notyet next mine popular]
  *     Button order / position                 move the Button blocks freely
  *     Where the QR code appears               a Shortcode block with [er_sj_qr_code];
  *                                             aligned right / centred: inside a Row group
@@ -74,9 +74,9 @@
 // Styles (sizes, spacing, other colours): search for "SITE JOURNEY STYLES".
 
 defined( 'ER_SJ_DAYS' ) || define( 'ER_SJ_DAYS', 90 ); // same window as Visitor Tracking
-defined( 'ER_SJ_TOP' ) || define( 'ER_SJ_TOP', 10 ); // "most read" places per type: gold in the sky, listed by [er_sj_popular]
+defined( 'ER_SJ_TOP' ) || define( 'ER_SJ_TOP', 10 ); // "most read" places per type: gold in the star map, listed by [er_sj_popular]
 
-// Colours of the constellations in the sky, used in this order (then repeated)
+// Colours of the constellations in the star map, used in this order (then repeated)
 function er_sj_hues() {
 	return array( '#2283d8', '#8b7fe8', '#2bb38a', '#e0679a', '#d08a2c', '#4aa3f0', '#6fd0b0', '#c59bf2', '#f0a35c', '#5cc1d6', '#e8807a', '#9fcf5a', '#7d9cf0', '#d9b44a' );
 }
@@ -85,7 +85,7 @@ function er_sj_hues() {
 // here only. %d / %1$d / %2$d / %s are filled in by the script: keep them.
 function er_sj_texts() {
 	return array(
-		// [er_sj_progress] and [er_sj_sky]: type names, "42 of 350"
+		// [er_sj_progress] and [er_sj_star_map]: type names, "42 of 350"
 		'pages'        => 'Pages',
 		'posts'        => 'Posts',
 		'interests'    => 'Interests',
@@ -93,11 +93,11 @@ function er_sj_texts() {
 		'traits'       => 'Traits',
 		'of'           => '%1$d of %2$d',
 		'visited'      => 'read',	// screen readers, after a read entry in [er_sj_list] / [er_sj_popular]
-		'open'         => 'Open',	// [er_sj_sky] on touch screens: link in the title shown by the first tap
-		'rankKey'      => 'rank, %s = most read',	// [er_sj_sky] key in the most read view, after "1–10"; %s: a bold 1
-		'enlarge'      => 'Enlarge sky',	// [er_sj_sky] buttons (screen readers)
-		'reduce'       => 'Reduce sky',
-		'close'        => 'Close enlarged sky',
+		'open'         => 'Open',	// [er_sj_star_map] on touch screens: link in the title shown by the first tap
+		'rankKey'      => 'rank, %s = most read',	// [er_sj_star_map] key in the most read view, after "1–10"; %s: a bold 1
+		'enlarge'      => 'Enlarge star map',	// [er_sj_star_map] buttons (screen readers)
+		'reduce'       => 'Reduce star map',
+		'close'        => 'Close enlarged star map',
 
 		// [er_sj_stat show="level"] and "level-note" (card: level)
 		// Levels by where a visitor stands among all visitors of the last 90 days
@@ -108,7 +108,7 @@ function er_sj_texts() {
 		'lvLegend'     => 'You\'ve read more than anyone',	// the top level, Legend
 
 		// [er_sj_stat show="completed-note"] (card: collections completed; the value is the number)
-		// A collection = one term of a type's taxonomy (Pages: things, Posts: category, …), drawn as one constellation in the sky
+		// A collection = one term of a type's taxonomy (Pages: things, Posts: category, …), drawn as one constellation in the star map
 		'done0'        => 'Collections completed – your first one is waiting',	// 0
 		'done1'        => 'Collection completed',	// 1
 		'doneN'        => 'Collections completed',	// 2 or more
@@ -186,7 +186,7 @@ function er_sj_js_lib() {
 		. 'load: function (key) { var v = []; try { v = JSON.parse(localStorage.getItem(key)) || []; } catch (e) {} return Array.isArray(v) ? v : []; },'
 		// The next unread entry of a collection (ids in site order): the first unread one after
 		// "self", wrapping around; from the start if self is not in it. The Almost-there card
-		// uses it (and the sky's pulsing star shows the same entry).
+		// uses it (and the star map's pulsing star shows the same entry).
 		. 'next: function (ids, self, isRead) { var at = ids.indexOf(self); for (var k = 1; k <= ids.length; k++) { var id = ids[(at + k + ids.length) % ids.length]; if (!isRead(id)) return id; } return 0; }'
 		. '};' . "\n";
 }
@@ -207,7 +207,7 @@ function er_sj_types() {
 	);
 }
 
-// The overview page of a type, shown as the hub star in the middle of its sky. Found
+// The overview page of a type, shown as the hub star in the middle of its star map. Found
 // the way the breadcrumbs find it (Eric Companion PHP 1b): My Pages from the hub
 // setting, My Blog from WordPress's Posts page, the others as the page whose slug is
 // the type's archive slug (my-interests, my-quotes, my-traits). No ids to maintain.
@@ -229,12 +229,12 @@ function er_sj_hub( $type ) {
 // ======================================
 
 // All places: id, title, relative url, type, groups (g: its collections = the terms
-// of its type's taxonomy, as on the filter pills, one constellation each; h: the sky
+// of its type's taxonomy, as on the filter pills, one constellation each; h: the star map
 // it is the hub of). A place in several collections shines in each of their
 // constellations but is counted once, as its own type, so the numbers match the
-// site's real counts. A page without a collection (the front page) sits in the middle of the Pages sky. An overview page
-// (er_sj_types()) is also drawn as the hub in the middle of its sky; My Pages,
-// the hub of the Pages sky itself, sits only there.
+// site's real counts. A page without a collection (the front page) sits in the middle of the Pages star map. An overview page
+// (er_sj_types()) is also drawn as the hub in the middle of its star map; My Pages,
+// the hub of the Pages star map itself, sits only there.
 // Cached 12 h, cleared whenever content or terms change.
 function er_sj_items() {
 	$items = get_transient( 'er_sj_items_v5' );
@@ -279,7 +279,7 @@ function er_sj_items() {
 			'g' => $groups,
 		);
 		if ( 'page' === $type && 'page' === get_option( 'show_on_front' ) && (int) get_option( 'page_on_front' ) === $p->ID ) {
-			$item['r'] = 1; // the front page: drawn above every sky, everything sits under it
+			$item['r'] = 1; // the front page: drawn above every star map, everything sits under it
 		}
 		if ( $hub ) {
 			$item['h'] = $hub;
@@ -504,8 +504,8 @@ add_action( 'wp_ajax_nopriv_er_sj_data', 'er_sj_data' );
 //
 // [er_sj_progress]
 //     Ring and bars.
-// [er_sj_sky label="…" visited="…" notyet="…" next="…" mine="…" popular="…"]
-//     Tab bar, sky and key. mine + popular add a switch to a view where the
+// [er_sj_star_map label="…" visited="…" notyet="…" next="…" mine="…" popular="…"]
+//     Tab bar, star map and key. mine + popular add a switch to a view where the
 //     ER_SJ_TOP most read places of the tab shine gold (rank only, never a count).
 //     In the own view: lines between two read stars light up, a completed collection
 //     shines with a ✓, the "next" entry (the Almost-there card's) pulses, a collection's
@@ -514,12 +514,12 @@ add_action( 'wp_ajax_nopriv_er_sj_data', 'er_sj_data' );
 //     number of entries; its tilt, elongation and star pattern come from its name.
 //     On touch screens the first tap on a star shows its title, the second opens it.
 //     Most read view: each gold star carries its rank (1 = most read; the key explains it).
-//     The bar stays under the header while a tall sky scrolls (Posts, Interests); phones:
-//     the types in a drawer behind one button. Enlarge button: the sky over the whole
+//     The bar stays under the header while a tall star map scrolls (Posts, Interests); phones:
+//     the types in a drawer behind one button. Enlarge button: the star map over the whole
 //     window (shared with Site Reach: Eric Companion PHP 1f).
 // [er_sj_list]
 //     The places of the selected tab as a list of links (e.g. inside a Details
-//     block): the way into the sky for keyboard and screen reader users.
+//     block): the way into the star map for keyboard and screen reader users.
 // [er_sj_popular]
 //     The ER_SJ_TOP most read places of the selected tab, in five columns. On tabs
 //     without a ranking (or without World Map) hidden together with the Group block
@@ -564,7 +564,7 @@ add_shortcode( 'er_sj_progress', function () {
 		. '<div class="er-sj-bars"></div></div>';
 } );
 
-add_shortcode( 'er_sj_sky', function ( $atts ) {
+add_shortcode( 'er_sj_star_map', function ( $atts ) {
 	er_sj_mark();
 	$a = shortcode_atts( array( 'label' => 'Choose a type:', 'visited' => 'read', 'notyet' => 'unread', 'next' => 'next', 'mine' => '', 'popular' => '' ), $atts );
 	$t = er_sj_texts();
@@ -574,13 +574,13 @@ add_shortcode( 'er_sj_sky', function ( $atts ) {
 			. '<button type="button" class="er-sj-tab" aria-pressed="true" data-view="mine">' . esc_html( $a['mine'] ) . '</button>'
 			. '<button type="button" class="er-sj-tab" aria-pressed="false" data-view="popular">' . esc_html( $a['popular'] ) . '</button></div>'
 		: '';
-	return '<div class="er-sj-skywrap" data-visited="' . esc_attr( $a['visited'] ) . '" data-notyet="' . esc_attr( $a['notyet'] ) . '" data-next="' . esc_attr( $a['next'] ) . '" data-popular="' . esc_attr( $a['popular'] ) . '">'
-		. '<div class="er-sj-skybox">'
+	return '<div class="er-sj-mapwrap" data-visited="' . esc_attr( $a['visited'] ) . '" data-notyet="' . esc_attr( $a['notyet'] ) . '" data-next="' . esc_attr( $a['next'] ) . '" data-popular="' . esc_attr( $a['popular'] ) . '">'
+		. '<div class="er-sj-mapbox">'
 		. '<div class="er-sj-tabbar">'
 		. '<button type="button" class="er-sj-tab er-sj-pick" aria-expanded="false" aria-controls="er-sj-picker"></button>' // phones: opens the type list
 		. '<div class="er-sj-picker" id="er-sj-picker"><span class="er-sj-tablabel" id="er-sj-tablabel">' . esc_html( $a['label'] ) . '</span>'
 		. '<div class="er-sj-tabs" role="tablist" aria-labelledby="er-sj-tablabel"></div></div>' . $views . '</div>'
-		. '<div id="er-sj-sky" role="tabpanel"><svg class="er-sj-svg" viewBox="0 0 1000 420" aria-hidden="true"></svg>'
+		. '<div id="er-sj-map" role="tabpanel"><svg class="er-sj-svg" viewBox="0 0 1000 420" aria-hidden="true"></svg>'
 		. ( function_exists( 'er_enlarge_button' ) ? er_enlarge_button( $t['enlarge'], $t['reduce'] ) . er_enlarge_close( $t['close'] ) : '' ) . '</div>' // enlarge: Eric Companion PHP 1f
 		. '<div class="er-sj-tip" hidden></div>'
 		. '<div class="er-sj-key" aria-hidden="true"><span><i class="is-seen"></i>' . esc_html( $a['visited'] ) . '</span><span><i></i>' . esc_html( $a['notyet'] ) . '</span>'
@@ -637,9 +637,9 @@ add_action( 'wp_footer', function () {
 	?>
 	<style>
 		/* SITE JOURNEY STYLES: sizes, spacing and colours of the page's building blocks */
-		:is(.er-sj-progress, .er-sj-skywrap, .er-sj-msg) {--sj-card: var(--color-8); --sj-line: var(--color-5); --sj-head: var(--color-4);}
-		body.dark-mode :is(.er-sj-progress, .er-sj-skywrap, .er-sj-msg) {--sj-card: var(--color-10); --sj-line: var(--color-3); --sj-head: var(--color-7);}
-		.er-sj-skywrap [hidden] {display: none !important;}
+		:is(.er-sj-progress, .er-sj-mapwrap, .er-sj-msg) {--sj-card: var(--color-8); --sj-line: var(--color-5); --sj-head: var(--color-4);}
+		body.dark-mode :is(.er-sj-progress, .er-sj-mapwrap, .er-sj-msg) {--sj-card: var(--color-10); --sj-line: var(--color-3); --sj-head: var(--color-7);}
+		.er-sj-mapwrap [hidden] {display: none !important;}
 		.er-sj-progress {display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px;}
 		.er-sj-ringbox {position: relative; flex: 0 0 132px; width: 132px; height: 132px;}
 		.er-sj-ring {display: block; width: 100%; height: 100%;}
@@ -651,7 +651,7 @@ add_action( 'wp_footer', function () {
 		.er-sj-bars {flex: 1 1 280px; display: grid; grid-template-columns: max-content 1fr max-content; gap: 8px 12px; align-items: center; font-size: var(--er-fs-sm);}
 		.er-sj-bar {height: 8px; border-radius: 4px; background: var(--sj-line); overflow: hidden;}
 		.er-sj-bar i {display: block; height: 100%; background: var(--color-1); border-radius: 4px; transition: width 0.8s ease;}
-		/* The bar stays under the header while a sky taller than the window scrolls (Posts, Interests).
+		/* The bar stays under the header while a star map taller than the window scrolls (Posts, Interests).
 		   --sj-top: the header's height, measured by the script below (whatever the header's height is). */
 		.er-sj-tabbar {display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; padding: 22px 18px; background: var(--color-10); border-bottom: 1px solid var(--color-4); position: sticky; top: var(--sj-top, 0px); z-index: 3;}
 		.er-sj-tablabel {font-size: var(--er-fs-sm); font-weight: var(--er-fw-bold); color: var(--color-5);}
@@ -661,8 +661,8 @@ add_action( 'wp_footer', function () {
 		.er-sj-tab:is([aria-selected="true"], [aria-pressed="true"]) {background: var(--color-1); border-color: var(--color-1); color: var(--color-8);}
 		.er-sj-tabnum {margin-left: 4px; font-size: var(--er-fs-xs); font-weight: var(--er-fw-bold); color: #ffd700;} /* gold, as the front-page stat numbers */
 		.er-sj-tab[aria-selected="true"] .er-sj-tabnum {color: var(--color-8);}
-		.er-sj-skybox {position: relative; background: var(--color-6); border-radius: 12px; overflow: clip; --er-link: var(--color-11); --er-link-hover: var(--color-12);} /* dark background: the dark link pair (style.css), ≥ 4.9:1 on --color-6. clip, not hidden: hidden would stop the sticky bar */
-		body.dark-mode .er-sj-skybox {box-shadow: 0 0 0 1px var(--color-4);} /* the sky's black is the dark page's black */
+		.er-sj-mapbox {position: relative; background: var(--color-6); border-radius: 12px; overflow: clip; --er-link: var(--color-11); --er-link-hover: var(--color-12);} /* dark background: the dark link pair (style.css), ≥ 4.9:1 on --color-6. clip, not hidden: hidden would stop the sticky bar */
+		body.dark-mode .er-sj-mapbox {box-shadow: 0 0 0 1px var(--color-4);} /* the star map's black is the dark page's black */
 		.er-sj-svg {display: block; width: 100%; height: auto;}
 		.er-sj-label {fill: var(--color-5); letter-spacing: 0.4px; font-family: inherit;}
 		.er-sj-label.is-done {fill: var(--color-8); font-weight: var(--er-fw-bold);} /* a completed collection */
@@ -687,7 +687,7 @@ add_action( 'wp_footer', function () {
 		.er-sj-key i.is-next {border-color: #ffd700; box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.25);}
 		.er-sj-views {display: flex; gap: 8px; margin-left: auto;}
 		/* Phones: two compact rows - the current type as a button that opens the type list (a drawer
-		   right under it, over the sky), and the two views as one switch. Wider screens: all pills in the bar. */
+		   right under it, over the star map), and the two views as one switch. Wider screens: all pills in the bar. */
 		.er-sj-picker {display: contents;}
 		.er-sj-pick {display: none;}
 		@media (max-width: 599px) {
@@ -705,11 +705,11 @@ add_action( 'wp_footer', function () {
 			.er-sj-views .er-sj-tab:last-child {border-radius: 0 20px 20px 0; margin-left: -1px;}
 		}
 		/* Enlarge (shared look and layer: Eric Companion CSS, script: Eric Companion PHP 1f). Here: the button's
-		   place, and the sky's width in the layer: --sj-full-w from the script - as wide as fits the window's
-		   height; a sky too tall for that (Posts, Interests) takes the full width and scrolls, the bar on top. */
-		#er-sj-sky {position: relative;}
-		#er-sj-sky > .er-enlarge-btn {position: absolute; z-index: 2; left: 10px; top: 10px;}
-		.er-enlarge-layer > .er-sj-skywrap {width: min(100%, var(--sj-full-w, 100%));}
+		   place, and the star map's width in the layer: --sj-full-w from the script - as wide as fits the window's
+		   height; a star map too tall for that (Posts, Interests) takes the full width and scrolls, the bar on top. */
+		#er-sj-map {position: relative;}
+		#er-sj-map > .er-enlarge-btn {position: absolute; z-index: 2; left: 10px; top: 10px;}
+		.er-enlarge-layer > .er-sj-mapwrap {width: min(100%, var(--sj-full-w, 100%));}
 		.er-enlarge-layer .er-sj-tabbar {top: 0;}
 		:is(.er-sj-tab, .er-sj-link):focus-visible {outline: var(--a11y-focus-width) solid var(--a11y-focus-color); outline-offset: var(--a11y-focus-offset);}
 		:is(.er-sj-listbox, .er-sj-popular) {columns: 4 180px; column-gap: 24px; font-size: var(--er-fs-sm);}
@@ -745,16 +745,16 @@ add_action( 'wp_footer', function () {
 		var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 		var items = [], byId = {}, seen = {}, hist = {}, links = {}, current = 'page';
 		var week = 0, countries = [], popular = [], view = 'mine';
-		var nextId = 0; // the Almost-there card's next entry: it pulses in the sky
+		var nextId = 0; // the Almost-there card's next entry: it pulses in the star map
 
 		// The building blocks are optional: each part only runs where its block is on the page
 		var P = document.querySelector('.er-sj-progress');
-		var S = document.querySelector('.er-sj-skywrap');
+		var S = document.querySelector('.er-sj-mapwrap');
 		var L = document.querySelector('.er-sj-listbox');
 		var Q = document.querySelector('.er-sj-qrcode');
 		var R = document.querySelector('.er-sj-popular');
 		var C = document.querySelectorAll('.er-sj-countries');
-		var first = document.querySelector('.er-sj-progress, .er-sj-skywrap, .er-sj-listbox, .er-sj-popular, .er-sj-countries, .er-sj-qrcode, [data-sj-stat]');
+		var first = document.querySelector('.er-sj-progress, .er-sj-mapwrap, .er-sj-listbox, .er-sj-popular, .er-sj-countries, .er-sj-qrcode, [data-sj-stat]');
 		if (!first) return;
 
 		function el(tag, attrs, parent) {
@@ -1051,11 +1051,11 @@ add_action( 'wp_footer', function () {
 			});
 		}
 
-		// ---- [er_sj_sky] ----
+		// ---- [er_sj_star_map] ----
 		function clusters(type) {
 			var map = {}, order = [], hub = [];
 			items.forEach(function (it) {
-				if (it.r) return;                                                            // the front page: above every sky
+				if (it.r) return;                                                            // the front page: above every star map
 				if (it.h === type || (it.y === type && !it.g.length && !it.h)) hub.push(it); // the middle
 				if (it.y !== type) return;
 				it.g.forEach(function (g) {                                                  // a star in each of its constellations
@@ -1077,12 +1077,12 @@ add_action( 'wp_footer', function () {
 				b.className = 'er-sj-tab';
 				b.setAttribute('role', 'tab');
 				b.setAttribute('aria-selected', t[0] === current ? 'true' : 'false');
-				b.setAttribute('aria-controls', 'er-sj-sky');
+				b.setAttribute('aria-controls', 'er-sj-map');
 				var n = document.createElement('span');
 				n.className = 'er-sj-tabnum';
 				n.textContent = c.per[t[0]][0] + '/' + c.per[t[0]][1];
 				b.append(t[1] + ' ', n);
-				b.addEventListener('click', function () { drawer(false); keepBar(function () { current = t[0]; ranked(); tabs(); sky(); if (L) list(); if (R) popularList(); }); });
+				b.addEventListener('click', function () { drawer(false); keepBar(function () { current = t[0]; ranked(); tabs(); starMap(); if (L) list(); if (R) popularList(); }); });
 				box.appendChild(b);
 				if (t[0] === current) pick(t[1], n.textContent);
 			});
@@ -1106,18 +1106,18 @@ add_action( 'wp_footer', function () {
 			p.setAttribute('aria-expanded', String(on));
 		}
 
-		function sky() {
+		function starMap() {
 			var svg = S.querySelector('.er-sj-svg'), wide = S.clientWidth >= 600;
 			hideTip(); // its star is about to be redrawn
 			topList();
 			var cl = clusters(current), n = cl.list.length, hub = cl.hub.length > 0;
 			var vw = wide ? 1000 : 420;
-			// The front page sits above everything, in every sky, in a band of its own at the top.
+			// The front page sits above everything, in every star map, in a band of its own at the top.
 			// Its line runs straight down to the middle, so no constellation may sit in the centre
 			// column above it: an even number of columns, and a lone constellation goes below.
 			var root = items.filter(function (it) { return it.r; })[0], top = root ? (wide ? 70 : 84) : 0;
 			// Up to 4 constellations around a hub: one row (4 columns keep a cell wider than tall, so nothing
-			// gets smaller and the sky stays low); more than 4: two rows or more, as before.
+			// gets smaller and the star map stays low); more than 4: two rows or more, as before.
 			var cols = wide ? (n > 8 ? (hub ? 4 : 5) : (n > 4 ? (hub && !root ? 3 : 4) : (hub ? (n === 1 ? 1 : n + n % 2) : n))) : Math.min(n, 2);
 			cols = Math.max(1, cols);
 			var rows = Math.max(1, Math.ceil(n / cols));
@@ -1220,30 +1220,30 @@ add_action( 'wp_footer', function () {
 				var rt = el('text', { x: rx, y: ry - 16, 'text-anchor': 'middle', 'class': 'er-sj-label', 'font-size': wide ? 13 : 16 }, rl);
 				rt.textContent = root.t;
 			}
-			// A name low in the bottom row makes the sky a bit taller rather than being cut off or covered
-			// by the key: room for the key's real height + its bottom offset (10px) + a 12px gap, in sky units
-			// (the sky scales with its width, the key does not)
+			// A name low in the bottom row makes the star map a bit taller rather than being cut off or covered
+			// by the key: room for the key's real height + its bottom offset (10px) + a 12px gap, in star map units
+			// (the star map scales with its width, the key does not)
 			var room = Math.max(34, Math.ceil((S.querySelector('.er-sj-key').offsetHeight + 22) * vw / (svg.clientWidth || vw)));
 			if (nameBottom + room > vh) svg.setAttribute('viewBox', '0 0 ' + vw + ' ' + (nameBottom + room));
 			fitVars();
-			// The key names "next" only while its star is in this sky (own view only)
+			// The key names "next" only while its star is in this star map (own view only)
 			var keyNext = S.querySelector('.er-sj-keynext');
 			if (keyNext) keyNext.hidden = !svg.querySelector('.er-sj-next');
 		}
 
-		// Switching type or view while the sky is scrolled under the bar: a shorter sky would leave the
+		// Switching type or view while the star map is scrolled under the bar: a shorter star map would leave the
 		// visitor below it. The page (or the enlarged view) moves so the bar stays where it was and the
-		// new sky starts right under it.
+		// new star map starts right under it.
 		function keepBar(change) {
 			var bar = S.querySelector('.er-sj-tabbar'), at = bar.getBoundingClientRect().top;
-			var inside = S.getBoundingClientRect().top < at - 1; // the sky's top has scrolled above the bar
+			var inside = S.getBoundingClientRect().top < at - 1; // the star map's top has scrolled above the bar
 			change();
 			if (!inside) return;
 			var by = S.getBoundingClientRect().top - at, lay = S.closest('.er-enlarge-layer');
 			if (lay) lay.scrollTop += by; else window.scrollBy(0, by);
 		}
 
-		// Width of the enlarged sky (CSS: .er-enlarge-layer): as wide as the whole sky fits the window's height.
+		// Width of the enlarged star map (CSS: .er-enlarge-layer): as wide as the whole star map fits the window's height.
 		// If that is narrower than on the page (Posts, Interests: too tall for any window), the full width.
 		function fitVars() {
 			if (!S.classList.contains('is-full')) return;
@@ -1270,14 +1270,14 @@ add_action( 'wp_footer', function () {
 			if (view === 'mine' && it.i === nextId) el('circle', { cx: x, cy: y, r: big ? 6 : 4.5, 'class': 'er-sj-next' }, a);
 			// Most read view: the rank next to a gold star (1 = most read; never a count)
 			if (view === 'popular' && tops[it.i]) {
-				var wideSky = svg.viewBox.baseVal.width >= 1000;
-				el('text', { x: x + (big ? 9 : 7), y: y - (big ? 7 : 5), 'class': 'er-sj-rank', 'font-size': wideSky ? 11 : 15 }, svg).textContent = tops[it.i];
+				var wideMap = svg.viewBox.baseVal.width >= 1000;
+				el('text', { x: x + (big ? 9 : 7), y: y - (big ? 7 : 5), 'class': 'er-sj-rank', 'font-size': wideMap ? 11 : 15 }, svg).textContent = tops[it.i];
 			}
 		}
 
 		// The switch between the own view and the most read view (only with mine + popular, and
 		// only on tabs with a ranking: elsewhere it hides and the own view returns). The key
-		// below the sky follows the view.
+		// below the star map follows the view.
 		var switcher = null;
 		function setView(v) {
 			view = v;
@@ -1301,7 +1301,7 @@ add_action( 'wp_footer', function () {
 			box.addEventListener('click', function (e) {
 				var b = e.target.closest('[data-view]');
 				if (!b || b.getAttribute('data-view') === view) return;
-				keepBar(function () { setView(b.getAttribute('data-view')); sky(); });
+				keepBar(function () { setView(b.getAttribute('data-view')); starMap(); });
 			});
 			ranked();
 		}
@@ -1313,10 +1313,10 @@ add_action( 'wp_footer', function () {
 		}
 
 		// Tooltip: the title of a star. Mouse: on hover. Touch: the first tap shows the title with
-		// an Open link, a second tap on the same star opens it, a tap on the empty sky closes it.
+		// an Open link, a second tap on the same star opens it, a tap on the empty star map closes it.
 		var hideTip = function () {};
 		function tips() {
-			var tip = S.querySelector('.er-sj-tip'), box = S.querySelector('.er-sj-skybox');
+			var tip = S.querySelector('.er-sj-tip'), box = S.querySelector('.er-sj-mapbox');
 			var visited = S.getAttribute('data-visited'), notyet = S.getAttribute('data-notyet'), nextWord = S.getAttribute('data-next');
 			var touch = false, tapped = null;
 			function show(a, withLink) {
@@ -1355,7 +1355,7 @@ add_action( 'wp_footer', function () {
 			box.addEventListener('click', function (e) {
 				if (!touch || e.target.closest('.er-sj-tip')) return; // the Open link opens as usual
 				var a = e.target.closest('.er-sj-star');
-				if (!a || !a.__it) { hideTip(); return; }               // empty sky or a collection name
+				if (!a || !a.__it) { hideTip(); return; }               // empty star map or a collection name
 				if (tapped === a) return;                               // second tap: open the entry
 				e.preventDefault();
 				tapped = a;
@@ -1365,17 +1365,17 @@ add_action( 'wp_footer', function () {
 
 
 		// [er_sj_list]: the places of the selected tab as plain links, grouped and counted like the
-		// sky - for keyboards, screen readers and anyone who prefers text
+		// star map - for keyboards, screen readers and anyone who prefers text
 		function list() {
 			var cl = clusters(current), word = (S && S.getAttribute('data-visited')) || T.visited;
-			var middle = items.filter(function (it) { return it.r; }).concat(cl.hub); // the front page first, as on top of the sky
+			var middle = items.filter(function (it) { return it.r; }).concat(cl.hub); // the front page first, as on top of the star map
 			var groups = (middle.length ? [['', middle]] : []).concat(cl.list);
 			L.textContent = '';
 			groups.forEach(function (g) {
 				var box = document.createElement('div');
 				box.className = 'er-sj-group';
 				var done = g[1].filter(function (it) { return seen[it.i]; }).length;
-				if (g[0]) { // a collection: its name opens its page, a completed one gets a ✓ (as in the sky)
+				if (g[0]) { // a collection: its name opens its page, a completed one gets a ✓ (as in the star map)
 					var h = document.createElement('h3'), url = links[current + '|' + g[0]], name = g[0];
 					if (url) { name = document.createElement('a'); name.href = url; name.textContent = g[0]; }
 					h.append(name, ' ' + done + '/' + g[1].length + (done === g[1].length ? ' ✓' : ''));
@@ -1489,10 +1489,10 @@ add_action( 'wp_footer', function () {
 			countryList();
 			document.addEventListener('er:visitor', numbers); // the own country arrives after the beacon
 			if (S) {
-				views(); tabs(); sky(); tips();
+				views(); tabs(); starMap(); tips();
 				var w = S.clientWidth;
 				var refit = function () {
-					if ((S.clientWidth >= 600) !== (w >= 600)) { w = S.clientWidth; sky(); } else fitVars();
+					if ((S.clientWidth >= 600) !== (w >= 600)) { w = S.clientWidth; starMap(); } else fitVars();
 				};
 				window.addEventListener('resize', refit);
 
@@ -1508,8 +1508,8 @@ add_action( 'wp_footer', function () {
 					new ResizeObserver(function () { S.style.setProperty('--sj-top', header.offsetHeight + 'px'); }).observe(header);
 				}
 
-				// Enlarge: the whole sky over the window (shared: Eric Companion PHP 1f). Before: the page width
-				// (the enlarged sky is never smaller); after: the tooltip closes, the sky's width is set.
+				// Enlarge: the whole star map over the window (shared: Eric Companion PHP 1f). Before: the page width
+				// (the enlarged star map is never smaller); after: the tooltip closes, the star map's width is set.
 				if (window.erEnlarge) window.erEnlarge(S, {
 					before: function (on) { if (on) S.dataset.pageW = S.offsetWidth; },
 					after: function () { hideTip(); refit(); }
