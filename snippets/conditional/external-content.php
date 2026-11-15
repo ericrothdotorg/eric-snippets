@@ -88,7 +88,6 @@ add_action('wp_footer', function () {
                         ? 'https://img.youtube.com/vi/' + videoId + '/hqdefault.jpg'
                         : 'https://vumbnail.com/' + videoId + '.jpg';
                     img.alt = ''; // the placeholder's label names the video
-                    img.loading = 'lazy';
                     placeholder.appendChild(img);
                 } else {
                     var caption = document.createElement('span');
