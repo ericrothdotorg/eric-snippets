@@ -26,7 +26,7 @@
      C. CONTENT COMPONENTS          grid / cards / related slider / post-footer
      D. FOOTER                      navy wrapper, columns, dropdown, animated word
      E. TEMPLATE-PART COMPONENTS    site logo, archive filter tabs, breadcrumbs
-     F. SIDEBAR DESIGN              octagon-text mark, widget titles, cards, stats hero, select + count,
+     F. SIDEBAR DESIGN              octagon-text mark, widget titles, cards, stats hero, row (dropdown + count),
 									author tiles & links, two-column / sidebar-hide
      G. DARK-MODE TOGGLE BUTTON     the switch UI
      H. MOTION & A11Y               reduced-motion umbrella
@@ -602,8 +602,8 @@ footer.wp-block-template-part {
 
 /* ============================================================
    E. TEMPLATE-PART COMPONENTS
-   Components rendered in template parts: the archive filter tab row,
-   breadcrumbs, sidebar widget titles, and the responsive sidebar-hide.
+   Components rendered in template parts: the site logo, the archive filter
+   tab row, breadcrumbs, and the footer text size.
    (Authored to the live reference; their original theme CSS is gone.)
    ============================================================ */
 
