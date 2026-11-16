@@ -27,7 +27,7 @@
      D. FOOTER                      navy wrapper, columns, dropdown, animated word
      E. TEMPLATE-PART COMPONENTS    site logo, archive filter tabs, breadcrumbs
      F. SIDEBAR DESIGN              octagon-text mark, widget titles, cards, stats hero, row (dropdown + count),
-									author tiles & links, two-column / sidebar-hide
+									two-column / sidebar-hide
      G. DARK-MODE TOGGLE BUTTON     the switch UI
      H. MOTION & A11Y               reduced-motion umbrella
    ============================================================ */
@@ -654,7 +654,7 @@ footer.wp-block-template-part .er-breadcrumbs [aria-current="page"] {color: var(
 footer.wp-block-template-part {font-size: var(--er-fs-sm);}
 
 /* ============================================================
-   F. SIDEBAR DESIGN  (sections, cards, stats, author tiles)
+   F. SIDEBAR DESIGN  (sections, cards, stats)
    Palette-only (no new colors); light + dark via existing tokens.
    Spacing: the containers own every distance (gap); their direct
    children carry no margin. So anything added to or moved within
@@ -777,23 +777,6 @@ body.dark-mode .post-stats .ps-cell {background: transparent; border-color: var(
 .post-stats .ps-num {display: block; font-weight: var(--er-fw-bold); color: var(--color-4); line-height: 1.2;}
 body.dark-mode .post-stats .ps-num {color: var(--color-7);}
 .post-stats .ps-lbl {display: block; font-size: var(--er-fs-xs);} /* colour = body text, light + dark */
-
-/* ---- About Me author links: two side-by-side icon-tiles (Personal green /
-   Professional orange). Real header SVGs wired in sidebar.html serve as the icons. ---- */
-.er-author-links {list-style: none; margin: 0; padding: 0; display: flex; gap: 8px;}
-.er-author-links li {flex: 1;}
-.er-author-links a {
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	gap: 5px;
-	padding: 12px 6px;
-	text-align: center;
-	background: var(--color-7);
-	border-radius: 12px;
-}
-body.dark-mode .er-author-links a {background: var(--color-6);}
-.er-author-links img {height: 24px; flex-shrink: 0;} /* width: 24 attribute in sidebar.html */
 
 /* ============================================================
    G. DARK-MODE TOGGLE BUTTON
