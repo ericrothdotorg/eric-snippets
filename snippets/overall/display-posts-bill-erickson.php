@@ -468,7 +468,7 @@ add_action( 'wp_head', function () {
 		.wp-block-group:has(> .display-posts-listing[data-live-id]) {gap: 0;}
 		
 		/* Sidebar Widgets */
-		.display-posts-listing#latest > *:not(:first-child):not(:last-child) {margin: 25px 0;}
+		.sidebar-content > section > .display-posts-listing:not(.grid) {display: flex; flex-direction: column; gap: var(--er-sidebar-item);} /* stacked lists (Latest): same distance as everything else in a sidebar section */
 		.sidebar-content .display-posts-listing.grid {grid-gap: 10px;} /* any grid in the narrow sidebar (e.g. Explore) */
 		.sidebar-content .display-posts-listing.grid .title {font-size: var(--er-fs-body);} /* one step smaller: two titles fit side by side */
 		
