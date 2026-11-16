@@ -296,8 +296,8 @@ add_action('wp_footer', function () {
 			clone.querySelectorAll(
 				'nav,aside,footer,header,style,script,noscript,select,code,pre,img,svg,iframe,' +
 				'.social-icons,.share-buttons,.tag-cloud,.tag-cloud-footer,' +
-				'.like-dislike-container,.er-social-icon-row,.er-author-links,' +
-				'.entry-meta,.er-reading-time,.post-stats,.er-breadcrumbs,.er-postnav,' +
+				'.like-dislike-container,.er-social-icon-row,' +
+				'.entry-meta,.er-reading-time,.er-breadcrumbs,.er-postnav,' +
 				'.er-related-posts,.tts-skip,' +
 				// Slideshows: the cue announces them, their slides say nothing. The controls are
 				// listed too, because center-mode sliders keep them outside the slideshow element.
