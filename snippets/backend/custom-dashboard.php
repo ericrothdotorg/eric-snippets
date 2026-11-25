@@ -668,7 +668,7 @@ function custom_lc_check_urls(array $urls) {
 	}
 	if (!$todo) return [];
 	$result = custom_lc_request_all($todo, 'HEAD');
-	$again  = array_keys(array_filter($result, fn($r) => $r[1] !== 'Domain not found'));
+	$again  = array_keys(array_filter($result, fn($r) => $r[0] !== 'ok'));
 	if ($again) {
 		$result = array_merge($result, custom_lc_request_all($again, 'GET')); // the GET answer counts
 	}
