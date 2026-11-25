@@ -792,7 +792,8 @@ function custom_lc_list($title, array $items) {
 	foreach ($items as $url => [$label, $post_ids]) {
 		$short = preg_replace('#^https?://(www\.)?#', '', $url);
 		$short = strlen($short) > 70 ? substr($short, 0, 67) . '…' : $short;
-		$where = array_map(fn($id) => '<a href="' . esc_url(get_edit_post_link($id)) . '" target="_blank">' . esc_html(get_the_title($id) ?: '#' . $id) . '</a>', $post_ids);
+		$where = array_map(fn($id) => '<a href="' . esc_url(get_edit_post_link($id)) . '" target="_blank">' . esc_html(get_the_title($id) ?: '#' . $id) . '</a>'
+		   . ' <a href="' . esc_url(get_permalink($id)) . '" target="_blank" class="cd-muted" style="font-size: 11px;">↗</a>', $post_ids);
 		echo '<li style="margin-bottom: 8px;"><a href="' . esc_url($url) . '" target="_blank" rel="noopener">' . esc_html($short) . '</a>'
 		   . ' <span class="cd-muted">- ' . esc_html($label) . '</span><br>'
 		   . '<span class="cd-muted">in:</span> ' . implode(', ', $where) . '</li>';
