@@ -651,7 +651,8 @@ function custom_lc_check_wiki($wiki_host, array $urls) {
 		$page  = $pages[$redirects[$title] ?? $title] ?? null;
 		if (!$page) {
 			$out[$url] = ['unclear', 'Wikipedia: no answer'];
-		} elseif (!empty($page['missing']) || !empty($page['invalid'])) {
+		} elseif ((!empty($page['missing']) && empty($page['known'])) || !empty($page['invalid'])) {
+			// known = no local page, but shown anyway (e.g. a File: from Commons)
 			$out[$url] = ['broken', 'No Wikipedia article'];
 		}
 	}
