@@ -5,6 +5,7 @@
 // WORDPRESS CORE OPTIMIZATIONS
 // ======================================
 
+// Editor: Content and post title at 90% width, centred
 add_action( 'enqueue_block_assets', function() {
     if ( is_admin() ) {
         wp_add_inline_style(
@@ -17,6 +18,17 @@ add_action( 'enqueue_block_assets', function() {
             }'
         );
     }
+} );
+
+
+// Captions: Strip leading / trailing line breaks on save
+add_filter( 'wp_insert_post_data', function ( $data ) {
+	$data['post_content'] = preg_replace(
+		[ '#(<figcaption\b[^>]*>)(?:\s|&nbsp;|<br\s*/?>)+#i', '#(?:\s|&nbsp;|<br\s*/?>)+(</figcaption>)#i' ],
+		'$1',
+		$data['post_content']
+	);
+	return $data;
 } );
 
 // ======================================
