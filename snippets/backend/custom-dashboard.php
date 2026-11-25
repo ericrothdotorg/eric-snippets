@@ -559,7 +559,8 @@ function custom_yt_render() {
 		echo '<summary class="cd-summary" style="margin-bottom: 15px;">Broken Links Locations</summary>';
 		echo '<ul>';
 		foreach ($results['broken_posts'] as $post_id => $video_ids) {
-			echo '<li><a href="' . esc_url(get_edit_post_link($post_id)) . '" target="_blank">' . esc_html(get_the_title($post_id)) . '</a>: ';
+			echo '<li><a href="' . esc_url(get_edit_post_link($post_id)) . '" target="_blank">' . esc_html(get_the_title($post_id)) . '</a>'
+			   . ' <a href="' . esc_url(get_permalink($post_id)) . '" target="_blank" class="cd-muted" style="font-size: 11px;">↗</a>: ';
 			echo esc_html(implode(', ', $video_ids)) . '</li>';
 		}
 		echo '</ul>';
