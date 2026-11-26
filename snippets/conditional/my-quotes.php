@@ -229,7 +229,7 @@ function q_output_styles() {
 		.my-quote-slide-content .wp-block-quote {margin: 0 auto !important;}
 		.my-quote-slide-content .wp-block-quote p,
 		.my-quote-slide-content .wp-block-quote ul,
-		.my-quote-slide-content .wp-block-quote li {font-size: var(--er-fs-lg);}
+		.my-quote-slide-content .wp-block-quote li {font-size: var(--er-fs-md);}
 		/* Shortcode [quote_text]: Typography to match that of [quotes_slider] → Higher Specificity wins */
 		.single-my-quotes .my-quote-text-content .wp-block-quote p,
 		.single-my-quotes .my-quote-text-content .wp-block-quote ul,
