@@ -781,7 +781,7 @@ function custom_lc_render() {
 	echo '</div>';
 	echo '</div>';
 	custom_lc_list('Broken Links (' . count($broken) . ')', $broken);
-	custom_lc_list('Unclear Links - check by hand (' . count($unclear) . ')', $unclear);
+	custom_lc_list('Unclear Links - Check by Hand (' . count($unclear) . ')', $unclear);
 	echo '</div>';
 }
 
