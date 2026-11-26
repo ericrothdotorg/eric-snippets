@@ -101,6 +101,11 @@ add_action('init', function() {
 add_filter('pings_open', '__return_false');
 add_filter('pre_ping', '__return_empty_array');
 
+// Tag Cloud blocks: No inline font-size from core; the pill rule (Eric Companion CSS B2) sets the size
+add_filter('render_block_core/tag-cloud', function ($html) {
+    return preg_replace('/ style="font-size:[^"]*"/', '', $html);
+});
+
 // ======================================
 // PERFORMANCE & ASSET LOADING
 // ======================================
