@@ -155,6 +155,7 @@ body.dark-mode .details-accordion summary:focus {background: var(--color-6);}
 .er-archive-filter .er-filter-tab {
 	background: var(--color-8);
 	font-weight: var(--er-fw-normal);
+	font-size: var(--er-fs-sm);
 	line-height: 1.75;
 	min-height: 25px;
 	padding: 3px 15px;
@@ -621,7 +622,7 @@ footer.wp-block-template-part {
 
 /* ---- Filter tabs (pill row; .er-active = current). Pill styling SHARED with .tag-cloud a (section B above). Here: centred wrap, inter-tab spacing, persistent red active tab. ---- */
 .er-archive-filter {text-align: center; margin-bottom: 35px;}
-.er-archive-filter .er-filter-tab {margin: 0 5px 10px; text-decoration: none; font-size: var(--er-fs-xs);} /* 14px matches the tag-cloud block's inline font-size (smallest/largest both 14px) so the shared padding renders identical pills */
+.er-archive-filter .er-filter-tab {margin: 0 5px 10px; text-decoration: none;}
 .er-archive-filter .er-filter-tab.er-active {background: none; color: var(--er-link-hover);}
 
 /* ---- Breadcrumbs (inline trail: home icon, chevrons, links). One wrapped row, uppercase, small, muted chevrons; dark + light contexts. ---- */
