@@ -533,7 +533,7 @@ footer.wp-block-template-part {
 	--er-footer-stack: 25px;   /* columns below each other (below 1200px, when the columns wrap) */
 	--er-footer-row: 24px;     /* rows of a column: menu / links → logo / toggle */
 	--er-footer-item: 10px;    /* items stacked in a row: Ninja Services, toggle, Cookies */
-	--er-footer-media: 35px;   /* graphic → its text: QR code, logo, dark-mode toggle */
+	--er-footer-media: 35px;   /* graphic → its text: QR code, logo */
 	--er-footer-icon: 10px;    /* icon → its label */
 }
 /* Mobile: the columns stack, so the top row and the tag cloud follow at the same distance as the columns. */
@@ -593,8 +593,9 @@ footer.wp-block-template-part {
 
 /* ---- Footer column RIGHT ---- */
 .flex-item-footer-right .er-header-icon {gap: var(--er-footer-icon);} /* the header keeps its own 0.55rem */
-.site-updates-wrapper {display: flex; align-items: center; gap: var(--er-footer-media);}
-.site-updates-text {margin: 0;}
+.site-updates-text {display: flex; align-items: flex-start; gap: var(--er-footer-icon); margin: 0;}
+.site-updates-text > img {flex: none; margin-top: calc((1lh - 20px) / 2);} /* icon centred on line 1 */
+.site-updates-wrapper {display: flex; align-items: center; gap: 1.5rem;} /* gap same as for Overview, Reach, Journey (style.css) */
 /* Rotating word after "for the latest": the 11 words are real text in parts / footer.html, so the
    Language Switcher and the browser's own translation translate them. They sit on top of each other
    (one grid cell, so the line keeps the width of the longest word) and take turns, each for 1/11 of
