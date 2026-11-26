@@ -623,7 +623,7 @@ footer.wp-block-template-part {
 .er-archive-filter .er-filter-tab.er-active {background: none; color: var(--er-link-hover);}
 
 /* ---- Breadcrumbs (inline trail: home icon, chevrons, links). One wrapped row, uppercase, small, muted chevrons; dark + light contexts. ---- */
-.er-breadcrumbs {font-size: var(--er-fs-xs);} /* the same small size in the hero and the footer */
+.er-breadcrumbs {font-size: var(--er-fs-sm);} /* the same small size in the hero and the footer */
 .er-breadcrumbs ol {
 	list-style: none;
 	display: flex;
@@ -651,7 +651,7 @@ footer.wp-block-template-part {
 footer.wp-block-template-part .er-breadcrumbs [aria-current="page"] {color: var(--color-8);}
 
 /* Footer: one text size, set here only; everything inside inherits it (columns, tag cloud). Only the breadcrumbs keep their own small size. */
-footer.wp-block-template-part {font-size: var(--er-fs-sm);}
+footer.wp-block-template-part {font-size: var(--er-fs-body);}
 
 /* ============================================================
    F. SIDEBAR DESIGN  (sections, cards, stats)
