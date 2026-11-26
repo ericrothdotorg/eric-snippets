@@ -435,14 +435,14 @@ add_action( 'wp_head', function () {
 		@media (min-width: 992px) {.display-posts-listing.grid#four-columns {grid-template-columns: repeat(4, 1fr);}}
 		
 		/* Grid Layout (6 columns) */
-		.display-posts-listing.grid#six-columns .title {min-height: 0; padding: 8px 0.5rem; font-size: var(--er-fs-xs);}
+		.display-posts-listing.grid#six-columns .title {min-height: 0; padding: 8px 0.5rem; font-size: var(--er-fs-sm);}
 		@media (min-width: 600px) and (max-width: 992px) {.display-posts-listing.grid#six-columns {grid-template-columns: repeat(3, 1fr);}}
 		@media (min-width: 992px) {.display-posts-listing.grid#six-columns {grid-template-columns: repeat(6, 1fr);}}
 		
 		/* Layout Variations */
 		.display-posts-listing#small-version {overflow: hidden;}
 		.display-posts-listing.grid#small-version .listing-item {margin-bottom: 0;}
-		.display-posts-listing.grid#small-version .title {min-height: 0; padding: 10px 0.5rem; font-size: var(--er-fs-xs);}
+		.display-posts-listing.grid#small-version .title {min-height: 0; padding: 10px 0.5rem; font-size: var(--er-fs-sm);}
 		
 		/* FAQs Layout (card skin from Base Styles; image left, text beside; image on top when the card is narrower than 450px) */
 		.display-posts-faqs {container-type: inline-size;}
@@ -470,7 +470,7 @@ add_action( 'wp_head', function () {
 		/* Sidebar Widgets */
 		.sidebar-content > section > .display-posts-listing:not(.grid) {display: flex; flex-direction: column; gap: var(--er-sidebar-item);} /* stacked lists (Latest): same distance as everything else in a sidebar section */
 		.sidebar-content .display-posts-listing.grid {grid-gap: 10px;} /* any grid in the narrow sidebar (e.g. Explore) */
-		.sidebar-content .display-posts-listing.grid .title {font-size: var(--er-fs-xs);} /* two steps smaller: two titles fit side by side */
+		.sidebar-content .display-posts-listing.grid .title {font-size: var(--er-fs-sm);} /* one step smaller: two titles fit side by side */
 		
 		/* Traits Conclusion */
 		.display-posts-listing.grid.traits-conclusion {grid-gap: 0.25rem;}
