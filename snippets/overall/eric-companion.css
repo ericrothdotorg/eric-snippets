@@ -593,8 +593,9 @@ footer.wp-block-template-part {
 
 /* ---- Footer column RIGHT ---- */
 .flex-item-footer-right .er-header-icon {gap: var(--er-footer-icon);} /* the header keeps its own 0.55rem */
-.site-updates-text {display: flex; align-items: flex-start; gap: var(--er-footer-icon); margin: 0;}
-.site-updates-text > img {flex: none; margin-top: calc((1lh - 20px) / 2);} /* icon centred on line 1 */
+.site-updates-text {margin: 0; padding-left: calc(20px + var(--er-footer-icon));} /* both lines start after icon + gap */
+.site-updates-text > .er-header-icon {margin-left: calc(-20px - var(--er-footer-icon)); vertical-align: top; height: 1lh;}
+.site-updates-text > .er-header-icon img {transform: translateY(2px);} /* the glyph's weight is in its top half: 2px down looks centred on "Updates" */
 .site-updates-wrapper {display: flex; align-items: center; gap: 1.5rem;} /* gap same as for Overview, Reach, Journey (style.css) */
 /* Rotating word after "for the latest": the 11 words are real text in parts / footer.html, so the
    Language Switcher and the browser's own translation translate them. They sit on top of each other
