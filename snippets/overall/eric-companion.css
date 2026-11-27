@@ -535,6 +535,7 @@ footer.wp-block-template-part {
 	--er-footer-item: 10px;    /* items stacked in a row: Ninja Services, toggle, Cookies */
 	--er-footer-media: 35px;   /* graphic → its text: QR code, logo */
 	--er-footer-icon: 10px;    /* icon → its label */
+	--er-footer-inline: 1.5rem; /* items side by side in a row: Overview / Reach / Journey, toggle → Updates */
 }
 /* Mobile: the columns stack, so the top row and the tag cloud follow at the same distance as the columns. */
 @media (max-width: 767px) {footer.wp-block-template-part {--er-footer-section: var(--er-footer-stack);}}
@@ -562,10 +563,16 @@ footer.wp-block-template-part {
 #tts-toggle-btn, #dark-mode-toggle-btn {flex: none; flex-wrap: nowrap;}
 .copyright-text, .site-updates-text {text-align: left;}
 
+/* ---- Icon links: every link with an icon and a label (Ninja Services, Cookies, Overview, Reach,
+   Journey, Updates). One component in every column. The link is exactly as tall as its icon (label
+   line-height 1), so the spacing around it comes only from the tokens. ---- */
+.er-footer-icon-link {display: inline-flex; align-items: center; gap: var(--er-footer-icon);}
+.er-footer-icon-link > img {display: block; width: 20px; height: 20px;}
+.er-footer-icon-link > span {line-height: 1;}
+
 /* ---- Footer column LEFT ---- */
 .qr-and-links-wrapper {display: flex; align-items: center; gap: var(--er-footer-media);}
 .qr-links-column {display: flex; flex-direction: column; gap: var(--er-footer-item);} /* the three items stay centred on the QR code as a set */
-.ninja-services-link, .cookies-link {display: flex; align-items: center; gap: var(--er-footer-icon);}
 
 /* ---- Footer column MIDDLE ---- */
 .dropdown-separator {color: var(--color-9); padding-left: 10px; padding-right: 5px;}
@@ -592,11 +599,13 @@ footer.wp-block-template-part {
 .dropdown:hover .dropdown-content, .dropdown:focus-within .dropdown-content {display: block;}
 
 /* ---- Footer column RIGHT ---- */
-.flex-item-footer-right .er-header-icon {gap: var(--er-footer-icon);} /* the header keeps its own 0.55rem */
-.site-updates-text {margin: 0; padding-left: calc(20px + var(--er-footer-icon));} /* both lines start after icon + gap */
-.site-updates-text > .er-header-icon {margin-left: calc(-20px - var(--er-footer-icon)); vertical-align: top; height: 1lh;}
-.site-updates-text > .er-header-icon img {transform: translateY(2px);} /* the glyph's weight is in its top half: 2px down looks centred on "Updates" */
-.site-updates-wrapper {display: flex; align-items: center; gap: 1.5rem;} /* gap same as for Overview, Reach, Journey (style.css) */
+.er-footer-links {display: flex; align-items: center; gap: var(--er-footer-inline);} /* Overview, Reach, Journey */
+.site-updates-wrapper {display: flex; align-items: center; gap: var(--er-footer-inline);} /* toggle → Updates */
+/* Updates: an icon link at the start of a two-line text. Both lines start after icon + gap; the link
+   moves back into that space and is one line tall, so icon and label centre on line 1. */
+.site-updates-text {margin: 0; padding-left: calc(20px + var(--er-footer-icon));}
+.site-updates-text > .er-footer-icon-link {margin-left: calc(-20px - var(--er-footer-icon)); vertical-align: top; height: 1lh;}
+.site-updates-text > .er-footer-icon-link > img {transform: translateY(2px);} /* the glyph's weight is in its top half: 2px down looks centred on "Updates" */
 /* Rotating word after "for the latest": the 11 words are real text in parts / footer.html, so the
    Language Switcher and the browser's own translation translate them. They sit on top of each other
    (one grid cell, so the line keeps the width of the longest word) and take turns, each for 1/11 of
