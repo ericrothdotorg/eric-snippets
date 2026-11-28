@@ -264,15 +264,24 @@ add_filter( 'display_posts_shortcode_output', function( $output, $atts ) {
 // GERMAN CONTENT
 // =====================================
 
-/* German items are never in an automatic listing (random slider, dropdown, by type
-   or topic) - the site-wide rule from Eric Companion PHP 1d (er_uncounted_ids).
-   A shortcode that names items by id="..." shows exactly what it names. */
-add_filter( 'display_posts_shortcode_args', function( $args ) {
-    if ( empty( $args['post__in'] ) && function_exists( 'er_uncounted_ids' ) ) {
+/* LANGUAGE RULES FOR [display-posts]
+   - Normal: German items are left out of every automatic listing (random slider,
+     dropdown, by type or topic). Site-wide rule from Eric Companion PHP 1d
+     (er_uncounted_ids).
+   - Exception: With id="..." you get exactly the items you list, German or not.
+   - With language="german": You get only German items. Use it on German pages.
+   - This also works when the shortcode uses tax_relation="OR". */
+add_filter( 'display_posts_shortcode_args', function( $args, $atts ) {
+    if ( is_array( $atts ) && ( $atts['language'] ?? '' ) === 'german' ) {
+        $german = [ 'taxonomy' => 'er_language', 'field' => 'slug', 'terms' => 'german' ];
+        $args['tax_query'] = empty( $args['tax_query'] )
+            ? [ $german ]
+            : [ 'relation' => 'AND', $args['tax_query'], $german ];
+    } elseif ( empty( $args['post__in'] ) && function_exists( 'er_uncounted_ids' ) ) {
         $args['post__not_in'] = array_merge( (array) ( $args['post__not_in'] ?? [] ), er_uncounted_ids() );
     }
     return $args;
-} );
+}, 10, 2 );
 
 // =====================================
 // DPS FOR TAXONOMIES
